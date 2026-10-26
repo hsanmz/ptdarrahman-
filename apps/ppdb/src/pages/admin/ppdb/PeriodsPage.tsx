@@ -9,12 +9,13 @@ import {
   DialogFooter, ConfirmDialog, EmptyState
 } from '@/components/ui'
 import { TableSkeletonRows } from "@/components/ui"
-import { Plus, Edit, Trash2, CheckCircle, XCircle, Layers, CalendarX2, Activity } from 'lucide-react'
+import { Plus, Edit, Trash2, CheckCircle, XCircle, Layers, CalendarX2, Activity, Banknote } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import WavesSheet from './components/WavesSheet'
+import PeriodFeeItemsModal from './components/PeriodFeeItemsModal'
 import PageHeaderCard from '@/components/shared/PageHeaderCard'
 
 const periodSchema = z.object({
@@ -46,25 +47,21 @@ export default function PeriodsPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [actionId, setActionId] = useState<{ id: string, type: 'activate' | 'deactivate' } | null>(null)
 
-  // Waves Sheet
+  // Waves Sheet & Period Fee Items Modal
   const [selectedPeriod, setSelectedPeriod] = useState<any>(null)
+  const [feePeriod, setFeePeriod] = useState<any>(null)
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<PeriodFormData>({
     resolver: zodResolver(periodSchema),
     defaultValues: { name: '', academic_year: '', description: '', wa_group_link: '', head_of_committee: '' }
   })
 
-  // Aktivasi/deaktivasi periode menonaktifkan wave global → semua data
-  // wave-scoped ikut basi. Samakan dengan WavesSheet (invalidasi luas).
   const invalidateWaveScoped = () => {
     return Promise.all([
       queryClient.invalidateQueries({ queryKey: ['periods'] }),
       queryClient.invalidateQueries({ queryKey: ['waves'] }),
       queryClient.invalidateQueries({ queryKey: ['applicants'] }),
       queryClient.invalidateQueries({ queryKey: ['transactions'] }),
-      queryClient.invalidateQueries({ queryKey: ['stage2-applicants'] }),
-      queryClient.invalidateQueries({ queryKey: ['stage2-bills'] }),
-      queryClient.invalidateQueries({ queryKey: ['mou-applicants'] }),
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
     ])
   }
@@ -139,7 +136,7 @@ export default function PeriodsPage() {
     <div className="space-y-6 animate-fade-in">
       <PageHeaderCard
         title="Periode PPDB"
-        description="Kelola data periode dan gelombang pendaftaran."
+        description="Kelola data periode, gelombang, dan komponen master biaya pendaftaran."
         loading={loading}
         docKey="ppdb-periods"
         action={
@@ -170,7 +167,7 @@ export default function PeriodsPage() {
                 <TableHead className="whitespace-nowrap">Tahun Ajaran</TableHead>
                 <TableHead>Deskripsi</TableHead>
                 <TableHead className="whitespace-nowrap">Status</TableHead>
-                <TableHead className="whitespace-nowrap">Gelombang</TableHead>
+                <TableHead className="whitespace-nowrap">Konfigurasi</TableHead>
                 <TableHead className="text-right whitespace-nowrap">Aksi</TableHead>
               </TableRow>
             </TableHeader>
@@ -183,7 +180,7 @@ export default function PeriodsPage() {
                     <EmptyState
                       icon={CalendarX2}
                       title="Belum Ada Periode"
-                      description="Mulai tambahkan periode pendaftaran PPDB agar gelombang dapat dibuat."
+                      description="Mulai tambahkan periode pendaftaran PPDB agar gelombang dan biaya dapat dibuat."
                       className="bg-transparent border-transparent"
                     />
                   </TableCell>
@@ -200,10 +197,22 @@ export default function PeriodsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
-                      <Button variant="outline" size="sm" onClick={() => setSelectedPeriod(p)} className="gap-2 text-xs">
-                        <Layers className="h-3 w-3" />
-                        {p.wave_count || 0} Gelombang
-                      </Button>
+                      <div className="flex items-center gap-1.5">
+                        <Button variant="outline" size="sm" onClick={() => setSelectedPeriod(p)} className="gap-1.5 text-xs">
+                          <Layers className="h-3 w-3" />
+                          {p.wave_count || 0} Gelombang
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setFeePeriod(p)}
+                          className="gap-1.5 text-xs text-primary hover:text-primary hover:bg-primary/5"
+                          title="Atur master komponen biaya pendidikan periode ini"
+                        >
+                          <Banknote className="h-3 w-3" />
+                          {p.fee_count ? `${p.fee_count} Biaya` : 'Komponen Biaya'}
+                        </Button>
+                      </div>
                     </TableCell>
                     <TableCell className="text-right whitespace-nowrap">
                       {canCrud && (
@@ -236,6 +245,14 @@ export default function PeriodsPage() {
 
       {/* Waves Sheet */}
       <WavesSheet period={selectedPeriod} onClose={() => setSelectedPeriod(null)} />
+
+      {/* Period Master Fee Items Modal */}
+      <PeriodFeeItemsModal
+        period={feePeriod}
+        open={Boolean(feePeriod)}
+        onClose={() => setFeePeriod(null)}
+        canManage={canCrud}
+      />
 
       {/* Form Dialog */}
       <Dialog open={showForm} onOpenChange={setShowForm}>

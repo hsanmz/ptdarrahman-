@@ -116,7 +116,7 @@ export async function shareLoaDoc({
   const shareUrl = `${window.location.origin}/loa/${safeNo}`
   const shareData = {
     title: `Letter of Acceptance (LoA) - ${applicantName}`,
-    text: `Surat Resmi Penerimaan Calon Santri Baru (Letter of Acceptance) Pesantren Tahfidz Qur'an dan Digital Arrahman atas nama ${applicantName}.`,
+    text: `Surat Resmi Penerimaan Calon Santri Baru (Letter of Acceptance) Pesantren Tahfidz Qur'an dan Digital Ar-Rahman atas nama ${applicantName}.`,
     url: shareUrl,
   }
 

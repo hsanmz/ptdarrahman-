@@ -42,10 +42,6 @@ class PPDBWave(Base):
     )
     wave_number: Mapped[int] = mapped_column(Integer, nullable=False)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
-    # Scope gelombang: nilai dipisah koma
-    allowed_paths: Mapped[str] = mapped_column(
-        String(50), default="reguler,prestasi,tahfidz,rapot"
-    )
     registration_start_date: Mapped[date | None] = mapped_column(Date)
     registration_end_date: Mapped[date | None] = mapped_column(Date)
     quota: Mapped[int] = mapped_column(Integer, default=0)
@@ -71,7 +67,6 @@ class PPDBApplicant(Base):
     full_name: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(100), nullable=False)
     phone: Mapped[str] = mapped_column(String(20), nullable=False)
-    registration_path: Mapped[str] = mapped_column(String(50), nullable=False)
     birth_place: Mapped[str | None] = mapped_column(String(100))
     birth_date: Mapped[date | None] = mapped_column(Date)
     gender: Mapped[str | None] = mapped_column(String(10))
@@ -90,6 +85,7 @@ class PPDBApplicant(Base):
     parent_income: Mapped[str | None] = mapped_column(String(100))
     parent_email: Mapped[str | None] = mapped_column(String(100))
     previous_school: Mapped[str | None] = mapped_column(String(255))
+    graduation_year: Mapped[str | None] = mapped_column(String(10), nullable=True)
     province: Mapped[str | None] = mapped_column(String(100))
     city: Mapped[str | None] = mapped_column(String(100))
     district: Mapped[str | None] = mapped_column(String(100))
@@ -144,7 +140,7 @@ class FileUpload(Base):
     public_url: Mapped[str | None] = mapped_column(String(500))
     entity_type: Mapped[str | None] = mapped_column(String(50))
     entity_id: Mapped[str | None] = mapped_column(String(50))
-    data: Mapped[bytes | None] = mapped_column(LargeBinary(length=16777215))
+    data: Mapped[bytes | None] = mapped_column(LargeBinary(length=16777215), deferred=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
 
@@ -171,36 +167,27 @@ class PPDBPaymentTransaction(Base):
     applicant_id: Mapped[str] = mapped_column(
         String(64), ForeignKey("ppdb_applicants.id", ondelete="CASCADE")
     )
-    # Metode: offline (cash ke panitia) | online (payment gateway / simulator)
     method: Mapped[str] = mapped_column(String(20), default="offline")
     amount: Mapped[int] = mapped_column(BigInteger, default=0)
-    # Status transaksi: pending | success | failed | expired | cancelled | exception
     status: Mapped[str] = mapped_column(String(20), default="pending")
-    # Referensi order/invoice dari PG (nullable untuk metode offline)
     external_id: Mapped[str | None] = mapped_column(String(100))
     order_id: Mapped[str | None] = mapped_column(String(100), index=True, nullable=True)
     txn_id: Mapped[str | None] = mapped_column(String(100), index=True, nullable=True)
-    # payment_type: form | dp | installment
     payment_type: Mapped[str] = mapped_column(String(30), default="form")
     installment_number: Mapped[int | None] = mapped_column(Integer, nullable=True)
     provider_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
     qr_string: Mapped[str | None] = mapped_column(Text, nullable=True)
     expired_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     paid_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    # Financial snapshot fields for immutable historical receipts
     total_obligation: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     total_paid_before: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     remaining_before: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     total_paid_after: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     remaining_after: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     receipt_number: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    # Raw payload dari webhook PG (JSON string)
     gateway_payload: Mapped[str | None] = mapped_column(Text)
-    # Alasan gagal (untuk notif ke pendaftar)
     failure_reason: Mapped[str | None] = mapped_column(Text)
-    # URL bukti transfer / kwitansi (untuk metode offline)
     proof_url: Mapped[str | None] = mapped_column(Text)
-    # Admin yang mengkonfirmasi (untuk metode offline)
     confirmed_by: Mapped[str | None] = mapped_column(String(36))
     confirmed_at: Mapped[datetime | None] = mapped_column(DateTime)
     notes: Mapped[str | None] = mapped_column(Text)
@@ -214,129 +201,92 @@ class PPDBPaymentTransaction(Base):
 
 
 class NotificationTemplate(Base):
-    """Template pesan notifikasi yang bisa di-custom oleh admin.
-
-    event_key adalah identifier unik per jenis notifikasi.
-
-    ── EVENT KEYS AKTIF (sesuai spec notifikasi terbaru) ──────────────────────
-    Fase 1 – Pendaftaran Awal & Formulir:
-      registration_account_created  → Pendaftaran akun berhasil
-      payment_success_formulir      → Pembayaran formulir berhasil
-      wave_closed_pending_payment   → Gelombang ditutup, tagihan dibatalkan
-      payment_reminder_monday       → Pengingat bayar formulir setiap Senin
-
-    Fase 2 – Verifikasi Dokumen & TIU:
-      document_rejected_revision    → Dokumen ditolak (perlu revisi)
-      document_approved_non_tiu     → Dokumen disetujui (bukan jalur TIU)
-      tiu_exam_instructions         → Dokumen disetujui (jalur TIU) — instruksi SEB
-      tiu_result_ready              → Hasil TIU tersedia via webhook Apps Script
-
-    Fase 3 – Ujian & Wawancara:
-      session_confirmed             → Jadwal ujian Tahfidz/Wawancara terkonfirmasi
-      tahfidz_score_recorded        → Nilai Tahfidz direkam, lanjut ke wawancara
-      interview_completed           → Wawancara selesai, menunggu pengumuman
-
-    Fase 4 – Kelulusan & Pembayaran DP:
-      selection_result_passed       → Lulus + instruksi bayar DP
-      selection_result_failed       → Tidak lulus
-      dp_payment_reminder           → Pengingat bayar DP mingguan (3 bulan)
-      dp_payment_success            → DP berhasil + SKD + link grup WA
-
-    Fase 5 – Pengingat Lanjutan:
-      reminder_upload_docs_h3       → Pengingat upload dokumen H+3
-      reminder_take_session_h2      → Pengingat pilih jadwal ujian H+2
-      reminder_exam_1hour           → Pengingat ujian 1 jam sebelum
-      reminder_installment          → Pengingat cicilan bulanan
-
-    ── EVENT KEYS LEGACY (tetap ada untuk backward-compat) ───────────────────
-      registration_welcome, payment_failed, payment_reminder_day7,
-      payment_expired, payment_success, document_reminder_3days,
-      document_reminder_1day, document_rejected, document_approved,
-      selection_announced, selection_reminder_5days, selection_reminder_1day,
-      selection_passed, selection_failed, payment_manual_approved,
-      reregistration_reminder, reregistration_success, wave_closing,
-      user_created, password_reset
-
-    ── CHANNEL ────────────────────────────────────────────────────────────────
-    channel: whatsapp (email tidak digunakan; field tetap ada di skema DB
-    untuk backward-compat tapi notif_email_enabled=False di config)
-
-    ── VARIABEL TEMPLATE ──────────────────────────────────────────────────────
-    Body mendukung placeholder {variable_name}. Variabel tersedia:
-      Identitas: {nama_peserta}, {username}, {email}, {phone}, {password},
-                 {nama_sekolah}
-      Link: {link_login}, {link_aplikasi}, {link_pembayaran},
-            {link_panduan_seb}, {link_grup_whatsapp}
-      Gelombang: {nama_gelombang}, {tanggal_tutup}, {tanggal_tutup_gelombang},
-                 {batas_waktu_bayar}
-      Pembayaran: {nominal_bayar}, {alasan_gagal}
-      Dokumen: {alasan_penolakan}
-      TIU: {nilai_tiu}
-      Ujian: {nama_ujian}, {tanggal}, {jam_mulai}, {jam_selesai}, {waktu},
-             {lokasi_atau_link}
-      Kelulusan: {deadline_daftar_ulang}
-      DP: {sisa_waktu}, {tanggal_jatuh_tempo}
-      Cicilan: {bulan_cicilan}, {nominal_cicilan}
-    """
-
     __tablename__ = "notification_templates"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    # Identifier unik event (lihat docstring)
     event_key: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    # Label human-readable untuk tampilan admin
     label: Mapped[str] = mapped_column(String(100), nullable=False)
-    # Saluran pengiriman: email | whatsapp | both
     channel: Mapped[str] = mapped_column(String(20), default="both")
-    # Subject email (khusus channel email/both)
     email_subject: Mapped[str | None] = mapped_column(String(255))
-    # Body pesan (mendukung variabel {placeholder})
     body: Mapped[str] = mapped_column(Text, nullable=False)
-    # True = template ini diaktifkan / akan dikirim sistem
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
 
 class NotificationLog(Base):
-    """Log setiap percobaan pengiriman notifikasi.
-
-    status: pending | sent | failed
-    """
-
     __tablename__ = "notification_logs"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    # Relasi ke template yang dipakai (nullable: bisa dikirim manual tanpa template)
     template_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("notification_templates.id", ondelete="SET NULL")
     )
-    # event_key snapshot (tidak berubah meski template diedit)
     event_key: Mapped[str] = mapped_column(String(50), nullable=False)
-    # Penerima — bisa applicant atau user lain
     recipient_user_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("users.id", ondelete="SET NULL")
     )
     recipient_name: Mapped[str | None] = mapped_column(String(255))
     recipient_email: Mapped[str | None] = mapped_column(String(100))
     recipient_phone: Mapped[str | None] = mapped_column(String(20))
-    # Saluran yang dipakai: email | whatsapp
     channel: Mapped[str] = mapped_column(String(20), nullable=False)
-    # Snapshot subject & body yang benar-benar terkirim (setelah substitusi variabel)
     subject_sent: Mapped[str | None] = mapped_column(String(255))
     body_sent: Mapped[str | None] = mapped_column(Text)
-    # Status pengiriman: pending | sent | failed
     status: Mapped[str] = mapped_column(String(20), default="pending")
-    # Pesan error jika gagal
     error_message: Mapped[str | None] = mapped_column(Text)
-    # Timestamp kirim / gagal
     sent_at: Mapped[datetime | None] = mapped_column(DateTime)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Komponen Biaya Periode & Diskon Gelombang
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class PPDBPeriodFeeItem(Base):
+    """Komponen Biaya Pendidikan/Masuk resmi per periode PPDB (Uang Pangkal, Seragam, SPP, dll).
+
+    Komponen biaya didefinisikan satu kali pada level Periode, dan berlaku untuk semua gelombang.
+    """
+
+    __tablename__ = "ppdb_period_fee_items"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    period_id: Mapped[str] = mapped_column(
+        String(50), ForeignKey("ppdb_periods.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    nominal: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+    description: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    order_index: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+
+class PPDBWaveFeeDiscount(Base):
+    """Konfigurasi diskon per gelombang untuk komponen biaya periode.
+
+    Gelombang hanya mengatur diskon (reguler & pendaftar awal) terhadap komponen biaya periode induk.
+    """
+
+    __tablename__ = "ppdb_wave_fee_discounts"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    wave_id: Mapped[str] = mapped_column(
+        String(50), ForeignKey("ppdb_waves.id", ondelete="CASCADE"), nullable=False
+    )
+    fee_item_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("ppdb_period_fee_items.id", ondelete="CASCADE"), nullable=False
+    )
+    discount_type: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    discount_value: Mapped[float | None] = mapped_column(Float, nullable=True)
+    early_discount_type: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    early_discount_value: Mapped[float | None] = mapped_column(Float, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+
 class PPDBWaveFeeItem(Base):
-    """Item biaya Tahap 2 per gelombang (custom list: Uang Pangkal, Uang Gedung,
-    dll)."""
+    """Legacy backward-compat: item biaya gelombang."""
 
     __tablename__ = "ppdb_wave_fee_items"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -359,15 +309,6 @@ class PPDBWaveFeeItem(Base):
 
 
 class PPDBApplicantDiscount(Base):
-    """Konfigurasi diskon + cicilan per peserta per item biaya Tahap 2.
-
-    discount_type: 'percent' | 'nominal' | None (tidak ada diskon)
-    discount_value: nilai diskon (angka %, atau Rp)
-    discount_amount: nominal diskon hasil hitung (Rp)
-    final_amount: nominal - discount_amount (yang harus dibayar)
-    installment_count: 0 = lump sum, N = dicicil N kali
-    """
-
     __tablename__ = "ppdb_applicant_discounts"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     applicant_id: Mapped[str] = mapped_column(
@@ -376,10 +317,8 @@ class PPDBApplicantDiscount(Base):
     fee_item_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("ppdb_wave_fee_items.id", ondelete="CASCADE")
     )
-    discount_type: Mapped[str | None] = mapped_column(
-        String(10)
-    )  # 'percent' | 'nominal'
-    discount_value: Mapped[float | None] = mapped_column()  # angka diskon
+    discount_type: Mapped[str | None] = mapped_column(String(10))
+    discount_value: Mapped[float | None] = mapped_column(Float, nullable=True)
     discount_amount: Mapped[int] = mapped_column(BigInteger, default=0)
     final_amount: Mapped[int] = mapped_column(BigInteger, default=0)
     installment_count: Mapped[int] = mapped_column(Integer, default=0)
@@ -388,12 +327,6 @@ class PPDBApplicantDiscount(Base):
 
 
 class PPDBStage2Bill(Base):
-    """Tagihan pembayaran Tahap 2 per peserta per item (atau per cicilan).
-
-    installment_number: 0 = lump sum, 1..N = cicilan ke-N
-    status: pending | paid | cancelled
-    """
-
     __tablename__ = "ppdb_stage2_bills"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     applicant_id: Mapped[str] = mapped_column(
@@ -415,16 +348,3 @@ class PPDBStage2Bill(Base):
     notes: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-
-
-class PPDBTIUAttempt(Base):
-    __tablename__ = "ppdb_tiu_attempts"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True)
-    applicant_id: Mapped[str] = mapped_column(
-        String(64), ForeignKey("ppdb_applicants.id", ondelete="CASCADE")
-    )
-    token: Mapped[str] = mapped_column(
-        String(100), unique=True, index=True, nullable=False
-    )
-    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)

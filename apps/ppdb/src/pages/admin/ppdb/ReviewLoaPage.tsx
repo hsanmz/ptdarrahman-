@@ -136,7 +136,7 @@ export default function ReviewLoaPage() {
                 <TableRow>
                   <TableHead className="px-2 text-xs">No. Reg</TableHead>
                   <TableHead className="px-2 text-xs">Nama</TableHead>
-                  <TableHead className="px-2 text-xs">Jalur</TableHead>
+                  <TableHead className="px-2 text-xs">Gelombang</TableHead>
                   <TableHead className="px-2 text-xs">Penandatangan</TableHead>
                   <TableHead className="px-2 text-xs">Ditandatangani</TableHead>
                   <TableHead className="px-2 text-center text-xs">Status</TableHead>
@@ -182,13 +182,10 @@ export default function ReviewLoaPage() {
                       </TableCell>
                       <TableCell className="px-2 py-3">
                         <div
-                          className="truncate text-xs font-medium uppercase text-slate-700"
-                          title={`${app.registration_path || 'Reguler'} · ${app.wave_name || 'Gelombang 1'}`}
+                          className="truncate text-xs font-medium text-slate-700"
+                          title={app.wave_name || 'Gelombang 1'}
                         >
-                          {app.registration_path || 'Reguler'}
-                          <span className="font-normal normal-case text-slate-400">
-                            {' · '}{app.wave_name || 'Gelombang 1'}
-                          </span>
+                          {app.wave_name || 'Gelombang 1'}
                         </div>
                       </TableCell>
                       <TableCell className="px-2 py-3">

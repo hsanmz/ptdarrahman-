@@ -109,7 +109,7 @@ function FieldLabel({
  * 1. Container Profil / Avatar & Ringkasan Data Akun
  * 2. Container Informasi Profil (Form Ubah Identitas & Kontak)
  * 3. Container Ganti Password
- * Kolom kanan: Panel Sesi Perangkat mandiri independen (sesuai pola TIU Admin PPDB).
+ * Kolom kanan: Panel Sesi Perangkat mandiri independen.
  */
 export function ProfilePage({
   user,
@@ -919,7 +919,7 @@ export function ProfilePage({
         <div className="h-8 sm:h-12 shrink-0" aria-hidden="true" />
       </div>
 
-      {/* ── KOLOM KANAN: Panel Sesi Perangkat (Sesuai Referensi TIU Admin PPDB - Tidak Diubah) ── */}
+      {/* ── KOLOM KANAN: Panel Sesi Perangkat ── */}
       <aside
         className="w-full lg:w-[380px] xl:w-[420px] shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-muted/30 dark:bg-muted/10 p-3.5 sm:p-4 md:p-6 flex flex-col overflow-visible lg:overflow-y-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}

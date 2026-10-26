@@ -11,7 +11,7 @@
  *   apakah countdown tampilan sudah habis.
  */
 
-export type QrisPaymentType = 'form' | 'dp' | 'installment'
+export type QrisPaymentType = 'form'
 
 export type LocalPaymentState =
   | 'none'

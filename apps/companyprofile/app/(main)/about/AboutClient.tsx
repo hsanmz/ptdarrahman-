@@ -79,7 +79,7 @@ export default function AboutClient({ staff }: { staff: Staff[] }) {
                 title="Warisan Keunggulan Quran & Digital"
               />
               <div className="space-y-4 text-[var(--text-secondary)] leading-relaxed">
-                <p>{'Terletak di kawasan strategis Rukan Hexa Green Kalimalang, Pesantren Arrahman lahir dari visi untuk menciptakan generasi pemimpin yang tidak hanya kuat dalam nilai-nilai Al-Quran tetapi juga unggul dalam inovasi digital.'}</p>
+                <p>{'Terletak di kawasan strategis Rukan Hexa Green Kalimalang, PTDARRAHMAN lahir dari visi untuk menciptakan generasi pemimpin yang tidak hanya kuat dalam nilai-nilai Al-Quran tetapi juga unggul dalam inovasi digital.'}</p>
                 <p>{'Selama 5 tahun terakhir, kami telah berkembang dari kelompok belajar tahfidz kecil menjadi pesantren komprehensif dari tingkat SMP hingga SMA (program terpadu 6 tahun), dengan fasilitas canggih dan kurikulum kelas dunia yang mengintegrasikan hafalan Al-Quran dengan coding, AI, robotik, dan pengembangan kepemimpinan.'}</p>
               </div>
             </div>

@@ -145,7 +145,7 @@ export default function PPDBPage() {
         id="info-section"
         className="pt-28 md:pt-32 pb-20 md:pb-28 px-4 sm:px-6 md:px-12 max-w-7xl mx-auto"
       >
-        {/* Heading Jalur */}
+        {/* Heading Program Pembinaan */}
         <div className="text-center max-w-3xl mx-auto mb-14 md:mb-16">
           <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-700">
             <span className="h-1.5 w-1.5 rounded-full bg-[#D4A853]" aria-hidden />
@@ -159,7 +159,7 @@ export default function PPDBPage() {
           </p>
         </div>
 
-        {/* Kartu Jalur Pendaftaran */}
+        {/* Kartu Program Pembinaan Santri */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
           {content.jalur.map((card) => {
             const Icon = ICON_MAP[resolveIconName(card.icon)]

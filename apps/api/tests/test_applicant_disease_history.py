@@ -43,7 +43,6 @@ def _register_payload(**overrides):
         "full_name": "Ahmad Fauzi",
         "email": "ahmad.fauzi@example.com",
         "phone": "081234567890",
-        "registration_path": "reguler",
         "province": "Jawa Barat",
         "city": "Bogor",
         "district": "Bogor Selatan",

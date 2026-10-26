@@ -369,7 +369,6 @@ export default function ApplicantsPage() {
                 <TableHead>Nama Pendaftar</TableHead>
                 <TableHead>Email / No. WA</TableHead>
                 <TableHead>Periode / Gelombang</TableHead>
-                <TableHead>Jalur Pendaftaran</TableHead>
                 <TableHead>Pembayaran</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
@@ -377,13 +376,13 @@ export default function ApplicantsPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={5} className="text-center py-8">
                     Memuat data...
                   </TableCell>
                 </TableRow>
               ) : applicants.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-8">
+                  <TableCell colSpan={5} className="py-8">
                     <EmptyState
                       icon={UserRoundSearch}
                       title={hasFilter ? 'Tidak Ada Pendaftar' : 'Belum Ada Pendaftar'}
@@ -420,9 +419,6 @@ export default function ApplicantsPage() {
                         <span className="text-xs text-muted-foreground">
                           {scope.muted}
                         </span>
-                      </TableCell>
-                      <TableCell className="text-sm capitalize font-medium">
-                        {a.registration_path || '-'}
                       </TableCell>
                       <TableCell>
                         <Badge variant={paymentVariant(a.payment_status)}>
@@ -510,14 +506,6 @@ export default function ApplicantsPage() {
                       value={
                         <span className="text-xs sm:text-sm">
                           {scopeLabel(detail).text} · {scopeLabel(detail).muted}
-                        </span>
-                      }
-                    />
-                    <HeaderStat
-                      label="Jalur Pendaftaran"
-                      value={
-                        <span className="text-xs capitalize sm:text-sm">
-                          {detail.registration_path || '-'}
                         </span>
                       }
                     />

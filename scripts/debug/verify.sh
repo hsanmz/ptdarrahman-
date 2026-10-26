@@ -20,9 +20,9 @@ echo
 echo "=== 4. Frontend HTTP status codes ==="
 echo -n "Port 3000 (Company Profile): "
 curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000
-echo -n "Port 5173 (PPDB App): "
+echo -n "Port 5173 (Superadmin): "
 curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:5173
-echo -n "Port 5174 (Superadmin): "
+echo -n "Port 5174 (PPDB App): "
 curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:5174
 
 echo

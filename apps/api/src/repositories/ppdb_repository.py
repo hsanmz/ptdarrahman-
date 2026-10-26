@@ -1,7 +1,7 @@
 from datetime import date, datetime, timedelta
 from typing import Any, cast
 
-from sqlalchemy import func, or_, text
+from sqlalchemy import case, func, or_, text
 from sqlalchemy.orm import Session
 
 from src.models.auth import User
@@ -11,8 +11,10 @@ from src.models.ppdb import (
     PPDBApplicantDiscount,
     PPDBPaymentTransaction,
     PPDBPeriod,
+    PPDBPeriodFeeItem,
     PPDBStage2Bill,
     PPDBWave,
+    PPDBWaveFeeDiscount,
     PPDBWaveFeeItem,
 )
 
@@ -27,10 +29,6 @@ class PPDBRepository:
     def get_periods_paginated(
         self, search: str, page: int, per_page: int
     ) -> tuple[list[dict[str, Any]], int]:
-        # Using raw mapping or ORM?
-        # Using ORM for periods and left outer join / subquery for wave count
-        # In router.py it returns dicts, let's keep it simple with ORM.
-
         query = self.db.query(PPDBPeriod)
         if search:
             query = query.filter(PPDBPeriod.name.ilike(f"%{search}%"))
@@ -43,24 +41,18 @@ class PPDBRepository:
             .all()
         )
 
-        # calculate wave_count for each
         result = []
         for p in periods:
             wave_count = (
                 self.db.query(PPDBWave).filter(PPDBWave.period_id == p.id).count()
             )
-            p_dict = {
-                "id": p.id,
-                "name": p.name,
-                "academic_year": p.academic_year,
-                "description": p.description,
-                "wa_group_link": p.wa_group_link,
-                "head_of_committee": p.head_of_committee,
-                "status": p.status,
-                "created_at": p.created_at,
-                "wave_count": wave_count,
-            }
-            result.append(p_dict)
+            fee_count = (
+                self.db.query(PPDBPeriodFeeItem).filter(PPDBPeriodFeeItem.period_id == p.id).count()
+            )
+            d = {c.name: getattr(p, c.name) for c in p.__table__.columns}
+            d["wave_count"] = wave_count
+            d["fee_count"] = fee_count
+            result.append(d)
 
         return result, total
 
@@ -76,13 +68,10 @@ class PPDBRepository:
             self.db.query(PPDBPeriod).filter(PPDBPeriod.id == period_id).first(),
         )
 
-    def get_waves_by_period(self, period_id: str) -> list[PPDBWave]:
+    def get_active_period(self) -> PPDBPeriod | None:
         return cast(
-            list[PPDBWave],
-            self.db.query(PPDBWave)
-            .filter(PPDBWave.period_id == period_id)
-            .order_by(PPDBWave.wave_number.asc())
-            .all(),
+            PPDBPeriod | None,
+            self.db.query(PPDBPeriod).filter(PPDBPeriod.status == "active").first(),
         )
 
     def create_period(self, period: PPDBPeriod) -> PPDBPeriod:
@@ -96,16 +85,18 @@ class PPDBRepository:
         self.db.refresh(period)
         return period
 
+    def delete_period(self, period: PPDBPeriod):
+        self.db.delete(period)
+        self.db.commit()
+
+    def deactivate_all_periods(self):
+        self.db.query(PPDBPeriod).update(
+            {"status": "inactive"}, synchronize_session=False
+        )
+        self.db.commit()
+
     def activate_period(self, period_id: str):
-        # Keep any active wave inside the selected period, but turn off every
-        # period and wave outside it. Run the changes in one transaction so the
-        # public registration lookup never sees a half-switched period.
-        self.db.query(PPDBPeriod).filter(PPDBPeriod.id != period_id).update(
-            {"status": "inactive"}, synchronize_session=False
-        )
-        self.db.query(PPDBWave).filter(PPDBWave.period_id != period_id).update(
-            {"status": "inactive"}, synchronize_session=False
-        )
+        self.deactivate_all_periods()
         self.db.query(PPDBPeriod).filter(PPDBPeriod.id == period_id).update(
             {"status": "active"}, synchronize_session=False
         )
@@ -113,42 +104,100 @@ class PPDBRepository:
 
     def deactivate_period(self, period_id: str):
         self.db.query(PPDBPeriod).filter(PPDBPeriod.id == period_id).update(
-            {"status": "inactive"}
+            {"status": "inactive"}, synchronize_session=False
         )
         self.db.query(PPDBWave).filter(PPDBWave.period_id == period_id).update(
-            {"status": "inactive"}
+            {"status": "inactive"}, synchronize_session=False
         )
         self.db.commit()
 
-    def delete_period(self, period: PPDBPeriod):
-        self.db.delete(period)
+    # -------------------------------------------------------------------------
+    # Period Fee Items (Master Komponen Biaya per Periode)
+    # -------------------------------------------------------------------------
+    def get_period_fee_items(self, period_id: str) -> list[PPDBPeriodFeeItem]:
+        return cast(
+            list[PPDBPeriodFeeItem],
+            self.db.query(PPDBPeriodFeeItem)
+            .filter(PPDBPeriodFeeItem.period_id == period_id)
+            .order_by(
+                PPDBPeriodFeeItem.order_index.asc(), PPDBPeriodFeeItem.created_at.asc()
+            )
+            .all(),
+        )
+
+    def get_period_fee_item(self, item_id: str) -> PPDBPeriodFeeItem | None:
+        return cast(
+            PPDBPeriodFeeItem | None,
+            self.db.query(PPDBPeriodFeeItem)
+            .filter(PPDBPeriodFeeItem.id == item_id)
+            .first(),
+        )
+
+    def create_period_fee_item(self, item: PPDBPeriodFeeItem) -> PPDBPeriodFeeItem:
+        self.db.add(item)
         self.db.commit()
+        self.db.refresh(item)
+        return item
+
+    def update_period_fee_item(self, item: PPDBPeriodFeeItem) -> PPDBPeriodFeeItem:
+        self.db.add(item)
+        self.db.commit()
+        self.db.refresh(item)
+        return item
+
+    def delete_period_fee_item(self, item: PPDBPeriodFeeItem):
+        self.db.delete(item)
+        self.db.commit()
+
+    # -------------------------------------------------------------------------
+    # Wave Fee Discounts (Diskonasi Gelombang terhadap Komponen Periode)
+    # -------------------------------------------------------------------------
+    def get_wave_fee_discounts(self, wave_id: str) -> list[PPDBWaveFeeDiscount]:
+        return cast(
+            list[PPDBWaveFeeDiscount],
+            self.db.query(PPDBWaveFeeDiscount)
+            .filter(PPDBWaveFeeDiscount.wave_id == wave_id)
+            .all(),
+        )
+
+    def get_wave_fee_discount(
+        self, wave_id: str, fee_item_id: str
+    ) -> PPDBWaveFeeDiscount | None:
+        return cast(
+            PPDBWaveFeeDiscount | None,
+            self.db.query(PPDBWaveFeeDiscount)
+            .filter(
+                PPDBWaveFeeDiscount.wave_id == wave_id,
+                PPDBWaveFeeDiscount.fee_item_id == fee_item_id,
+            )
+            .first(),
+        )
+
+    def save_wave_fee_discount(
+        self, discount: PPDBWaveFeeDiscount
+    ) -> PPDBWaveFeeDiscount:
+        self.db.add(discount)
+        self.db.commit()
+        self.db.refresh(discount)
+        return discount
 
     # -------------------------------------------------------------------------
     # Waves
     # -------------------------------------------------------------------------
-    def get_waves(self, period_id: str | None = None) -> list[PPDBWave]:
-        query = self.db.query(PPDBWave)
-        if period_id:
-            query = query.filter(PPDBWave.period_id == period_id)
-        return cast(
-            list[PPDBWave],
-            query.order_by(
-                PPDBWave.registration_start_date.asc(), PPDBWave.wave_number.asc()
-            ).all(),
-        )
-
-    def get_active_wave(self) -> PPDBWave | None:
-        return cast(
-            PPDBWave | None,
+    def get_waves_by_period(self, period_id: str) -> list[dict[str, Any]]:
+        waves = (
             self.db.query(PPDBWave)
-            .join(PPDBPeriod, PPDBPeriod.id == PPDBWave.period_id)
-            .filter(PPDBWave.status == "active", PPDBPeriod.status == "active")
-            .order_by(
-                PPDBWave.registration_start_date.asc(), PPDBWave.wave_number.asc()
-            )
-            .first(),
+            .filter(PPDBWave.period_id == period_id)
+            .order_by(PPDBWave.wave_number.asc())
+            .all()
         )
+        result = []
+        for w in waves:
+            d = {c.name: getattr(w, c.name) for c in w.__table__.columns}
+            d["total_applicants"] = self.count_applicants_in_wave(w.id)
+            d["confirmed_applicants"] = self.count_paid_form_payments_in_wave(w.id)
+            result.append(d)
+        return result
 
     def get_wave_by_id(self, wave_id: str) -> PPDBWave | None:
         return cast(
@@ -156,15 +205,18 @@ class PPDBRepository:
             self.db.query(PPDBWave).filter(PPDBWave.id == wave_id).first(),
         )
 
-    def get_max_wave_number(self, period_id: str) -> int:
-        from sqlalchemy import func
-
-        max_num = (
-            self.db.query(func.max(PPDBWave.wave_number))
-            .filter(PPDBWave.period_id == period_id)
-            .scalar()
+    def get_active_wave(self) -> PPDBWave | None:
+        active_period = self.get_active_period()
+        if not active_period:
+            return None
+        return cast(
+            PPDBWave | None,
+            self.db.query(PPDBWave)
+            .filter(
+                PPDBWave.period_id == active_period.id, PPDBWave.status == "active"
+            )
+            .first(),
         )
-        return cast(int, max_num) if max_num is not None else 0
 
     def create_wave(self, wave: PPDBWave) -> PPDBWave:
         self.db.add(wave)
@@ -177,12 +229,32 @@ class PPDBRepository:
         self.db.refresh(wave)
         return wave
 
-    def activate_wave(self, wave_id: str, period_id: str):
-        # Wave activation is scoped to its parent period. Other periods are
-        # already inactive when their parent period is switched off.
-        self.db.query(PPDBWave).filter(
-            PPDBWave.period_id == period_id, PPDBWave.id != wave_id
-        ).update({"status": "inactive"}, synchronize_session=False)
+    def delete_wave(self, wave: PPDBWave):
+        self.db.delete(wave)
+        self.db.commit()
+
+    def get_max_wave_number(self, period_id: str) -> int:
+        result = (
+            self.db.query(func.max(PPDBWave.wave_number))
+            .filter(PPDBWave.period_id == period_id)
+            .scalar()
+        )
+        return result or 0
+
+    def deactivate_all_waves_in_period(self, period_id: str):
+        self.db.query(PPDBWave).filter(PPDBWave.period_id == period_id).update(
+            {"status": "inactive"}, synchronize_session=False
+        )
+        self.db.commit()
+
+    def deactivate_all_waves_globally(self):
+        self.db.query(PPDBWave).update(
+            {"status": "inactive"}, synchronize_session=False
+        )
+        self.db.commit()
+
+    def activate_wave(self, wave_id: str, period_id: str | None = None):
+        self.deactivate_all_waves_globally()
         self.db.query(PPDBWave).filter(PPDBWave.id == wave_id).update(
             {"status": "active"}, synchronize_session=False
         )
@@ -190,16 +262,12 @@ class PPDBRepository:
 
     def deactivate_wave(self, wave_id: str):
         self.db.query(PPDBWave).filter(PPDBWave.id == wave_id).update(
-            {"status": "inactive"}
+            {"status": "inactive"}, synchronize_session=False
         )
         self.db.commit()
 
-    def delete_wave(self, wave: PPDBWave):
-        self.db.delete(wave)
-        self.db.commit()
-
     # -------------------------------------------------------------------------
-    # Wave fee items (Biaya Tahap 2 per gelombang)
+    # Legacy Wave fee items (Backward compatibility)
     # -------------------------------------------------------------------------
     def get_fee_items_by_wave(self, wave_id: str) -> list[PPDBWaveFeeItem]:
         return cast(
@@ -319,14 +387,8 @@ class PPDBRepository:
         per_page: int,
         period_id: str | None = None,
         payment_status: str | None = None,
+        sort: str | None = None,
     ) -> tuple[list[dict[str, Any]], int]:
-        """Daftar pendaftar lintas periode/gelombang.
-
-        ``wave_id`` dan ``period_id`` bersifat opsional: bila keduanya None,
-        seluruh pendaftar dari semua periode & gelombang dikembalikan (dipakai
-        Superadmin). Baris selalu membawa ``wave_name``/``period_name`` sebagai
-        label asal pendaftar.
-        """
         query = (
             self.db.query(
                 PPDBApplicant,
@@ -369,12 +431,33 @@ class PPDBRepository:
             query = query.filter(PPDBApplicant.payment_status == payment_status)
 
         total = query.count()
-        rows = (
-            query.order_by(PPDBApplicant.created_at.desc())
-            .offset((page - 1) * per_page)
-            .limit(per_page)
-            .all()
-        )
+        if sort == "fifo_unverified" or status in ("document_uploaded", "document_uploaded_pending"):
+            # FIFO untuk yang belum verifikasi: yang upload lebih dulu di atas (ASC)
+            rows = (
+                query.order_by(
+                    case(
+                        (PPDBApplicant.status.in_(["document_uploaded", "document_uploaded_pending"]), 0),
+                        (PPDBApplicant.status == "document_rejected", 1),
+                        else_=2,
+                    ),
+                    case(
+                        (PPDBApplicant.status.in_(["document_uploaded", "document_uploaded_pending"]), PPDBApplicant.updated_at),
+                        else_=None,
+                    ).asc(),
+                    PPDBApplicant.updated_at.desc(),
+                    PPDBApplicant.created_at.desc(),
+                )
+                .offset((page - 1) * per_page)
+                .limit(per_page)
+                .all()
+            )
+        else:
+            rows = (
+                query.order_by(PPDBApplicant.created_at.desc())
+                .offset((page - 1) * per_page)
+                .limit(per_page)
+                .all()
+            )
 
         result = []
         for (
@@ -385,7 +468,6 @@ class PPDBRepository:
             period_name,
             username,
         ) in rows:
-            # map to dict
             app_dict = {c.name: getattr(app, c.name) for c in app.__table__.columns}
             app_dict["wave_name"] = wave_name
             app_dict["wave_id"] = wave_id_joined
@@ -397,7 +479,6 @@ class PPDBRepository:
         return result, total
 
     def get_applicant_detail(self, applicant_id: str) -> dict[str, Any] | None:
-        """Detail satu pendaftar lengkap dengan label periode & gelombang."""
         row = (
             self.db.query(
                 PPDBApplicant,
@@ -426,25 +507,13 @@ class PPDBRepository:
         return detail
 
     def delete_applicant_permanent(self, applicant: PPDBApplicant) -> None:
-        """Hapus permanen pendaftar beserta akun login dan seluruh data turunannya.
-
-        Dipakai Superadmin (keputusan bisnis: hapus = permanen, bukan soft delete).
-        Semua penghapusan dalam SATU transaksi: bila salah satu gagal, tidak ada
-        data yang hilang sebagian (mis. akun terhapus tapi nilai seleksi tertinggal).
-        """
         user_id = applicant.user_id
 
-        # 1. Baris dokumen milik pendaftar ini. Dihapus eksplisit (bukan hanya
-        #    andalkan CASCADE dari users) supaya physical file purge di service
-        #    punya sumber yang jelas dan tidak bergantung pada ada/tidaknya FK
-        #    di database produksi. Unggahan lain milik user (mis. avatar)
-        #    tetap ikut terhapus lewat CASCADE.
         self.db.query(FileUpload).filter(
             FileUpload.entity_type.like("ppdb_document:%"),
             FileUpload.entity_id == applicant.id,
         ).delete(synchronize_session=False)
 
-        # 2. Data pembayaran & tagihan.
         self.db.query(PPDBPaymentTransaction).filter(
             PPDBPaymentTransaction.applicant_id == applicant.id
         ).delete(synchronize_session=False)
@@ -455,8 +524,6 @@ class PPDBRepository:
             PPDBStage2Bill.applicant_id == applicant.id
         ).delete(synchronize_session=False)
 
-        # 3. Hasil & nilai seleksi. TIDAK punya FK ke ppdb_applicants, jadi tanpa
-        #    baris di sini akan jadi data yatim yang tetap muncul di daftar hasil.
         self.db.execute(
             text("DELETE FROM `selection_results` WHERE `applicant_id` = :aid"),
             {"aid": applicant.id},
@@ -466,13 +533,8 @@ class PPDBRepository:
             {"aid": applicant.id},
         )
 
-        # 4. Baris pendaftar lalu akun login.
-        #    audit_log & notification_logs tidak dihapus: keduanya FK-nya
-        #    ON DELETE SET NULL, jadi riwayat tetap ada tanpa akun —
-        #    sesuai kebutuhan "riwayat dapat ditelusuri".
         self.db.delete(applicant)
         if user_id:
-            # refresh_tokens & user_page_permissions ber-CASCADE dari users.
             self.db.query(User).filter(User.id == user_id).delete(
                 synchronize_session=False
             )
@@ -480,19 +542,15 @@ class PPDBRepository:
         self.db.commit()
 
     def get_applicant_document_files(self, applicant_id: str) -> list[str]:
-        """List ``storage_path`` file upload milik satu pendaftar.
-
-        Dipakai saat hapus permanen supaya file fisiknya ikut dibersihkan.
-        """
         rows = (
-            self.db.query(FileUpload)
+            self.db.query(FileUpload.storage_path)
             .filter(
                 FileUpload.entity_type.like("ppdb_document:%"),
                 FileUpload.entity_id == applicant_id,
             )
             .all()
         )
-        return [r.storage_path for r in rows]
+        return [r[0] for r in rows]
 
     def get_applicant_by_user_id(self, user_id: str) -> PPDBApplicant | None:
         return cast(
@@ -509,7 +567,15 @@ class PPDBRepository:
 
     def get_applicant_documents(self, applicant_id: str) -> list[dict[str, Any]]:
         rows = (
-            self.db.query(FileUpload)
+            self.db.query(
+                FileUpload.id,
+                FileUpload.original_name,
+                FileUpload.mime_type,
+                FileUpload.size_bytes,
+                FileUpload.public_url,
+                FileUpload.entity_type,
+                FileUpload.created_at,
+            )
             .filter(
                 FileUpload.entity_type.like("ppdb_document:%"),
                 FileUpload.entity_id == applicant_id,
@@ -540,10 +606,6 @@ class PPDBRepository:
         uploaded_by: str,
         now: datetime,
     ) -> list[str]:
-        """Simpan satu dokumen pendaftar. Dokumen lama sejenis dihapus dulu.
-
-        Return list storage_path lama yang harus dihapus oleh pemanggil.
-        """
         entity_type = f"ppdb_document:{doc_type}"
         old = (
             self.db.query(FileUpload)
@@ -605,8 +667,6 @@ class PPDBRepository:
         return period.name if period else None
 
     def count_applicants_in_wave(self, wave_id: str) -> int:
-        """Total pendaftar di gelombang tertentu (ikut soft-deleted/expired,
-        konsisten dengan GET /ppdb/applicants yang tetap menampilkan expired)."""
         return cast(
             int,
             (
@@ -617,7 +677,6 @@ class PPDBRepository:
         )
 
     def count_paid_form_payments_in_wave(self, wave_id: str) -> int:
-        """Count unique applicants with a successful form payment in a wave."""
         return cast(
             int,
             self.db.query(

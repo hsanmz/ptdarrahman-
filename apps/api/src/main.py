@@ -13,6 +13,7 @@ from src.core.cors import setup_cors
 from src.core.database import execute_raw
 from src.core.middleware import ServerErrorJSONMiddleware
 from src.modules.auth.router import router as auth_router
+from src.modules.cbt.router import router as cbt_router
 from src.modules.companyprofile.router import router as companyprofile_router
 from src.modules.modules.router import router as modules_router
 from src.modules.notifications.router import router as notifications_router
@@ -184,7 +185,16 @@ async def lifespan(app: FastAPI):
     threading.Thread(target=keep_db_alive, daemon=True).start()
     _wait_for_database()
 
-    # Start automated PPDB background scheduler (Monthly installment reminders)
+    # Ensure tables for newly declared models exist
+    try:
+        from src.core.database import get_engine
+        from src.models.base import Base
+
+        Base.metadata.create_all(bind=get_engine())
+    except Exception as exc:
+        logger.warning("Auto-create tables skipped or failed: %s", exc)
+
+    # Start automated background scheduler (Session cleanup & maintenance)
     from src.core.scheduler import start_scheduler, stop_scheduler
 
     start_scheduler()
@@ -276,6 +286,7 @@ app.include_router(
     notifications_router, prefix="/notifications", tags=["Notifications"]
 )
 app.include_router(selection_router, prefix="/selection", tags=["Selection"])
+app.include_router(cbt_router, prefix="/cbt", tags=["CBT & Bank Soal"])
 app.include_router(whatsapp_router, prefix="/whatsapp", tags=["WhatsApp"])
 app.include_router(search_router, prefix="/search", tags=["Search"])
 if settings.upload_provider == "db":

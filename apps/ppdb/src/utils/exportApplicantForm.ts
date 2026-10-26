@@ -190,7 +190,6 @@ export function exportAllApplicantsToWord(
       const gender = a.gender === 'L' ? 'L' : a.gender === 'P' ? 'P' : '-'
       const ttl = [a.birth_place, a.birth_date].filter(Boolean).join(', ') || '-'
       const school = a.previous_school || '-'
-      const path = (a.registration_path || '-').toUpperCase()
       const wave = a.wave_name || '-'
       const wa = a.phone || '-'
       const email = a.email || '-'
@@ -225,7 +224,6 @@ export function exportAllApplicantsToWord(
           <td style="text-align: center; vertical-align: top;">${gender}</td>
           <td style="vertical-align: top;">${ttl}</td>
           <td style="vertical-align: top;">${school}</td>
-          <td style="vertical-align: top;">${path}</td>
           <td style="vertical-align: top;">${wave}</td>
           <td style="vertical-align: top;">${wa}<br/><small style="color: #64748b;">${email}</small></td>
           <td style="vertical-align: top;">${domisili}</td>
@@ -415,8 +413,7 @@ export function exportAllApplicantsToWord(
               <th width="3%" style="text-align: center;">L/P</th>
               <th width="9%">TTL</th>
               <th width="9%">Asal Sekolah</th>
-              <th width="6%">Jalur</th>
-              <th width="6%">Gelombang</th>
+              <th width="12%">Gelombang</th>
               <th width="9%">Kontak Santri</th>
               <th width="11%">Domisili</th>
               <th width="12%">Data Orang Tua / Wali</th>
@@ -506,7 +503,6 @@ export function exportAllApplicantsToPdf(
       const gender = a.gender === 'L' ? 'L' : a.gender === 'P' ? 'P' : '-'
       const ttl = [a.birth_place, a.birth_date].filter(Boolean).join(', ') || '-'
       const school = a.previous_school || '-'
-      const path = (a.registration_path || '-').toUpperCase()
       const wave = a.wave_name || '-'
       const wa = a.phone || '-'
       const email = a.email || '-'
@@ -533,7 +529,6 @@ export function exportAllApplicantsToPdf(
           <td style="text-align: center;">${gender}</td>
           <td>${ttl}</td>
           <td>${school}</td>
-          <td>${path}</td>
           <td>${wave}</td>
           <td>${wa}<br/><span style="color: #64748b; font-size: 7pt;">${email}</span></td>
           <td>${domisili}</td>
@@ -719,8 +714,7 @@ export function exportAllApplicantsToPdf(
             <th width="3%" style="text-align: center;">L/P</th>
             <th width="9%">TTL</th>
             <th width="9%">Asal Sekolah</th>
-            <th width="6%">Jalur</th>
-            <th width="6%">Gelombang</th>
+            <th width="12%">Gelombang</th>
             <th width="9%">Kontak Santri</th>
             <th width="11%">Domisili</th>
             <th width="12%">Data Orang Tua / Wali</th>

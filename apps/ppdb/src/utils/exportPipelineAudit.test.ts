@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { downloadReceiptPdf } from './exportReceipt'
 import { downloadLoaDoc } from './exportLoa'
-import { downloadSkdPdf } from './exportSkd'
 import {
   parseHealthData,
   formatHealthSummary,
@@ -150,29 +149,6 @@ describe('Export Pipeline Comprehensive Audit & Verification', () => {
       expect(mockAddPage).toHaveBeenCalledTimes(1)
       expect(mockAddImage).toHaveBeenCalledTimes(2)
       expect(mockSave).toHaveBeenCalledWith('letter-of-acceptance-fatimah-az-zahra-reg-002.pdf')
-    })
-  })
-
-  describe('3. Surat Keterangan Diterima (exportSkd)', () => {
-    it('mengekspor sertifikat SKD ke A4 Landscape dengan background gelap #022c22', async () => {
-      const el = document.createElement('div')
-      Object.defineProperty(el, 'offsetWidth', { value: 1123 })
-      Object.defineProperty(el, 'offsetHeight', { value: 794 })
-      el.getBoundingClientRect = vi.fn().mockReturnValue({ width: 1123, height: 794 })
-
-      await downloadSkdPdf(el, 'Zaid bin Tsabit', 'REG-SKD-01')
-
-      expect(mockAddImage).toHaveBeenCalledWith(
-        'data:image/png;base64,mockPngData',
-        'PNG',
-        0,
-        0,
-        297,
-        210,
-        undefined,
-        'NONE'
-      )
-      expect(mockSave).toHaveBeenCalledWith('skd-kelulusan-zaid-bin-tsabit-reg-skd-01.pdf')
     })
   })
 

@@ -196,7 +196,6 @@ def test_session_status_colors_red_yellow_green(db: Session, active_wave):
         wave_id=active_wave.id,
         full_name="Calon Santri Budi",
         email="budi@example.com",
-        registration_path="reguler",
         status="selection",
         phone="08123456789",
         created_at=datetime.now(),

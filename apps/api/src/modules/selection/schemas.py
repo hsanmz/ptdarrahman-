@@ -6,7 +6,9 @@ from pydantic import AnyHttpUrl, BaseModel, Field, field_validator, model_valida
 
 class SessionFields(BaseModel):
     name: str = Field(min_length=1, max_length=100)
-    session_type: Literal["tahfidz", "interview"]
+    session_type: str = Field(default="tahfidz")  # "tahfidz", "interview", "wawancara", "interview_santri", "interview_ortu"
+    wave_id: str | None = None
+    batch_name: str | None = Field(default=None, max_length=50)
     session_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
     start_time: str = Field(pattern=r"^\d{2}:\d{2}$")
     end_time: str | None = Field(default=None)
@@ -15,7 +17,7 @@ class SessionFields(BaseModel):
     location: str | None = Field(None, max_length=200)
     meeting_url: AnyHttpUrl | None = None
     description: str | None = None
-    quota: int = Field(default=0, ge=0)  # 0 means unlimited
+    quota: int = Field(default=0, ge=0)  # 0 means unlimited / all applicants in wave
 
     @model_validator(mode="after")
     def validate_delivery_details(self):
@@ -51,6 +53,11 @@ class BookSession(BaseModel):
     session_id: str
 
 
+class RescheduleApplicantSession(BaseModel):
+    target_session_id: str
+    reason: str | None = None
+
+
 class BroadcastSession(BaseModel):
     message: str
 
@@ -80,6 +87,10 @@ class ApplicantScoreSave(BaseModel):
     applicant_id: str
     scores: list[ScoreInputItem]
     notes: str | None = None  # saved to selection_results
+
+
+class BulkApplicantScoreSave(BaseModel):
+    items: list[ApplicantScoreSave]
 
 
 class ApplicantStatusUpdate(BaseModel):

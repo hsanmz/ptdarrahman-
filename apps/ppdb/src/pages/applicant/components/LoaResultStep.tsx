@@ -11,9 +11,6 @@ import {
   AlertTriangle,
   ShieldCheck,
   PenTool,
-  ArrowRight,
-  Sparkles,
-  Brain,
   BookOpen,
   MessageSquare,
   Award,
@@ -23,6 +20,7 @@ import {
   Send,
   ShieldAlert,
   FileText,
+  MessageCircle,
 } from 'lucide-react'
 import { Badge, Button, Card, CardContent, Input, Label } from '@/components/ui'
 
@@ -117,7 +115,7 @@ export default function LoaResultStep({ applicant, selectionResult, loa }: LoaRe
   }
 
   // Parse & structure categories, weights, and scores cleanly
-  const { tiuScore, totalScore, tahfidzCategory, wawancaraCategory, otherCategories } = useMemo(() => {
+  const { totalScore, tahfidzCategory, wawancaraCategory, otherCategories } = useMemo(() => {
     let catList: CategoryGroup[] = []
 
     if (selectionResult?.categories && Array.isArray(selectionResult.categories) && selectionResult.categories.length > 0) {
@@ -179,9 +177,7 @@ export default function LoaResultStep({ applicant, selectionResult, loa }: LoaRe
       })
     }
 
-    // Separate TIU from categories if it was stored as a rubric category
-    const tiuCat = catList.find(c => (c.category_name || '').toLowerCase().includes('tiu'))
-    const cleanCategories = catList.filter(c => c !== tiuCat)
+    const cleanCategories = catList
 
     // Dedicated categories
     const tahfidz = cleanCategories.find(c => (c.category_name || '').toLowerCase().includes('tahfidz')) || null
@@ -190,10 +186,6 @@ export default function LoaResultStep({ applicant, selectionResult, loa }: LoaRe
       return n.includes('wawancara') || n.includes('interview')
     }) || null
     const others = cleanCategories.filter(c => c !== tahfidz && c !== wawancara)
-
-    // TIU Score
-    const rawTiu = selectionResult?.tiu_score ?? tiuCat?.subtotal_score ?? tiuCat?.criteria?.[0]?.score ?? null
-    const parsedTiu = rawTiu != null ? Number(rawTiu) : null
 
     // Final total score
     let finalTotal: number | null = null
@@ -206,9 +198,6 @@ export default function LoaResultStep({ applicant, selectionResult, loa }: LoaRe
           components.push(c.subtotal_score)
         }
       })
-      if (parsedTiu != null && !isNaN(parsedTiu)) {
-        components.push(parsedTiu)
-      }
       if (components.length > 0) {
         finalTotal = Number((components.reduce((acc, val) => acc + val, 0) / components.length).toFixed(2))
       }
@@ -216,7 +205,6 @@ export default function LoaResultStep({ applicant, selectionResult, loa }: LoaRe
 
     return {
       categories: cleanCategories,
-      tiuScore: parsedTiu,
       totalScore: finalTotal,
       tahfidzCategory: tahfidz,
       wawancaraCategory: wawancara,
@@ -241,13 +229,10 @@ export default function LoaResultStep({ applicant, selectionResult, loa }: LoaRe
   if (applicant?.status !== 'passed') {
     return (
       <div className="p-6 sm:p-8 border rounded-2xl text-center bg-muted/10">
-        <p className="text-muted-foreground text-sm">Belum ada pengumuman hasil seleksi. Silakan cek kembali nanti.</p>
+        <p className="text-muted-foreground text-sm">Belum ada hasil pendaftaran. Silakan cek kembali nanti.</p>
       </div>
     )
   }
-
-  const regPath = (applicant?.registration_path || '').toLowerCase()
-  const isTiuPath = ['reguler', 'tiu', 'tes', 'reguler_tiu'].includes(regPath) || regPath.includes('tiu')
 
   // Predikat badge calculation based on total score
   const getPredicateBadge = (score: number) => {
@@ -317,28 +302,7 @@ export default function LoaResultStep({ applicant, selectionResult, loa }: LoaRe
         </div>
 
         {/* Ringkasan Subtotal Per Komponen Evaluasi */}
-        <div className="p-4 sm:p-5 bg-slate-50/70 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {/* Komponen TIU */}
-          {(isTiuPath || tiuScore !== null) && (
-            <div className="bg-white border border-blue-200 rounded-xl p-3.5 shadow-2xs">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-blue-900 font-semibold flex items-center gap-1.5">
-                  <Brain className="w-4 h-4 text-blue-600" />
-                  Tes TIU Online
-                </span>
-                <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
-                  Ujian SEB
-                </Badge>
-              </div>
-              <div className="mt-2 flex items-baseline justify-between">
-                <span className="text-2xl font-bold font-heading text-blue-700">
-                  {tiuScore !== null ? tiuScore : '—'}
-                </span>
-                <span className="text-xs text-slate-400">Skala 100</span>
-              </div>
-            </div>
-          )}
-
+        <div className="p-4 sm:p-5 bg-slate-50/70 border-b border-slate-200 grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Komponen Tahfidz */}
           <div className="bg-white border border-emerald-200 rounded-xl p-3.5 shadow-2xs">
             <div className="flex items-center justify-between">
@@ -387,53 +351,9 @@ export default function LoaResultStep({ applicant, selectionResult, loa }: LoaRe
         </div>
       </div>
 
-      {/* 3. RINCIAN NILAI TERPISAH SESUAI INPUT RUBRIK & KATEGORI */}
+      {/* RINCIAN NILAI SESUAI INPUT RUBRIK & KATEGORI */}
 
-      {/* SEKSI A: TES TIU ONLINE */}
-      {(isTiuPath || tiuScore !== null) && (
-        <div className="border border-blue-200 rounded-2xl bg-white overflow-hidden shadow-sm">
-          <div className="bg-blue-50/80 p-4 sm:p-5 border-b border-blue-100 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 bg-blue-100 text-blue-700 rounded-xl">
-                <Brain className="w-5 h-5" />
-              </div>
-              <div>
-                <h4 className="font-bold text-sm sm:text-base text-blue-950">
-                  1. Tes Inteligensi Umum (TIU) Online
-                </h4>
-                <p className="text-xs text-blue-700">Tes Skolastik & Akademik Mandiri via Safe Exam Browser (SEB)</p>
-              </div>
-            </div>
-            <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300 font-semibold text-xs">
-              Skor: {tiuScore !== null ? tiuScore : '—'} / 100
-            </Badge>
-          </div>
-          <div className="p-4 sm:p-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-              <div className="p-3.5 bg-blue-50/40 border border-blue-100 rounded-xl flex items-center justify-between">
-                <div>
-                  <span className="text-slate-500 block text-[11px]">Metode Penilaian:</span>
-                  <span className="font-semibold text-slate-800 text-xs">Pilihan Ganda Otomatis (Webhook Apps Script)</span>
-                </div>
-                <Badge variant="success" className="text-[10px]">Tervalidasi</Badge>
-              </div>
-              <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
-                <div>
-                  <span className="text-slate-500 block text-[11px]">Waktu Ujian:</span>
-                  <span className="font-semibold text-slate-800 text-xs">
-                    {selectionResult?.tiu_completed_at
-                      ? new Date(selectionResult.tiu_completed_at).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) + ' WIB'
-                      : 'Tercatat di server SEB'}
-                  </span>
-                </div>
-                <span className="font-bold text-blue-700 text-sm">{tiuScore !== null ? `${tiuScore} Pts` : '—'}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* SEKSI B: SELEKSI TAHFIDZ AL-QUR'AN */}
+      {/* SEKSI 1: SELEKSI TAHFIDZ AL-QUR'AN */}
       <div className="border border-emerald-200 rounded-2xl bg-white overflow-hidden shadow-sm">
         <div className="bg-emerald-50/80 p-4 sm:p-5 border-b border-emerald-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
@@ -442,7 +362,7 @@ export default function LoaResultStep({ applicant, selectionResult, loa }: LoaRe
             </div>
             <div>
               <h4 className="font-bold text-sm sm:text-base text-emerald-950">
-                {isTiuPath || tiuScore !== null ? '2.' : '1.'} Seleksi Uji Tahfidz Al-Qur'an (1:1)
+                1. Seleksi Uji Tahfidz Al-Qur'an
               </h4>
               <p className="text-xs text-emerald-700">Penilaian langsung penguji tahfidz bersertifikasi sesuai kriteria rubrik</p>
             </div>
@@ -506,7 +426,7 @@ export default function LoaResultStep({ applicant, selectionResult, loa }: LoaRe
         </div>
       </div>
 
-      {/* SEKSI C: SELEKSI UJI WAWANCARA */}
+      {/* SEKSI 2: SELEKSI UJI WAWANCARA */}
       <div className="border border-amber-200 rounded-2xl bg-white overflow-hidden shadow-sm">
         <div className="bg-amber-50/80 p-4 sm:p-5 border-b border-amber-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
@@ -515,7 +435,7 @@ export default function LoaResultStep({ applicant, selectionResult, loa }: LoaRe
             </div>
             <div>
               <h4 className="font-bold text-sm sm:text-base text-amber-950">
-                {isTiuPath || tiuScore !== null ? '3.' : '2.'} Seleksi Uji Wawancara Santri & Wali (1:1)
+                2. Wawancara Terpadu Calon Santri & Wali
               </h4>
               <p className="text-xs text-amber-800">Penilaian komitmen santri dan kesiapan orang tua/wali sesuai rubrik wawancara</p>
             </div>
@@ -677,7 +597,7 @@ export default function LoaResultStep({ applicant, selectionResult, loa }: LoaRe
                     Konfirmasi Tanda Tangan Digital Orang Tua / Wali
                   </p>
                   <p className="text-amber-900 leading-relaxed text-[11px] sm:text-xs mt-0.5">
-                    Silakan isi identitas dan bubuhkan tanda tangan di bawah ini untuk mengesahkan LoA sebelum lanjut ke pembayaran Uang Muka (DP).
+                    Silakan isi identitas dan bubuhkan tanda tangan di bawah ini untuk mengesahkan dokumen Letter of Acceptance (LoA) dan menyelesaikan proses pendaftaran.
                   </p>
                 </div>
               </div>
@@ -841,38 +761,68 @@ export default function LoaResultStep({ applicant, selectionResult, loa }: LoaRe
         </div>
       </div>
 
-      {/* 5. Next Step Action Guide */}
+      {/* 5. Alur Selesai / Dokumen Resmi */}
       {isLoaSigned ? (
-        <div className="p-4 sm:p-6 bg-gradient-to-r from-emerald-50 via-teal-50 to-white border-2 border-emerald-300 rounded-2xl shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="flex items-start gap-3.5">
-            <div className="p-2.5 bg-emerald-600 text-white rounded-xl shadow-xs mt-0.5 shrink-0">
-              <Sparkles className="w-5 h-5" />
+        <div className="space-y-4">
+          <div className="p-4 sm:p-6 bg-gradient-to-r from-emerald-50 via-teal-50 to-white border-2 border-emerald-300 rounded-2xl shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3.5">
+              <div className="p-2.5 bg-emerald-600 text-white rounded-xl shadow-xs mt-0.5 shrink-0">
+                <CheckCircle className="w-5 h-5" />
+              </div>
+              <div className="space-y-1">
+                <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">
+                  Alur Pendaftaran Selesai
+                </span>
+                <h4 className="font-bold text-slate-900 text-base sm:text-lg font-heading">
+                  Selamat! Proses PPDB Telah Selesai
+                </h4>
+                <p className="text-xs sm:text-sm text-slate-600 max-w-xl leading-relaxed">
+                  Letter of Acceptance (LoA) telah resmi ditandatangani. Dokumen ini menjadi bukti sah penerimaan santri baru di Pesantren Tahfidz Qur'an dan Digital Ar-Rahman. Silakan simpan dan unduh dokumen LoA Anda.
+                </p>
+              </div>
             </div>
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold text-emerald-800 uppercase tracking-wider bg-emerald-100 px-2 py-0.5 rounded-full border border-emerald-200">
-                Tahap Selanjutnya Terbuka
-              </span>
-              <h4 className="font-bold text-slate-900 text-base sm:text-lg font-heading">
-                Lanjut ke Pembayaran Uang Muka (DP) & Klaim Sertifikat SKD
-              </h4>
-              <p className="text-xs sm:text-sm text-slate-600 max-w-xl leading-relaxed">
-                Tanda tangan LoA telah lengkap. Silakan masuk ke tahap pembayaran DP untuk mengesahkan kursi santri dan membuka dokumen resmi SKD beserta grup komunikasi sekolah.
-              </p>
-            </div>
+            <Button
+              type="button"
+              onClick={handleOpenLoaPage}
+              className="w-full md:w-auto h-11 px-5 gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm shrink-0 cursor-pointer shadow-md hover:scale-102 transition-transform"
+            >
+              <FileText className="w-4 h-4" />
+              <span>Lihat / Cetak LoA</span>
+            </Button>
           </div>
-          <Button
-            type="button"
-            onClick={() => navigate('/applicant/bayar-dp')}
-            className="w-full md:w-auto h-11 px-5 gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs sm:text-sm shrink-0 cursor-pointer shadow-md hover:scale-102 transition-transform"
-          >
-            <span>Bayar DP & Sertifikat</span>
-            <ArrowRight className="w-4 h-4" />
-          </Button>
+
+          {/* Akses Grup WhatsApp Resmi Calon Santri & Wali Santri */}
+          {loa?.whatsapp_group_link && (
+            <div className="p-4 sm:p-5 bg-gradient-to-r from-emerald-700 via-teal-800 to-emerald-800 text-white rounded-2xl shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-start gap-3.5">
+                <div className="p-2.5 bg-white/15 text-white rounded-xl shadow-xs shrink-0 mt-0.5">
+                  <MessageCircle className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm sm:text-base font-heading">
+                    Grup WhatsApp Resmi Calon Santri &amp; Wali Santri
+                  </h4>
+                  <p className="text-xs text-emerald-100 mt-0.5 max-w-xl leading-relaxed">
+                    Bergabunglah ke grup koordinasi resmi angkatan untuk mendapatkan informasi orientasi santri baru, jadwal masuk asrama, dan perlengkapan pondok.
+                  </p>
+                </div>
+              </div>
+              <a
+                href={loa.whatsapp_group_link}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-emerald-900 hover:bg-emerald-50 font-bold text-xs sm:text-sm rounded-xl shadow-xs transition-colors shrink-0"
+              >
+                <MessageCircle className="w-4 h-4 text-emerald-700" />
+                <span>Gabung Grup WhatsApp</span>
+              </a>
+            </div>
+          )}
         </div>
       ) : (
         <div className="p-4 bg-amber-50/60 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-          <span>Tahap berikutnya (Bayar DP & Sertifikat) akan terbuka setelah Anda menandatangani formulir tanda tangan LoA di atas.</span>
+          <span>Penandatanganan LoA di atas adalah tahap akhir pendaftaran. Mohon lengkapi tanda tangan digital orang tua/wali untuk menyelesaikan proses.</span>
         </div>
       )}
     </div>

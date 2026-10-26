@@ -82,12 +82,6 @@ class Settings(BaseSettings):
     wa_service_api_key: str = ""
     wa_webhook_secret: str = ""
 
-    # ── TIU / Apps Script ────────────────────────────────────────────────────
-    # Secret untuk validasi webhook dari Google Apps Script.
-    # Apps Script mengirim header X-TIU-Secret: <TIU_WEBHOOK_SECRET>.
-    # Fallback bila secret belum disimpan melalui pengaturan backoffice.
-    tiu_webhook_secret: str = ""
-
     # ── Notifikasi ───────────────────────────────────────────────────────────
     # Email belum dipakai: seluruh notifikasi dikirim via WhatsApp.
     # Template dengan channel "email"/"both" otomatis diperlakukan sebagai

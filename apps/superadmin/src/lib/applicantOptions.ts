@@ -1,10 +1,3 @@
-export const REGISTRATION_PATHS = [
-  { value: 'reguler', label: 'Reguler' },
-  { value: 'prestasi', label: 'Prestasi' },
-  { value: 'tahfidz', label: 'Tahfidz' },
-  { value: 'rapot', label: 'Rapot' },
-]
-
 /**
  * Status alur pendaftar. Daftar ini dipakai bersama oleh form edit dan kolom
  * tabel supaya label yang sama muncul di dua tempat.

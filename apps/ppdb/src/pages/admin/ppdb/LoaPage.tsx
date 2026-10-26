@@ -1,10 +1,6 @@
 import { useState } from 'react'
 import {
-  FileText,
-  Award,
   ShieldCheck,
-  Building2,
-  QrCode,
   FileBadge,
   Eye,
   Maximize2
@@ -26,8 +22,7 @@ import LoaOfficialDocument, { type LoaData } from '@/components/shared/LoaOffici
 
 const activeOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://ptdarrahman.sch.id'
 
-export default function LoaSkdPage() {
-  const [activeTab, setActiveTab] = useState<'loa' | 'skd'>('loa')
+export default function LoaPage() {
   const [loaActivePage, setLoaActivePage] = useState<1 | 2>(1)
   const [fullscreenOpen, setFullscreenOpen] = useState(false)
 
@@ -43,7 +38,7 @@ export default function LoaSkdPage() {
     applicant: {
       id: 'app-dummy-1',
       full_name: 'MUHAMMAD ZIYAD HASAN',
-      registration_path: 'Reguler (Tahfidz Qur\'an & Digital)',
+      wave_name: 'Gelombang 1',
       nisn: '1234567890',
       previous_school: 'SMP Negeri 1 Cikarang Utara',
       parent_name: 'Hasan Basri',
@@ -69,30 +64,12 @@ export default function LoaSkdPage() {
     whatsapp_group_link: 'https://chat.whatsapp.com/demo-santri-baru',
   }
 
-  // Dummy Applicant Data for SKD
-  const sampleData = {
-    fullName: 'MUHAMMAD ZIYAD HASAN',
-    registrationNo: 'REG-27102501079',
-    nisn: '1234567890',
-    schoolOrigin: 'SMP Negeri 1 Cikarang Utara',
-    registrationTrack: 'Reguler (Tahfidz Qur\'an & Digital)',
-    academicYear: '2026 / 2027',
-    dateStr: '08 Oktober 2026',
-    location: 'Bekasi',
-    admissionOfficer: 'Ust. Wijaya Kurnia, M.Pd.',
-    directorName: 'Ust. Dr. H. Abdurrahman, M.A.',
-    vaBank: 'Bank Syariah Indonesia (BSI)',
-    vaNumber: '88560 27 102 501079',
-    totalFee: 15000000,
-    dpFee: 5000000,
-  }
-
   return (
     <div className="space-y-6">
       <PageHeaderCard
         title="Pratinjau Dokumen Pengumuman & Kelulusan"
-        description="Showcase pratinjau Letter of Acceptance (LoA) 2 halaman dan Surat Keterangan Diterima (SKD) Sertifikat CSS murni yang akan diterima oleh santri yang dinyatakan lulus."
-        docKey="ppdb-loa-skd"
+        description="Pratinjau Letter of Acceptance (LoA) resmi yang ditandatangani sebagai tahap akhir pendaftaran."
+        docKey="ppdb-loa"
       />
 
       {/* Document Showcase Card */}
@@ -107,36 +84,12 @@ export default function LoaSkdPage() {
                 </CardTitle>
               </div>
               <p className="text-xs text-slate-500 mt-1">
-                Pilih jenis dokumen untuk melihat format visual dokumen kelulusan yang dihasilkan sistem.
+                Pratinjau format visual LoA yang dihasilkan sistem.
               </p>
             </div>
 
             {/* Document Selector & Fullscreen Action */}
             <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
-              <div className="inline-flex rounded-lg border border-slate-200 bg-white p-1 shadow-xs">
-                <button
-                  onClick={() => setActiveTab('loa')}
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                    activeTab === 'loa'
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <FileText className="h-3.5 w-3.5 shrink-0" />
-                  <span>LoA (Surat Kelulusan)</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('skd')}
-                  className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
-                    activeTab === 'skd'
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Award className="h-3.5 w-3.5 shrink-0" />
-                  <span>SKD (Sertifikat)</span>
-                </button>
-              </div>
 
               <Button
                 variant="outline"
@@ -151,7 +104,7 @@ export default function LoaSkdPage() {
           </div>
 
           {/* Sub-navigation for LoA Pages if LoA is selected */}
-          {activeTab === 'loa' && (
+          {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pt-3 mt-2 border-t border-slate-200/70">
               <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 sm:pb-0">
                 <span className="text-xs font-medium text-slate-500 shrink-0">Lembar LoA:</span>
@@ -182,18 +135,11 @@ export default function LoaSkdPage() {
                 Format Surat Resmi Sesuai Standar Institusi (2 Halaman)
               </span>
             </div>
-          )}
+          }
         </CardHeader>
 
         <CardContent className="p-3 sm:p-6 bg-slate-100/60 min-h-[500px] flex items-center justify-start md:justify-center overflow-x-auto">
-          {activeTab === 'loa' ? (
-            <LoaOfficialDocument
-              data={sampleLoaData}
-              page={loaActivePage}
-            />
-          ) : (
-            <SkdCertificateView data={sampleData} />
-          )}
+          <LoaOfficialDocument data={sampleLoaData} page={loaActivePage} />
         </CardContent>
       </Card>
 
@@ -203,10 +149,10 @@ export default function LoaSkdPage() {
           <DialogHeader className="pb-3 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <DialogTitle className="text-sm sm:text-base font-semibold text-slate-800 flex items-center gap-2">
               <Eye className="h-4 w-4 text-indigo-600 shrink-0" />
-              <span>{activeTab === 'loa' ? 'Pratinjau Letter of Acceptance [LoA]' : 'Pratinjau Surat Keterangan Diterima [SKD]'}</span>
+              <span>Pratinjau Letter of Acceptance [LoA]</span>
             </DialogTitle>
             <div className="flex items-center gap-2 sm:mr-6 self-start sm:self-auto">
-              {activeTab === 'loa' && (
+              {
                 <div className="inline-flex gap-1 bg-white border border-slate-200 p-0.5 rounded-md">
                   <button
                     onClick={() => setLoaActivePage(1)}
@@ -225,19 +171,12 @@ export default function LoaSkdPage() {
                     Halaman 2
                   </button>
                 </div>
-              )}
+              }
             </div>
           </DialogHeader>
 
           <div className="flex justify-start md:justify-center py-4 overflow-x-auto">
-            {activeTab === 'loa' ? (
-              <LoaOfficialDocument
-                data={sampleLoaData}
-                page={loaActivePage}
-              />
-            ) : (
-              <SkdCertificateView data={sampleData} />
-            )}
+            <LoaOfficialDocument data={sampleLoaData} page={loaActivePage} />
           </div>
         </DialogContent>
       </Dialog>
@@ -276,7 +215,7 @@ export function LoaDocumentView({
                 Sdr/Sdri {data.fullName}
               </h2>
               <p className="text-xs text-slate-600 font-medium mt-0.5">
-                {data.registrationTrack}
+                {data.waveName}
               </p>
             </div>
             <div className="text-right">
@@ -307,8 +246,8 @@ export function LoaDocumentView({
             </p>
             <p className="text-xs leading-relaxed text-slate-800 text-justify">
               Anda telah dinyatakan <strong>LULUS</strong> seleksi dan dinyatakan <strong>DITERIMA</strong> sebagai
-              santri / peserta didik baru <strong>Pesantren Tahfidz Qur&apos;an dan Digital Arrahman</strong> dalam
-              Academic Year {data.academicYear} melalui jalur pendaftaran &quot;<strong>{data.registrationTrack}</strong>&quot;.
+              santri / peserta didik baru <strong>Pesantren Tahfidz Qur&apos;an dan Digital Ar-Rahman</strong> dalam
+              Academic Year {data.academicYear} pada {data.waveName}.
             </p>
           </div>
 
@@ -528,7 +467,7 @@ export function LoaDocumentView({
                   <td className="py-2 px-3 text-slate-700 leading-relaxed border border-slate-200">
                     <ol className="list-decimal pl-4 space-y-1">
                       <li>Akses dashboard melalui portal resmi PPDB PTDARRAHMAN menggunakan nomor registrasi dan password akun yang telah dibuat.</li>
-                      <li>Setelah pembayaran terverifikasi oleh sistem secara otomatis, unduh bukti kuitansi pembayaran dan Surat Keterangan Diterima (SKD).</li>
+                      <li>Setelah pembayaran formulir terverifikasi, kuitansi resmi tersedia di dashboard pendaftar.</li>
                     </ol>
                   </td>
                 </tr>
@@ -619,7 +558,7 @@ export function LoaDocumentView({
                     <span className="block text-[10px] text-slate-500 font-normal">Dokumen Terbit Otomatis</span>
                   </td>
                   <td className="py-2 px-2.5 text-slate-700 border border-slate-200 leading-relaxed text-[11px]" colSpan={2}>
-                    Kuitansi Pembayaran Sah Ber-QR Code serta dokumen Surat Keterangan Diterima (SKD) langsung aktif dan dapat diunduh di dashboard pendaftar setelah pembayaran terkonfirmasi.
+                    Kuitansi pembayaran formulir ber-QR Code tersedia di dashboard pendaftar setelah pembayaran terkonfirmasi.
                   </td>
                 </tr>
               </tbody>
@@ -657,136 +596,3 @@ export function LoaDocumentView({
 }
 
 // -----------------------------------------------------------------------------
-// Component: SKD Certificate View (Pure Modern CSS, matching ApplicantSKDModal)
-// -----------------------------------------------------------------------------
-function SkdCertificateView({ data }: { data: any }) {
-  return (
-    <div className="relative w-[840px] aspect-[1.414] bg-gradient-to-br from-emerald-950 via-slate-950 to-emerald-900 text-white shadow-2xl border-4 border-slate-950 overflow-hidden flex flex-col justify-between p-8 select-none print:shadow-none print:border-none print:w-full print:m-0">
-      {/* Subtle Islamic Geometric Pattern Watermark in Background */}
-      <div
-        className="absolute inset-0 opacity-10 bg-[radial-gradient(#f59e0b_1px,transparent_1px)]"
-        style={{ backgroundSize: '24px 24px' }}
-      />
-
-      {/* Inner Golden Double Border Frame */}
-      <div className="absolute inset-3 border-2 border-amber-500/70 rounded-md pointer-events-none" />
-      <div className="absolute inset-5 border border-amber-400/40 rounded-sm pointer-events-none" />
-
-      {/* Four Corner Decorative Flourishes */}
-      <div className="absolute top-4 left-4 w-7 h-7 border-t-2 border-l-2 border-amber-400 pointer-events-none" />
-      <div className="absolute top-4 right-4 w-7 h-7 border-t-2 border-r-2 border-amber-400 pointer-events-none" />
-      <div className="absolute bottom-4 left-4 w-7 h-7 border-b-2 border-l-2 border-amber-400 pointer-events-none" />
-      <div className="absolute bottom-4 right-4 w-7 h-7 border-b-2 border-r-2 border-amber-400 pointer-events-none" />
-
-      {/* Radial Center Glow */}
-      <div className="absolute inset-0 bg-radial from-amber-400/5 via-transparent to-black/40 pointer-events-none" />
-
-      {/* Certificate Content */}
-      <div className="relative z-10 flex-1 flex flex-col justify-between text-center px-6 py-2">
-        {/* Header */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-center gap-2 mb-1">
-            <Building2 className="h-5 w-5 text-amber-400" />
-            <span className="text-[11px] font-semibold tracking-widest uppercase text-amber-200/90 font-serif">
-              YAYASAN & PESANTREN TAHFIDZ QUR&apos;AN DAN DIGITAL ARRAHMAN
-            </span>
-          </div>
-
-          <h1 className="text-2xl sm:text-3xl font-serif font-black tracking-widest uppercase text-amber-300">
-            SURAT KETERANGAN DITERIMA
-          </h1>
-          <p className="text-[11px] font-serif italic tracking-widest uppercase text-amber-200/70">
-            Certificate of Acceptance
-          </p>
-
-          <div className="flex items-center justify-center gap-3 pt-0.5">
-            <div className="h-[1px] w-14 bg-amber-400/60" />
-            <span className="text-[10px] font-mono tracking-wider text-amber-300">
-              No. 27102501079/SKD-PPDB/2026
-            </span>
-            <div className="h-[1px] w-14 bg-amber-400/60" />
-          </div>
-        </div>
-
-        {/* Body / Awarded To */}
-        <div className="space-y-1.5 my-auto py-2">
-          <p className="text-xs italic text-slate-300">
-            Diberikan kepada / This is proudly presented to:
-          </p>
-
-          <h2 className="text-3xl font-serif font-bold tracking-wide uppercase text-white">
-            {data.fullName}
-          </h2>
-
-          <div className="flex items-center justify-center gap-4 text-xs font-medium">
-            <span className="text-amber-200/90">
-              NISN: <strong>{data.nisn}</strong>
-            </span>
-            <span className="text-slate-500">•</span>
-            <span className="text-amber-200/90">
-              No. Registrasi: <strong>{data.registrationNo}</strong>
-            </span>
-            <span className="text-slate-500">•</span>
-            <span className="text-amber-200/90">
-              Jalur: <strong>{data.registrationTrack}</strong>
-            </span>
-          </div>
-
-          <div className="max-w-2xl mx-auto text-xs leading-relaxed text-center pt-2 text-slate-200/90">
-            Berdasarkan Keputusan Panitia Seleksi PPDB, yang bersangkutan telah memenuhi seluruh kriteria
-            kelayakan dan secara resmi dinyatakan <strong className="text-amber-300">LULUS</strong> serta{' '}
-            <strong className="text-amber-300">DITERIMA</strong> sebagai Santri Baru pada{' '}
-            <strong>Pesantren Tahfidz Qur&apos;an dan Digital Arrahman</strong>.
-          </div>
-        </div>
-
-        {/* Footer: QR Code, Gold Seal Badge, Signature */}
-        <div className="grid grid-cols-3 items-end pt-2 border-t border-amber-500/30">
-          {/* Left: QR Code Verification */}
-          <div className="text-left flex items-center gap-2.5">
-            <div className="p-1 rounded bg-white/10 border border-amber-400/40 text-amber-300">
-              <QrCode className="h-8 w-8" />
-            </div>
-            <div className="space-y-0.5">
-              <span className="text-[9px] font-bold block text-white">
-                VALIDASI DIGITAL
-              </span>
-              <span className="text-[8px] block text-slate-400">
-                Dokumen sah diterbitkan sistem PPDB
-              </span>
-            </div>
-          </div>
-
-          {/* Center: Gold Seal Emblem */}
-          <div className="flex flex-col items-center justify-center">
-            <div className="w-12 h-12 rounded-full border-2 border-amber-400 bg-gradient-to-br from-amber-300 via-amber-500 to-amber-700 text-slate-950 flex flex-col items-center justify-center shadow-lg">
-              <Award className="h-4 w-4" />
-              <span className="text-[6px] font-extrabold uppercase tracking-tighter">OFFICIAL</span>
-            </div>
-            <span className="text-[8px] font-semibold mt-0.5 tracking-wider text-amber-300">
-              PPDB PTDARRAHMAN 2026
-            </span>
-          </div>
-
-          {/* Right: Signature */}
-          <div className="text-right space-y-0.5">
-            <p className="text-[9px] text-slate-300">
-              {data.location}, {data.dateStr}
-            </p>
-            <div className="h-8 flex items-center justify-end pr-2">
-              <span className="font-serif italic text-emerald-300 text-xs font-semibold opacity-90">
-                Dr. H. Abdurrahman, M.A.
-              </span>
-            </div>
-            <p className="text-xs font-bold underline text-white">
-              {data.directorName}
-            </p>
-            <p className="text-[9px] text-amber-200/80">
-              Pengasuh / Direktur Pesantren
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}

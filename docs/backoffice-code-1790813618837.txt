@@ -1,23 +1,22 @@
-[ADMIN LOGIN BACKOFFICE]
-       │
-       ▼
+﻿[ADMIN LOGIN BACKOFFICE]
+       â”‚
+       â–¼
 [DASHBOARD UTAMA ADMIN]
-       │
-       ├─────────────────────┬─────────────────────┬─────────────────────┬─────────────────────┬─────────────────────┬──────────────────────────┐
-       ▼                     ▼                     ▼                     ▼                     ▼                     ▼
-[1. KELOLA GELOMBANG] [2. KELOLA TEMPLATE & LoA] [3. KELOLA RUBRIK]  [4. KELOLA SESI TAHFIDZ] [5. KELOLA SESI WAWANCARA] [6. PENGATURAN TIU] ◄── (BARU)
+       â”‚
+       â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+       â–¼                     â–¼                     â–¼                     â–¼                     â–¼                     â–¼
+[1. KELOLA GELOMBANG] [2. KELOLA TEMPLATE & LoA] [3. KELOLA RUBRIK]  [4. KELOLA SESI TAHFIDZ] [5. KELOLA SESI WAWANCARA] [6. PENGATURAN TIU] â—„â”€â”€ (BARU)
 - Set Buka/Tutup      - Generate Teks LoA        - Kriteria Nilai    - Set Jadwal (Tgl/Jam)   - Set Jadwal (Tgl/Jam)     - Google Form URL
-- Harga Formulir      - Upload Background SKD    - Bobot Nilai (%)   - Set Penguji            - Set Interviewer          - Webhook Secret
 - Diskon Gelombang    - *Preview Template LoA*   - Form Evaluator    - Mode Online/Offline    - Mode Online/Offline      - Petunjuk Apps Script
 - Set Batas Slot /      *(Cek Sblm Publish)*       (Tahfidz, TIU,    - Link Zoom / Ruangan    - Link Zoom / Ruangan        (Dokumentasi)
   Kuota Pendaftar     - Set Teks Non-Refundable     Wawancara)
 - Set Diskon untuk      (Hardcoded)
   {X} Pendaftar Awal
 - Set Minimal DP
-       │                     │                     │                     │                     │                     │
-       └─────────────────────┴──────────────┬──────┴─────────────────────┴─────────────────────┴─────────────────────┘
-                                            │
-                                            ▼
+       â”‚                     â”‚                     â”‚                     â”‚                     â”‚                     â”‚
+       â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                            â”‚
+                                            â–¼
                        [PENDAFTARAN DIBUKA JIKA ADA GELOMBANG AKTIF YANG SIAP]
 Gelombang siap jika periode induk aktif, tanggal pendaftaran berlaku, dan kuota pembayaran formulir belum penuh. Template LoA bukan syarat pendaftaran dibuka.
 

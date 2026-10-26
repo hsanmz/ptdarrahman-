@@ -3,7 +3,7 @@
 Aturan bisnis (lihat AGENTS.md):
 
 - Seluruh halaman operasional admin PPDB (Data Pendaftar, Verifikasi Dokumen,
-  Pembayaran Formulir, Pembayaran Tahap 2, Session 1:1, Hasil Pendaftaran,
+  Pembayaran Formulir, Jadwal Seleksi, Jadwal Wawancara, Hasil Pendaftaran,
   Review LoA) hanya menampilkan data dari **periode yang sedang aktif** — yaitu
   semua gelombang yang berada di dalam periode tersebut, berapa pun gelombangnya.
 - Bila tidak ada periode aktif, halaman otomatis kosong.

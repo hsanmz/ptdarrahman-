@@ -57,6 +57,9 @@ export default function App() {
     loadFavicon()
     const es = new EventSource(`${api.API_BASE}/companyprofile/events`)
     es.addEventListener('change', loadFavicon)
+    es.onerror = () => {
+      // EventSource browser otomatis reconnect jika server restart / network drop
+    }
     return () => es.close()
   }, [])
 

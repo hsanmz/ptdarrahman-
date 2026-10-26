@@ -72,7 +72,7 @@ function SelectionStatusBadge({ status }: { status?: string }) {
 const headBase = 'h-11 text-[11px] font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap align-middle'
 
 export default function ApplicantsTable({ applicants, loading, hasActivePeriod, showSelectionColumn = false, onRowClick }: ApplicantsTableProps) {
-  const totalCols = showSelectionColumn ? 7 : 6
+  const totalCols = showSelectionColumn ? 6 : 5
 
   return (
     <Table className="w-full min-w-[880px] xl:min-w-0 xl:table-fixed">
@@ -82,11 +82,10 @@ export default function ApplicantsTable({ applicants, loading, hasActivePeriod, 
         mulai `xl` tabel dikunci `table-fixed` dengan proporsi di bawah.
       */}
       <colgroup>
-        <col className={showSelectionColumn ? 'xl:w-[22%]' : 'xl:w-[29%]'} />
-        <col className={showSelectionColumn ? 'xl:w-[20%]' : 'xl:w-[25%]'} />
-        <col className={showSelectionColumn ? 'xl:w-[10%]' : 'xl:w-[12%]'} />
-        <col className={showSelectionColumn ? 'xl:w-[13%]' : 'xl:w-[14%]'} />
-        <col className={showSelectionColumn ? 'xl:w-[15%]' : 'xl:w-[14%]'} />
+        <col className={showSelectionColumn ? 'xl:w-[26%]' : 'xl:w-[34%]'} />
+        <col className={showSelectionColumn ? 'xl:w-[22%]' : 'xl:w-[28%]'} />
+        <col className={showSelectionColumn ? 'xl:w-[15%]' : 'xl:w-[16%]'} />
+        <col className={showSelectionColumn ? 'xl:w-[17%]' : 'xl:w-[16%]'} />
         {showSelectionColumn && <col className="xl:w-[14%]" />}
         <col className="xl:w-[6%]" />
       </colgroup>
@@ -94,7 +93,6 @@ export default function ApplicantsTable({ applicants, loading, hasActivePeriod, 
         <TableRow className="hover:bg-transparent">
           <TableHead className={cn(headBase, 'px-4')}>Pendaftar</TableHead>
           <TableHead className={cn(headBase, 'px-4')}>Kontak</TableHead>
-          <TableHead className={cn(headBase, 'px-2.5')}>Jalur</TableHead>
           <TableHead className={cn(headBase, 'px-2.5')}>Pembayaran</TableHead>
           <TableHead className={cn(headBase, 'px-2.5')}>Dokumen</TableHead>
           {showSelectionColumn && <TableHead className={cn(headBase, 'px-2.5')}>Seleksi</TableHead>}
@@ -154,20 +152,6 @@ export default function ApplicantsTable({ applicants, loading, hasActivePeriod, 
                     {a.phone || 'Nomor WA belum diisi'}
                   </div>
                 </div>
-              </TableCell>
-
-              {/* Jalur */}
-              <TableCell className="px-2.5 py-3.5">
-                {a.registration_path ? (
-                  <span
-                    className="inline-flex items-center rounded-md bg-slate-100 px-2 py-1 text-[11px] font-semibold text-slate-600 ring-1 ring-inset ring-slate-200 whitespace-nowrap"
-                    title={humanize(a.registration_path)}
-                  >
-                    {humanize(a.registration_path)}
-                  </span>
-                ) : (
-                  <span className="text-sm text-slate-300">—</span>
-                )}
               </TableCell>
 
               {/* Pembayaran */}

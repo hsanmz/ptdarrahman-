@@ -1,14 +1,14 @@
-# Panduan Agent — PPDB Ar-Rahman
+﻿# Panduan Agent â€” PPDB Ar-Rahman
 
-> Dokumen ini adalah panduan utama bagi AI agent yang bekerja di monorepo ini. Gunakan sebagai referensi pertama sebelum membaca kode. Selalu prioritaskan dokumen di `docs/` sebagai acuan aturan bisnis terbaru — jangan menerapkan flow lama dari arsip kode atau README lama tanpa konfirmasi.
+> Dokumen ini adalah panduan utama bagi AI agent yang bekerja di monorepo ini. Gunakan sebagai referensi pertama sebelum membaca kode. Selalu prioritaskan dokumen di `docs/` sebagai acuan aturan bisnis terbaru â€” jangan menerapkan flow lama dari arsip kode atau README lama tanpa konfirmasi.
 
 ---
 
-## 📑 Daftar Isi
+## ðŸ“‘ Daftar Isi
 
 1. [Status Kebutuhan Produk](#status-kebutuhan-produk)
 2. [Ruang Lingkup Sistem](#ruang-lingkup-sistem)
-3. [Alur 10 Tahap Pendaftar](#alur-10-tahap-pendaftar)
+3. [Alur Tahap Pendaftar](#alur-tahap-pendaftar)
 4. [Aturan Bisnis Kritis](#aturan-bisnis-kritis)
 5. [Arsitektur Database & Model](#arsitektur-database--model)
 6. [Konvensi Pengkodean](#konvensi-pengkodean)
@@ -34,33 +34,35 @@ Sistem PPDB Pesantren Tahfidz Qur'an dan Digital Ar-Rahman menaungi **Konfiguras
 
 Admin/Panitia menyiapkan komponen operasional sebelum pendaftaran dibuka:
 
-- **Gelombang:** tanggal buka/tutup, harga formulir, kuota pendaftar, diskon komponen DP/gedung/SPP, diskon X pendaftar pertama, dan minimal DP.
-- **Template dan LoA:** generate dan preview LoA sebelum publish, latar SKD, dan klausul dana tidak dapat dikembalikan (*non-refundable*).
-- **Rubrik Penilaian:** kriteria, bobot, dan formulir evaluator Tahfidz serta Wawancara. Nilai TIU berasal otomatis dari paket pilihan ganda dan webhook — admin **tidak** menginput nilai TIU manual.
-- **Sesi 1:1 Tahfidz:** penjadwalan, penguji, mode online/offline, tautan Zoom atau lokasi tatap muka.
-- **Sesi 1:1 Wawancara:** penjadwalan, pewawancara, mode online/offline, tautan Zoom atau lokasi tatap muka.
-- **Pengaturan TIU Global:** URL pre-filled Google Form (dengan placeholder `{token}`), webhook secret, durasi tes (menit), dan integrasi Apps Script untuk sinkronisasi skor secara real-time. Pengaturan TIU bersifat **global**, bukan per gelombang.
+- **Periode:** nama periode, tahun ajaran, dan master komponen biaya pendidikan (uang pangkal, SPP, seragam, matrikulasi, dll.) yang berlaku standar untuk seluruh gelombang di bawahnya.
+- **Gelombang:** tanggal buka/tutup, harga formulir, kuota pendaftar, diskon X pendaftar pertama formulir, dan diskonasi per komponen biaya master (diskon reguler dan diskon pendaftar awal).
+- **Template dan LoA:** generate dan preview LoA sebelum publish serta klausul dana formulir tidak dapat dikembalikan (*non-refundable*).
+- **Rubrik Penilaian:** kriteria, bobot, dan formulir evaluator Tahfidz serta Wawancara.
+- **Bank Soal CBT (Akademik & Psikologi):** kelola bank soal per periode, kategori akademik dan psikologi, daftar soal pilihan ganda (MCQ A-E), kunci jawaban, bobot poin, dan durasi pengerjaan.
+- **Jadwal Seleksi CBT Massal:** penjadwalan ujian CBT per gelombang dan kloter/batch, PIN akses/session token, mode ujian online (Zoom) atau offline (Lab CBT).
+- **Pemantauan Ujian Real-Time:** pengawasan pengerjaan live (status peserta, sisa waktu, deteksi keluar tab/pelanggaran, auto-submit saat habis waktu, dan unfreeze peserta).
+- **Jadwal Seleksi Tahfidz:** penjadwalan ujian tahfidz massal per gelombang & batch untuk seluruh pendaftar, penguji, mode online/offline, tautan Zoom atau lokasi tatap muka.
+- **Jadwal Wawancara (Santri & Ortu/Wali):** penjadwalan terpadu satu waktu untuk wawancara calon santri dan orang tua/wali santri (komitmen pendidikan & kesiapan santri).
+- **Batching & Cutoff H-1:** pengelompokan jadwal seleksi per batch/kloter dengan cutoff pendaftaran 24 jam sebelum ujian batch dimulai, serta sistem automated reminder WhatsApp H-2, H-1, dan 1 jam sebelum ujian.
 
 ---
 
-## Alur 10 Tahap Pendaftar
+## Alur Tahap Pendaftar
 
-Pendaftar melewati tahapan pendaftaran secara berurutan dan terstruktur:
+Pendaftar melewati tahapan pendaftaran secara berurutan dan terstruktur, yang **berakhir tuntas pada penandatanganan LoA**:
 
 | # | Tahap | Aksi Kunci | Endpoint Terkait |
 |---|---|---|---|
-| 1 | **Pendaftaran Akun (7 Bagian)** | Pilih Jalur, Identitas Santri, Data Ortu/Wali, Kontak, Domisili, Kuesioner Kesehatan (10 soal), Pernyataan | `POST /ppdb/register` |
-| 2 | **Bayar Formulir (Pakasir v2)** | QRIS dinamis → kuota berkurang → kuitansi terbit | `POST /ppdb/payment/create-invoice` |
-| 3 | **Upload Dokumen** | NISN, KK, Akte, Pas Foto + dokumen jalur khusus | `POST /ppdb/documents/upload` |
-| 4 | **Ujian TIU (SEB)** | Unduh `.seb` → kunci layar → Google Form → Apps Script webhook | `POST /ppdb/webhook/tiu` |
-| 5 | **Booking Tahfidz** | Pilih slot jadwal + penguji (online/offline) | `POST /ppdb/sessions/tahfidz/book` |
-| 6 | **Booking Wawancara** | Terbuka otomatis setelah nilai Tahfidz diinput | `POST /ppdb/sessions/interview/book` |
-| 7 | **Pengumuman + LoA** | Unduh LoA → tanda tangan digital pendaftar + orang tua | `POST /ppdb/applicants/me/sign-loa` |
-| 8 | **Bayar DP + Cicilan** | QRIS DP Pakasir v2 → setup skema cicilan | `POST /ppdb/payment/dp/create-invoice` |
-| 9 | **SKD + Grup WA** | DP lunas → SKD `REG-{YYYYMMDD}-{XXXX}` → tautan WA Group | `GET /ppdb/applicants/me/skd` |
-| 10 | **Profil Mandiri** | Update data + kuesioner kesehatan, kelola avatar, pantau sesi | `PUT /ppdb/applicants/me` |
+| 1 | **Pendaftaran Akun (6 Bagian)** | Identitas Santri, Data Ortu/Wali Lengkap, Kontak, Domisili, Kuesioner Kesehatan (10 soal), Pernyataan | `POST /ppdb/register` |
+| 2 | **Bayar Formulir (Pakasir v2)** | QRIS dinamis â†’ kuota berkurang atomik â†’ kuitansi resmi ber-HMAC terbit | `POST /payment/create-qris` |
+| 3 | **Upload Dokumen** | NISN, KK, Akte, Pas Foto, KTP Orang Tua/Wali, 4 Rapor Terakhir (diverifikasi panitia di backoffice) | `POST /ppdb/documents/upload` |
+| 4 | **Ujian Seleksi (Akademik, Psikologi, Tahfidz)** | Akses ujian seleksi terpadu sesuai jadwal batch yang ditentukan otomatis | `POST /cbt/exam/auth`, `POST /cbt/exam/submit`, `GET /selection/applicants/me/sessions` |
+| 5 | **Wawancara Terpadu (Santri & Ortu)** | Wawancara terpadu calon santri dan orang tua/wali dalam satu jadwal bersamaan | `GET /selection/applicants/me/sessions` |
+| 6 | **Pengumuman + LoA Digital** | Panitia rilis hasil kelulusan seleksi terpadu â†’ pendaftar unduh LoA â†’ tanda tangan digital santri & orang tua (Alur PPDB Tuntas, `is_locked = true`) | `POST /ppdb/applicants/me/sign-loa` |
+| 7 | **Penandatanganan LoA** | Pendaftar dan orang tua/wali menandatangani LoA secara digital; alur PPDB selesai | `POST /ppdb/applicants/me/sign-loa` |
+| 8 | **Profil Mandiri & Keamanan** | Update profil & kuesioner kesehatan (selama belum locked), kelola avatar, ganti password, pantau sesi login perangkat aktif | `PUT /ppdb/applicants/me` |
 
-> **is_locked:** Setelah LoA resmi terbit dan ditandatangani, flag `is_locked = true` dikunci. Pendaftar tidak dapat mengubah data formulir atau kuesioner kesehatan setelah status ini.
+> **is_locked:** Setelah LoA resmi terbit dan ditandatangani, flag `is_locked = true` dikunci. Pendaftar tidak dapat mengubah data formulir atau kuesioner kesehatan setelah status ini. Alur PPDB telah tuntas.
 
 ---
 
@@ -70,13 +72,20 @@ Pendaftar melewati tahapan pendaftaran secara berurutan dan terstruktur:
 
 - **Periode Tunggal:** Hanya satu periode aktif secara global. Mengaktifkan periode lain menonaktifkan periode dan gelombang sebelumnya.
 - **Gelombang Tunggal:** Dalam satu periode hanya boleh ada satu gelombang aktif. Mengaktifkan gelombang lain menggantikan gelombang aktif sebelumnya.
-- **Penautan Otomatis:** Pendaftar otomatis masuk ke gelombang aktif satu-satunya — tidak ada pilihan manual.
+- **Penautan Otomatis:** Pendaftar otomatis masuk ke gelombang aktif satu-satunya â€” tidak ada pilihan manual.
+
+### Master Biaya Periode & Diskonasi Gelombang
+
+- **Master Biaya di Periode:** Seluruh master komponen biaya masuk / biaya pendidikan (uang pangkal, SPP, seragam, dll.) dikonfigurasi di level Periode (`ppdb_period_fee_items`). Setiap gelombang dalam periode otomatis mewarisi komponen biaya standar yang sama.
+- **Gelombang Cukup Diskonasi:** Gelombang (`ppdb_waves`) tidak membuat komponen biaya dari nol, melainkan hanya mengatur diskonasi per komponen biaya periode (`ppdb_wave_fee_discounts`): Diskon Reguler (persen/nominal), Diskon Pendaftar Awal (Early Bird persen/nominal), serta kuota diskon pendaftar awal (`early_discount_quota`).
+- **Biaya Pendidikan Sebagai Informasi:** Biaya pendidikan dihitung dan disajikan secara transparan sebagai rincian resmi pada Letter of Acceptance (LoA) calon santri yang lulus.
+- **Pembayaran di Luar Aplikasi:** Penyetoran biaya pendidikan dilakukan **di luar aplikasi** (transfer rekening resmi PTDARRAHMAN / tunai ke kantor bendahara pesantren). Di dalam portal PPDB pendaftar **tidak ada** pembayaran online tahap 2, dan alur pendaftaran tuntas saat penandatanganan LoA.
 
 ### Kuota Atomik & Penutupan Otomatis
 
 - Kuota dan diskon X pendaftar awal dihitung dari pembayaran formulir yang **sukses** (bukan dari pendaftaran akun).
 - Saat kuota tercapai: gelombang ditutup otomatis, invoice pending dibatalkan, dan WA reminder dihentikan.
-- **Pengecualian pembayaran terlambat:** jika webhook sukses tiba setelah kuota habis dan invoice dibatalkan → tandai sebagai *exception* untuk pemeriksaan admin. **Jangan** memindahkan pendaftar ke gelombang lain secara otomatis.
+- **Pengecualian pembayaran terlambat:** jika webhook sukses tiba setelah kuota habis dan invoice dibatalkan â†’ tandai sebagai *exception* untuk pemeriksaan admin. **Jangan** memindahkan pendaftar ke gelombang lain secara otomatis.
 
 ### Bebas Jenjang Pendidikan
 
@@ -84,11 +93,11 @@ Pendaftar melewati tahapan pendaftaran secara berurutan dan terstruktur:
 - Tidak ada pemilihan jenjang di mana pun: formulir registrasi, dashboard pendaftar, konfigurasi gelombang, maupun halaman publik.
 - Pendaftar tidak dapat memilih, mengisi, atau mengubah jenjang.
 - **Jangan** menambah field/whitelist jenjang baru di backend maupun UI.
-- Jika jenjang perlu dicantumkan di dokumen resmi (LoA, SKD), perlakukan sebagai atribut tetap institusi dari satu konfigurasi tingkat sekolah — **bukan input pengguna**.
+- Jika jenjang perlu dicantumkan di dokumen resmi LoA, perlakukan sebagai atribut tetap institusi dari satu konfigurasi tingkat sekolah â€” **bukan input pengguna**.
 
 ### Kuesioner Kesehatan (Pengganti Medcheck)
 
-- Diisi sendiri oleh pendaftar saat registrasi awal di `/register` — **bukan** oleh petugas medis.
+- Diisi sendiri oleh pendaftar saat registrasi awal di `/register` â€” **bukan** oleh petugas medis.
 - Struktur **10 pertanyaan baku:** riwayat penyakit kronis, diagnosis kondisi tertentu, alergi, pengobatan rutin, keterbatasan fisik, riwayat rawat inap (2 tahun terakhir), kebutuhan khusus belajar, nama kontak darurat, hubungan kontak darurat, nomor telepon darurat.
 - Pertanyaan Ya/Tidak membuka kolom keterangan kondisional. Keterangan pada jawaban "Tidak" dikosongkan dan tidak dikirim.
 - Validasi kelengkapan dijalankan ulang di backend saat pendaftaran.
@@ -97,10 +106,29 @@ Pendaftar melewati tahapan pendaftaran secara berurutan dan terstruktur:
 
 ### Arsip & Dossier
 
-- Filter pencarian lintas periode dan gelombang **hanya ada** di halaman `/admin/arsip` — tidak ditambahkan ke tabel operasional lain.
-- Dossier lengkap: biodata, dokumen + riwayat verifikasi, hasil TIU, nilai sesi 1:1, keputusan kelulusan, LoA bertanda tangan, riwayat pembayaran & cicilan, SKD.
+- Filter pencarian lintas periode dan gelombang **hanya ada** di halaman `/admin/arsip` â€” tidak ditambahkan ke tabel operasional lain.
+- Dossier lengkap: biodata, dokumen + riwayat verifikasi, nilai seleksi & wawancara, keputusan pendaftaran, LoA bertanda tangan, dan riwayat pembayaran formulir.
 - Mendukung unduhan per berkas dan unduhan paket ZIP satu-klik.
 - Akses dossier dibatasi izin khusus dan mencatat log audit alamat IP admin.
+
+### Standar Penulisan Nama Institusi & Entitas (Naming Convention)
+
+Wajib dipatuhi oleh seluruh developer dan AI agent di semua aplikasi (`apps/api`, `apps/ppdb`, `apps/companyprofile`, `apps/superadmin`, `packages/*`, dan `docs/`):
+
+1. **Nama Resmi Lembaga (Utuh & Baku):**
+   - Gunakan selalu: **`Pesantren Tahfidz Qur'an dan Digital Ar-Rahman`** (atau huruf kapital penuh pada Kop dokumen: **`PESANTREN TAHFIDZ QUR'AN DAN DIGITAL AR-RAHMAN`**).
+   - **JANGAN** pernah mengubah, memotong, atau menambahkan kata baru di depan/belakang nama resmi ini (misal: *jangan* menulis `PTDARRAHMAN (Pesantren Tahfidz Qur'an dan Digital Ar-Rahman)`). Jika ada nama lengkap ini di kode atau dokumen, biarkan tetap utuh apa adanya.
+2. **Singkatan / Nama Entitas Pendek:**
+   - Gunakan selalu: **`PTDARRAHMAN`** (atau **`PTD ARRAHMAN`** / **`PTD Ar-Rahman`**).
+   - Digunakan untuk:
+     - Branding aplikasi & judul tab (contoh: *Superadmin Panel - PTDARRAHMAN*, *PPDB PTDARRAHMAN*).
+     - Rincian kanal pembayaran resmi di luar aplikasi: *Rekening Resmi PTDARRAHMAN*, *Kantor Administrasi & Bendahara PTDARRAHMAN*.
+     - Footer surat & watermark sistem: *Letter of Acceptance (LoA) Resmi - PTDARRAHMAN*, *Sistem Resmi PPDB PTDARRAHMAN*.
+     - Penyebutan singkat profil: *PTDARRAHMAN*.
+3. **KATA YANG DILARANG KERAS DIGUNAKAN:**
+   - âŒ **DILARANG** menulis: **`Yayasan Pesantren Ar-Rahman`** atau **`Yayasan Pesantren Ar Rahman`**.
+   - âŒ **DILARANG** menulis: **`Pesantren Ar-Rahman`** atau **`Pesantren Ar Rahman`** sebagai sebutan entitas mandiri tanpa kelanjutan *Tahfidz Qur'an dan Digital*.
+   - Jika menemukan kata-kata terlarang di atas pada kode lama atau template teks, wajib diganti menjadi **`PTDARRAHMAN`**.
 
 ---
 
@@ -111,28 +139,28 @@ Model SQLAlchemy dikelompokkan per domain di `apps/api/src/models/`:
 | File Model | Domain | Tabel Utama |
 |---|---|---|
 | `auth.py` | Autentikasi & Pengguna | `users`, `user_sessions`, `roles`, `permissions`, `role_permissions` |
-| `ppdb.py` | PPDB Inti | `periods`, `waves`, `applicants`, `health_questionnaires`, `documents`, `document_verifications` |
-| `selection.py` | Seleksi & Penilaian | `tiu_settings`, `tiu_results`, `rubrics`, `rubric_criteria`, `session_schedules`, `session_bookings`, `session_scores` |
-| `payment.py` | Pembayaran | `invoices`, `payments`, `installment_plans`, `installment_payments` |
+| `ppdb.py` | PPDB Inti | `periods`, `waves`, `applicants`, `health_questionnaires`, `documents`, `document_verifications`, `period_fee_items`, `wave_fee_discounts` |
+| `selection.py` | Seleksi & Wawancara | `selection_categories`, `selection_criteria`, `selection_sessions`, `selection_results`, `selection_scores` |
+| `cbt.py` | Ujian CBT (Akademik & Psikologi) | `ppdb_exam_banks`, `ppdb_exam_questions`, `ppdb_exam_options`, `ppdb_exam_schedules`, `ppdb_exam_attempts`, `ppdb_exam_answers` |
+| `payment.py` | Pembayaran Formulir | `invoices`, `payments` |
 | `content.py` | CMS Company Profile | `posts`, `programs`, `staff`, `facilities`, `galleries`, `settings` |
 | `notification.py` | Notifikasi & Log | `notification_logs`, `wa_jobs`, `activity_logs` |
-| `loa_skd.py` | Dokumen Kelulusan | `loa_templates`, `loa_signatures`, `skd_records` |
 
-**Konvensi migrasi:** Gunakan Alembic (`apps/api/alembic/`). Setiap perubahan skema harus melalui file migrasi — **jangan** `ALTER TABLE` langsung ke database produksi.
+**Konvensi migrasi:** Gunakan Alembic (`apps/api/alembic/`). Setiap perubahan skema harus melalui file migrasi â€” **jangan** `ALTER TABLE` langsung ke database produksi.
 
 ---
 
 ## Konvensi Pengkodean
 
-### Backend (FastAPI — `apps/api/`)
+### Backend (FastAPI â€” `apps/api/`)
 
 Arsitektur berlapis (layered architecture):
 
 ```
 Router (src/routers/)
-  └──► Service (src/services/)
-         └──► Repository (src/repositories/)
-                └──► SQLAlchemy Model / Redis / External API
+  â””â”€â”€â–º Service (src/services/)
+         â””â”€â”€â–º Repository (src/repositories/)
+                â””â”€â”€â–º SQLAlchemy Model / Redis / External API
 ```
 
 | Lapisan | Lokasi | Tanggung Jawab |
@@ -145,23 +173,23 @@ Router (src/routers/)
 | **Schemas** | `src/schemas/` | Pydantic request/response schema |
 
 **Aturan:**
-- Router **tidak boleh** memanggil repository secara langsung — harus melalui service.
+- Router **tidak boleh** memanggil repository secara langsung â€” harus melalui service.
 - Service **tidak boleh** mengimport router atau schema response secara langsung.
-- Repository **tidak boleh** mengandung logika bisnis — hanya query data.
+- Repository **tidak boleh** mengandung logika bisnis â€” hanya query data.
 - Semua dependency injection menggunakan `Depends()` FastAPI.
 
-### Frontend (React — `apps/ppdb/`, `apps/superadmin/`)
+### Frontend (React â€” `apps/ppdb/`, `apps/superadmin/`)
 
 ```
 Page Component (src/pages/)
-  └──► Feature Component (src/components/<feature>/)
-         └──► API Hook (src/hooks/ atau src/services/)
-                └──► API Client (src/lib/api.ts)
+  â””â”€â”€â–º Feature Component (src/components/<feature>/)
+         â””â”€â”€â–º API Hook (src/hooks/ atau src/services/)
+                â””â”€â”€â–º API Client (src/lib/api.ts)
 ```
 
-- Gunakan TanStack Query untuk semua data fetching — jangan `useEffect` + `fetch` manual.
+- Gunakan TanStack Query untuk semua data fetching â€” jangan `useEffect` + `fetch` manual.
 - State global dengan Zustand; state lokal dengan `useState`/`useReducer`.
-- Komponen UI bersama berada di `packages/ui` — import dari `@repo/ui/...`.
+- Komponen UI bersama berada di `packages/ui` â€” import dari `@repo/ui/...`.
 
 ---
 
@@ -183,32 +211,46 @@ Page Component (src/pages/)
 | `POST` | `/ppdb/register` | Registrasi akun pendaftar baru |
 | `GET` | `/ppdb/applicants/me` | Data pendaftar yang sedang login |
 | `PUT` | `/ppdb/applicants/me` | Update profil & kuesioner kesehatan |
-| `POST` | `/ppdb/applicants/me/sign-loa` | Tanda tangan digital LoA |
-| `GET` | `/ppdb/applicants/me/skd` | Unduh SKD pasca-pelunasan DP |
+| `POST` | `/ppdb/applicants/me/sign-loa` | Tanda tangan digital LoA (Alur pendaftaran tuntas) |
 
-### Dokumen & TIU
+### Dokumen
 | Method | Path | Keterangan |
 |---|---|---|
 | `POST` | `/ppdb/documents/upload` | Upload dokumen persyaratan |
-| `GET` | `/ppdb/tiu/seb-config` | Unduh konfigurasi `.seb` untuk ujian |
-| `POST` | `/ppdb/webhook/tiu` | Webhook nilai TIU dari Apps Script |
 
-### Sesi 1:1
+### Seleksi & Wawancara
 | Method | Path | Keterangan |
 |---|---|---|
-| `GET` | `/ppdb/sessions/tahfidz/slots` | Daftar slot Tahfidz tersedia |
-| `POST` | `/ppdb/sessions/tahfidz/book` | Booking sesi Tahfidz |
-| `GET` | `/ppdb/sessions/interview/slots` | Daftar slot Wawancara tersedia |
-| `POST` | `/ppdb/sessions/interview/book` | Booking sesi Wawancara |
+| `GET` | `/selection/sessions` | Daftar jadwal sesi seleksi & wawancara per gelombang |
+| `POST` | `/selection/sessions` | Buat jadwal sesi seleksi atau wawancara massal baru |
+| `GET` | `/selection/sessions/{id}/evaluation` | Lembar evaluasi rubrik pendaftar di sesi |
+| `POST` | `/selection/applicants/{id}/move-session` | Pindah sesi pendaftar (reschedule) & kirim WA notifikasi baru |
 
-### Payment
+### CBT (Akademik & Psikologi)
 | Method | Path | Keterangan |
 |---|---|---|
-| `POST` | `/ppdb/payment/create-invoice` | Buat invoice formulir, generate QRIS |
-| `POST` | `/ppdb/payment/dp/create-invoice` | Buat invoice DP Tahap 2, generate QRIS |
+| `GET` | `/cbt/banks` | Daftar bank soal per kategori (akademik/psikologi) |
+| `POST` | `/cbt/banks/import` | Import file bank soal (MCQ pilihan ganda A-E) |
+| `GET` | `/cbt/schedules` | Daftar jadwal ujian CBT massal gelombang |
+| `POST` | `/cbt/schedules` | Buat jadwal ujian CBT per gelombang & batch |
+| `GET` | `/cbt/schedules/{id}/monitoring` | Live monitoring ujian (status peserta, sisa waktu, pelanggaran) |
+| `POST` | `/cbt/schedules/{id}/unfreeze` | Buka kunci peserta ujian yang ter-lock |
+| `POST` | `/cbt/exam/auth` | Gerbang autentikasi CBT (Password akun + PIN sesi) |
+| `GET` | `/cbt/exam/{schedule_id}/questions` | Ambil lembar soal CBT peserta |
+| `POST` | `/cbt/exam/answer` | Autosave jawaban per klik opsi |
+| `POST` | `/cbt/exam/violation` | Lapor pelanggaran tab switch > 5 detik |
+| `POST` | `/cbt/exam/sync-timer` | Sinkronisasi sisa waktu ujian peserta |
+| `POST` | `/cbt/exam/submit` | Selesai ujian & auto-grading skor akhir |
+| `GET` | `/cbt/exam/{schedule_id}/status` | Status pengerjaan ujian peserta |
+
+### Payment (Formulir)
+| Method | Path | Keterangan |
+|---|---|---|
+| `POST` | `/payment/create-qris` | Buat invoice formulir, generate QRIS Pakasir |
 | `POST` | `/payment/webhook` | Terima webhook Pakasir v2 |
-| `POST` | `/payment/webhook/pak-kasir` | Alternatif endpoint webhook Pakasir |
-| `GET` | `/payment/public-receipt/{id}` | Kuitansi publik (tanpa login) |
+| `POST` | `/payment/webhook/pak-kasir` | Endpoint webhook 1 Pintu Pakasir |
+| `GET` | `/payment/receipt/{id}` | Kuitansi pembayaran formulir |
+| `GET` | `/payment/public-receipt/{id}` | Kuitansi publik (verifikasi QR) |
 
 ### Admin Backoffice
 | Method | Path | Keterangan |
@@ -219,8 +261,12 @@ Page Component (src/pages/)
 | `GET` | `/admin/applicants` | Daftar pendaftar (gelombang aktif) |
 | `GET` | `/admin/applicants/{id}` | Detail pendaftar |
 | `PUT` | `/admin/documents/{id}/verify` | Verifikasi dokumen pendaftar |
-| `GET` | `/admin/pembayaran-tahap2/{applicantId}` | Detail tagihan & cicilan Tahap 2 |
 | `GET` | `/admin/arsip` | Arsip dossier lintas periode & gelombang |
+| `GET` | `/ppdb/periods/{id}/fee-items` | Daftar master komponen biaya periode |
+| `POST` | `/ppdb/periods/{id}/fee-items` | Tambah master komponen biaya periode |
+| `PUT` | `/ppdb/periods/{id}/fee-items/{item_id}` | Update master komponen biaya periode |
+| `DELETE` | `/ppdb/periods/{id}/fee-items/{item_id}` | Hapus master komponen biaya periode |
+| `PUT` | `/ppdb/waves/{id}/fee-discounts/{fee_item_id}` | Update diskon komponen biaya pada gelombang |
 
 ### Pencarian & Superadmin
 | Method | Path | Keterangan |
@@ -239,51 +285,38 @@ Page Component (src/pages/)
 
 ## Integrasi External
 
-### 💳 Pakasir API v2
+### ðŸ’³ Pakasir API v2
 - **File:** `apps/api/src/core/pakasir.py` & `src/services/payment_service.py`
-- **QRIS Dinamis:** Setiap transaksi (formulir atau DP) men-generate QRIS baru dengan batas waktu kedaluwarsa.
+- **QRIS Dinamis:** Pembayaran formulir men-generate QRIS baru dengan batas waktu kedaluwarsa.
 - **Webhook 1 Pintu:** `POST /payment/webhook` dan `POST /payment/webhook/pak-kasir`
   - Validasi header `X-Secret`
   - Pencocokan nominal
-  - Idempotency check — mencegah duplikasi saldo/kuota
-- **Kuitansi:** Setiap pembayaran yang terkonfirmasi menerbitkan kuitansi bertanda tangan HMAC.
+  - Idempotency check â€” mencegah duplikasi saldo/kuota
+- **Kuitansi:** Pembayaran formulir yang terkonfirmasi menerbitkan kuitansi bertanda tangan HMAC.
 
-### 🧪 Google Form + Apps Script (TIU)
-- **Alur:** Pendaftar buka Google Form via SEB → isi soal → submit → Apps Script otomatis `POST /ppdb/webhook/tiu`
-- **Konfigurasi Global:** URL pre-filled form dengan placeholder `{token}`, webhook secret, durasi tes (menit).
-- **Keamanan:** Webhook divalidasi dengan secret — reject request tanpa header yang valid.
-- **File panduan:** `docs/INTEGRASI_TIU_APPS_SCRIPT.md`
-
-### 🔒 Safe Exam Browser (SEB)
-- **Alur:** Pendaftar unduh file `.seb` dari dashboard → SEB mengunci seluruh desktop → buka Google Form pre-filled dengan token pendaftar.
-- **Token:** Disematkan otomatis di URL Google Form — pendaftar tidak perlu input manual.
-- **File panduan:** `docs/PANDUAN_UJIAN_TIU_SEB.md`
-
-### 🖼️ Cloudinary
+### ðŸ–¼ï¸ Cloudinary
 - **File:** `apps/api/src/core/cloudinary.py`
 - **Digunakan untuk:** Upload & serve gambar avatar pendaftar, logo institusi, foto staf, galeri, dan aset CMS.
-- **Dynamic branding:** Logo dan favicon diambil dinamis via `settingsService.getLogo()` — **jangan** hardcode path statis.
+- **Dynamic branding:** Logo dan favicon diambil dinamis via `settingsService.getLogo()` â€” **jangan** hardcode path statis.
 
-### 📱 WhatsApp (whatsapp-web.js)
-- **Arsitektur:** Core API enqueue job ke Redis → BullMQ consumer di `apps/whatsapp` → `whatsapp-web.js` kirim pesan.
-- **Event notifikasi:** Pembayaran formulir sukses, konfirmasi booking sesi, pengingat cicilan H-3 (via APScheduler), tautan WA Group pasca-SKD.
-- **Port internal:** `:3100` — tidak dipublikasikan ke host, hanya diakses dari jaringan Docker internal.
+### ðŸ“± WhatsApp (whatsapp-web.js)
+- **Arsitektur:** Core API enqueue job ke Redis â†’ BullMQ consumer di `apps/whatsapp` â†’ `whatsapp-web.js` kirim pesan.
+- **Event notifikasi:** Pembayaran formulir sukses, pengingat bayar formulir Senin, jadwal seleksi & wawancara terbit/berubah, pengumuman hasil kelulusan.
+- **Port internal:** `:3100` â€” tidak dipublikasikan ke host, hanya diakses dari jaringan Docker internal.
 - **Spesifikasi template:** `docs/notifikasi-code-1790904241894.md`
 
-### ⏰ Scheduler Cicilan (APScheduler)
+### â° Scheduler Maintenance
 - **File:** `apps/api/src/core/scheduler.py`
-- **Tugas:** Mendeteksi jatuh tempo cicilan dan mengirimkan notifikasi pengingat via WhatsApp H-3 sebelum tenggat.
-- **Pemberhentian otomatis:** Saat gelombang penuh (kuota tercapai), pengingat Senin dihentikan.
+- **Tugas:** Pembersihan token kedaluwarsa dan sesi ter-revoke secara berkala setiap jam.
 
 ---
 
 ## Integrasi Payment Gateway Pakasir API v2
 
 - Backend menggunakan integrasi resmi Pakasir API v2 (`apps/api/src/core/pakasir.py` & `src/services/payment_service.py`).
-- **QRIS Dinamis:** Setiap transaksi formulir atau pembayaran tahap 2 men-generate QRIS dengan batas waktu kedaluwarsa.
+- **QRIS Dinamis:** Setiap transaksi formulir men-generate QRIS dengan batas waktu kedaluwarsa.
 - **Webhook Verifikasi 1 Pintu:** Webhook diterima di `POST /payment/webhook` dan `POST /payment/webhook/pak-kasir`, divalidasi dengan header `X-Secret`, pencocokan nominal, dan pencatatan idempoten untuk mencegah duplikasi saldo/kuota.
-- **Kuitansi Resmi Publik:** Setiap pembayaran yang terkonfirmasi menerbitkan kuitansi resmi bertanda tangan digital HMAC token (`/kuitansi/:id` atau `/payment/public-receipt/{id}`).
-- **Penjadwal Cicilan:** Scheduler latar belakang (`apps/api/src/core/scheduler.py`) mendeteksi jatuh tempo cicilan pendaftar dan mengirimkan notifikasi pengingat via WhatsApp H-3 sebelum tenggat.
+- **Kuitansi Resmi Publik:** Setiap pembayaran formulir yang terkonfirmasi menerbitkan kuitansi resmi bertanda tangan digital HMAC token (`/kuitansi/:id` atau `/payment/public-receipt/{id}`).
 
 ---
 
@@ -294,17 +327,16 @@ Sistem menerapkan format cetak dan ekspor resmi A4 baku (`apps/ppdb/src/utils/ex
 | Dokumen | Fungsi | Isi |
 |---|---|---|
 | **Formulir Pendaftaran** | `exportApplicantForm` | Data diri, riwayat sekolah, keluarga, kuesioner kesehatan + stempel digital |
-| **Lembar Penilaian Evaluator** | `exportAssessment` | Skor TIU otomatis, nilai Tahfidz & Wawancara berbobot |
-| **Kuitansi Resmi Pembayaran** | `exportReceipt` | Nominal, tanggal, stempel digital, QR verifikasi HMAC |
-| **Surat Penerimaan (LoA)** | `exportLoa` | Klausul non-refundable, TTD digital orang tua + panitia, QR verifikasi |
-| **Surat Keterangan Diterima (SKD)** | `exportSkd` | Nomor `REG-{YYYYMMDD}-{XXXX}`, diterbitkan pasca-pelunasan DP |
+| **Lembar Penilaian Evaluator** | `exportAssessment` | Nilai Tahfidz & Wawancara berbobot |
+| **Kuitansi Resmi Pembayaran** | `exportReceipt` | Nominal formulir, tanggal, stempel digital, QR verifikasi HMAC |
+| **Surat Penerimaan (LoA)** | `exportLoa` | TTD digital orang tua + panitia, QR verifikasi, status tuntas penerimaan |
 
 ---
 
 ## Pencarian & Manajemen Sesi
 
 ### Pencarian Terpadu
-- **Core API (`GET /search/global`):** Endpoint pencarian modular lintas modul — pendaftar, berita, program, staf, pengguna sistem, dan log aktivitas.
+- **Core API (`GET /search/global`):** Endpoint pencarian modular lintas modul â€” pendaftar, berita, program, staf, pengguna sistem, dan log aktivitas.
 - **Superadmin Semantic Engine (`Ctrl+K`):** Dialog pencarian semantik cerdas untuk navigasi cepat halaman, pencarian data pendaftar, dan eksekusi tindakan instan.
 
 ### Manajemen Sesi Multi-Perangkat
@@ -316,8 +348,8 @@ Sistem menerapkan format cetak dan ekspor resmi A4 baku (`apps/ppdb/src/utils/ex
 
 ## Rute Publik Tanpa Login
 
-- `/kuitansi/:id` & `/receipt/:id` — Verifikasi keaslian kuitansi pembayaran resmi via QR code.
-- `/loa/:registrationNo` — Verifikasi keaslian Surat Penerimaan (LoA) calon santri resmi via QR code.
+- `/kuitansi/:id` & `/receipt/:id` â€” Verifikasi keaslian kuitansi pembayaran resmi via QR code.
+- `/loa/:registrationNo` â€” Verifikasi keaslian Surat Penerimaan (LoA) calon santri resmi via QR code.
 
 ---
 
@@ -331,12 +363,10 @@ Sistem menerapkan format cetak dan ekspor resmi A4 baku (`apps/ppdb/src/utils/ex
 | Docker Runbook Lokal | `docs/DOCKER_SETUP.md` | Deployment lokal WSL2 & Docker langkah per langkah |
 | Docker Runbook Production | `docs/DOCKER_PRODUCTION.md` | Panduan deployment VPS Ubuntu & Nginx Reverse Proxy |
 | Hero 3D Globe | `docs/HERO_3D_GLOBE.md` | Arsitektur Three.js dan optimasi bundle |
-| Integrasi Apps Script TIU | `docs/INTEGRASI_TIU_APPS_SCRIPT.md` | Pemasangan Apps Script Google Form TIU |
-| Panduan SEB | `docs/PANDUAN_UJIAN_TIU_SEB.md` | Instalasi dan penggunaan Safe Exam Browser |
 | Notifikasi WhatsApp | `docs/notifikasi-code-1790904241894.md` | Template dan event notifikasi WhatsApp |
 | Skrip & Tooling | `scripts/README.md` | Sinkronisasi Windows-WSL, normalisasi LF, tooling debug |
 | Panduan Agent API | `apps/api/AGENTS.md` | Arsitektur backend (FastAPI, Alembic, Pakasir v2, Repositories) |
-| Panduan Agent PPDB | `apps/ppdb/AGENTS.md` | Arsitektur frontend PPDB (10 rute tahapan, modal, backoffice) |
+| Panduan Agent PPDB | `apps/ppdb/AGENTS.md` | Arsitektur frontend PPDB (rute tahapan mandiri & backoffice) |
 | Panduan Agent Superadmin | `apps/superadmin/AGENTS.md` | Arsitektur panel Superadmin |
 | Panduan Agent Company Profile | `apps/companyprofile/AGENTS.md` | Arsitektur portal Company Profile & auth cookies |
 
@@ -344,22 +374,23 @@ Sistem menerapkan format cetak dan ekspor resmi A4 baku (`apps/ppdb/src/utils/ex
 
 ## Aturan Kerja & Konvensi
 
-- **Dynamic branding:** Logo dan favicon diambil dinamis dari API `settingsService.getLogo()` — **jangan** hardcode path logo statis.
+- **Dynamic branding:** Logo dan favicon diambil dinamis dari API `settingsService.getLogo()` â€” **jangan** hardcode path logo statis.
 - **Secret & Kredensial:** Simpan di file `.env` lokal masing-masing aplikasi. **Jangan pernah** commit file secret ke Git.
 - **Git:** Jangan commit atau membuat branch baru kecuali diminta secara eksplisit oleh user.
 - **Jenjang:** Jangan menambah field atau logika jenjang pendidikan di mana pun (lihat [Bebas Jenjang Pendidikan](#bebas-jenjang-pendidikan)).
-- **Arsip:** Filter lintas periode/gelombang hanya di `/admin/arsip` — jangan spread ke tabel operasional lain.
+- **Standar Naming:** Jangan gunakan kata `Yayasan Pesantren Ar-Rahman` atau `Pesantren Ar-Rahman` (tanpa lanjutan tahfidz). Selalu gunakan `PTDARRAHMAN` untuk singkatan entitas/rekening, dan `Pesantren Tahfidz Qur'an dan Digital Ar-Rahman` untuk nama lengkap institusi.
+- **Arsip:** Filter lintas periode/gelombang hanya di `/admin/arsip` â€” jangan spread ke tabel operasional lain.
 
 ### Keselarasan Port
 
 | Lingkungan | App | Port |
 |---|---|---|
 | **Docker Compose** | Company Profile | `:3000` |
-| **Docker Compose** | PPDB | `:5173` |
-| **Docker Compose** | Superadmin | `:5174` |
+| **Docker Compose** | Superadmin | `:5173` |
+| **Docker Compose** | PPDB | `:5174` |
 | **Docker Compose** | Core API | `:8080` |
 | **Docker Compose** | WhatsApp (internal) | `:3100` |
 | **Local Vite Dev** | Company Profile | `:3000` |
-| **Local Vite Dev** | PPDB | `:5174` |
 | **Local Vite Dev** | Superadmin | `:5173` |
+| **Local Vite Dev** | PPDB | `:5174` |
 | **Local Vite Dev** | Core API | `:8000` |

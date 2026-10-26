@@ -14,7 +14,6 @@ export interface ReceiptData {
   installment_number?: number | null
   applicant_name: string
   registration_number?: string
-  registration_path: string
   wave_name?: string
   amount: number
   payment_method: string
@@ -53,9 +52,9 @@ export default function OfficialReceiptCard({ receipt, showWatermark = true }: O
 
   const docTitle = receipt.payment_type_label || (
     receipt.payment_type === 'dp'
-      ? 'Kuitansi Uang Muka (DP) Tahap 2'
+      ? 'Kuitansi Pembayaran Formulir'
       : receipt.payment_type === 'installment'
-      ? `Kuitansi Cicilan Tahap 2 (Cicilan ke-${receipt.installment_number || 1})`
+      ? 'Kuitansi Pembayaran Formulir'
       : 'Kuitansi Pembayaran Formulir'
   )
 
@@ -76,7 +75,7 @@ export default function OfficialReceiptCard({ receipt, showWatermark = true }: O
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-emerald-300 shrink-0" />
             <span className="text-[11px] sm:text-xs font-bold tracking-wider text-emerald-200 uppercase leading-snug">
-              Pesantren Tahfidz Qur&apos;an dan Digital Arrahman
+              Pesantren Tahfidz Qur&apos;an dan Digital Ar-Rahman
             </span>
           </div>
           <h2 className="font-heading text-lg sm:text-2xl font-bold mt-1 text-white break-words">
@@ -105,9 +104,9 @@ export default function OfficialReceiptCard({ receipt, showWatermark = true }: O
             <p className="font-bold text-slate-900 mt-0.5 text-base break-words">{receipt.applicant_name}</p>
           </div>
           <div className="min-w-0">
-            <p className="text-muted-foreground text-xs font-medium">No. Registrasi / Jalur</p>
+            <p className="text-muted-foreground text-xs font-medium">No. Registrasi</p>
             <p className="font-semibold text-emerald-700 mt-0.5">
-              {receipt.registration_number ? `${receipt.registration_number} · ` : ''}{receipt.registration_path}
+              {receipt.registration_number || receipt.wave_name || 'PPDB'}
             </p>
           </div>
           <div className="min-w-0">

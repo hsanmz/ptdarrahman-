@@ -74,6 +74,7 @@ interface FormState {
   nisn: string
   nik: string
   previous_school: string
+  graduation_year: string
   // Kontak & Domisili
   phone: string
   province: string
@@ -108,6 +109,7 @@ const initialFormState: FormState = {
   nisn: '',
   nik: '',
   previous_school: '',
+  graduation_year: '',
   phone: '',
   province: '',
   city: '',
@@ -184,6 +186,7 @@ export default function ApplicantProfilePage() {
         nisn: appData.nisn || '',
         nik: appData.nik || '',
         previous_school: appData.previous_school || '',
+        graduation_year: appData.graduation_year || '',
         phone: appData.phone || '',
         province: appData.province || '',
         city: appData.city || '',
@@ -302,6 +305,7 @@ export default function ApplicantProfilePage() {
       nisn: applicant.nisn || '',
       nik: applicant.nik || '',
       previous_school: applicant.previous_school || '',
+      graduation_year: applicant.graduation_year || '',
       phone: applicant.phone || '',
       province: applicant.province || '',
       city: applicant.city || '',
@@ -491,7 +495,7 @@ export default function ApplicantProfilePage() {
                         )}
                       >
                         <GraduationCap className="h-3 w-3" />
-                        Jalur {applicant?.registration_path ? applicant.registration_path.toUpperCase() : 'REGULER'}
+                        {applicant?.wave_name || 'Santri Baru'}
                       </Badge>
                       {applicant?.payment_status === 'paid' ? (
                         <Badge variant="outline" className="text-[10px] px-2 py-0.5 font-semibold border-primary/30 bg-primary/10 text-primary rounded-full">
@@ -832,6 +836,18 @@ export default function ApplicantProfilePage() {
                             onChange={(e) => handleChange('previous_school', e.target.value)}
                             disabled={isLocked}
                             placeholder="Contoh: SD IT Ar-Rahman / MI Negeri"
+                            className="h-9 text-xs"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <FieldLabel icon={GraduationCap}>Tahun Kelulusan</FieldLabel>
+                          <Input
+                            value={form.graduation_year}
+                            onChange={(e) => handleChange('graduation_year', e.target.value.replace(/\D/g, '').slice(0, 4))}
+                            disabled={isLocked}
+                            placeholder="Contoh: 2024"
+                            maxLength={4}
                             className="h-9 text-xs"
                           />
                         </div>
@@ -1362,7 +1378,7 @@ export default function ApplicantProfilePage() {
         )}
       </div>
 
-      {/* ── KOLOM KANAN: Panel Sesi Perangkat (Sesuai Referensi TIU Admin PPDB & Shared Profile Page) ── */}
+      {/* ── KOLOM KANAN: Panel Sesi Perangkat ── */}
       <aside
         className="w-full lg:w-[380px] xl:w-[420px] shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-muted/30 dark:bg-muted/10 p-3.5 sm:p-4 md:p-6 flex flex-col overflow-visible lg:overflow-y-auto no-scrollbar [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}

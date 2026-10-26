@@ -56,9 +56,8 @@ PAGES = {
         ("penilaian", "Hasil Pendaftaran", "Award", 45),
         ("review-loa", "Review LoA", "FileCheck2", 50),
         ("periods", "Periode PPDB", "CalendarDays", 55),
-        ("pengumuman", "Preview LoA & SKD", "FileText", 60),
+        ("pengumuman", "Preview LoA", "FileText", 60),
         ("rubrik", "Rubrik Penilaian", "CheckSquare", 65),
-        ("tiu-settings", "Pengaturan TIU", "Timer", 70),
         ("arsip", "Arsip Pendaftar", "Archive", 75),
         ("notifications", "Notifikasi", "Bell", 80),
     ],
@@ -145,23 +144,6 @@ SITE_SETTINGS = [
 
 NOTIF_TEMPLATES = [
     {
-        "event_key": "welcome",
-        "label": "Selamat Datang & Kredensial Login",
-        "channel": "both",
-        "email_subject": "Selamat Datang di PPDB PT Darrahman",
-        "body": (
-            "Assalamu'alaikum Warahmatullahi Wabarakatuh,\n\n"
-            "Halo {nama_peserta}, pendaftaran Anda telah kami terima.\n\n"
-            "Berikut akun Anda untuk masuk ke sistem PPDB:\n"
-            "  Username: {username}\n"
-            "  Password: {password}\n"
-            "  Link Login: {link_login}\n\n"
-            "Segera lakukan pembayaran formulir pendaftaran sebelum "
-            "{batas_waktu_bayar}.\n\n"
-            "Terima kasih,\nPanitia PPDB Pesantren Tahfidz Qur'an dan Digital Ar-Rahman"
-        ),
-    },
-    {
         "event_key": "account_created",
         "label": "Akun Panel Dibuat (Kredensial Login)",
         "channel": "both",
@@ -210,62 +192,6 @@ NOTIF_TEMPLATES = [
         ),
     },
     {
-        "event_key": "payment_reminder",
-        "label": "Pengingat Pembayaran Formulir (saat daftar)",
-        "channel": "both",
-        "email_subject": "Pembayaran Formulir Pendaftaran PPDB",
-        "body": (
-            "Halo {nama_peserta},\n\n"
-            "Kami mengingatkan untuk segera menyelesaikan pembayaran formulir "
-            "pendaftaran PPDB "
-            "sebelum {batas_waktu_bayar}. Pendaftaran Anda akan hangus jika "
-            "melewati batas tersebut.\n\n"
-            "Lakukan pembayaran melalui: {link_pembayaran}\n\n"
-            "Terima kasih,\nPanitia PPDB Pesantren Tahfidz Qur'an dan Digital Ar-Rahman"
-        ),
-    },
-    {
-        "event_key": "payment_reminder_d7",
-        "label": "Pengingat Pembayaran H-7",
-        "channel": "both",
-        "email_subject": "Pengingat: Pembayaran Formulir PPDB",
-        "body": (
-            "Halo {nama_peserta},\n\n"
-            "Kami mengingatkan bahwa batas pembayaran formulir pendaftaran Anda adalah "
-            "{batas_waktu_bayar}. Segera selesaikan pembayaran agar pendaftaran "
-            "tidak hangus.\n\n"
-            "Lakukan pembayaran melalui: {link_pembayaran}\n\n"
-            "Terima kasih,\nPanitia PPDB Pesantren Tahfidz Qur'an dan Digital Ar-Rahman"
-        ),
-    },
-    {
-        "event_key": "payment_success",
-        "label": "Pembayaran Berhasil",
-        "channel": "both",
-        "email_subject": "Pembayaran Formulir PPDB Berhasil",
-        "body": (
-            "Halo {nama_peserta},\n\n"
-            "Pembayaran formulir pendaftaran Anda sebesar {nominal_bayar} telah "
-            "kami terima. "
-            "Anda kini dapat melanjutkan ke tahap upload dokumen persyaratan.\n\n"
-            "Terima kasih,\nPanitia PPDB Pesantren Tahfidz Qur'an dan Digital Ar-Rahman"
-        ),
-    },
-    {
-        "event_key": "payment_failed",
-        "label": "Pembayaran Gagal",
-        "channel": "both",
-        "email_subject": "Pembayaran Formulir PPDB Gagal",
-        "body": (
-            "Halo {nama_peserta},\n\n"
-            "Sayangnya pembayaran formulir pendaftaran Anda gagal diproses. "
-            "Silakan coba lagi "
-            "sebelum batas waktu {batas_waktu_bayar}.\n\n"
-            "Lakukan pembayaran melalui: {link_pembayaran}\n\n"
-            "Terima kasih,\nPanitia PPDB Pesantren Tahfidz Qur'an dan Digital Ar-Rahman"
-        ),
-    },
-    {
         "event_key": "payment_expired",
         "label": "Pendaftaran Hangus",
         "channel": "both",
@@ -276,32 +202,6 @@ NOTIF_TEMPLATES = [
             "melakukan pembayaran "
             "formulir hingga batas waktu yang ditentukan. Silakan mendaftar "
             "kembali pada gelombang berikutnya.\n\n"
-            "Terima kasih,\nPanitia PPDB Pesantren Tahfidz Qur'an dan Digital Ar-Rahman"
-        ),
-    },
-    {
-        "event_key": "document_reminder_d3",
-        "label": "Pengingat Upload Dokumen H-3",
-        "channel": "both",
-        "email_subject": "Pengingat: Upload Dokumen PPDB (H-3)",
-        "body": (
-            "Halo {nama_peserta},\n\n"
-            "Batas waktu upload dokumen persyaratan {nama_gelombang} tinggal "
-            "3 hari lagi. "
-            "Segera lengkapi dokumen Anda sebelum batas akhir.\n\n"
-            "Terima kasih,\nPanitia PPDB Pesantren Tahfidz Qur'an dan Digital Ar-Rahman"
-        ),
-    },
-    {
-        "event_key": "document_reminder_d1",
-        "label": "Pengingat Upload Dokumen H-1",
-        "channel": "both",
-        "email_subject": "Pengingat: Upload Dokumen PPDB (H-1)",
-        "body": (
-            "Halo {nama_peserta},\n\n"
-            "Batas waktu upload dokumen persyaratan {nama_gelombang} tinggal "
-            "1 hari lagi. "
-            "Segera lengkapi dokumen Anda sebelum batas akhir.\n\n"
             "Terima kasih,\nPanitia PPDB Pesantren Tahfidz Qur'an dan Digital Ar-Rahman"
         ),
     },
@@ -318,57 +218,7 @@ NOTIF_TEMPLATES = [
             "Terima kasih,\nPanitia PPDB Pesantren Tahfidz Qur'an dan Digital Ar-Rahman"
         ),
     },
-    {
-        "event_key": "document_rejected",
-        "label": "Dokumen Ditolak",
-        "channel": "both",
-        "email_subject": "Dokumen PPDB Anda Ditolak",
-        "body": (
-            "Halo {nama_peserta},\n\n"
-            "Mohon maaf, dokumen persyaratan Anda perlu diperbaiki.\n"
-            "Alasan: {alasan_penolakan}\n\n"
-            "Silakan perbaiki dan unggah ulang dokumen Anda.\n\n"
-            "Terima kasih,\nPanitia PPDB Pesantren Tahfidz Qur'an dan Digital Ar-Rahman"
-        ),
-    },
-    {
-        "event_key": "selection_reminder_d5",
-        "label": "Pengingat Seleksi H-5",
-        "channel": "both",
-        "email_subject": "Pengingat: Seleksi PPDB (H-5)",
-        "body": (
-            "Halo {nama_peserta},\n\n"
-            "Seleksi {nama_gelombang} akan dilaksanakan pada {tanggal_seleksi}. "
-            "Persiapkan diri Anda dengan baik.\n\n"
-            "Terima kasih,\nPanitia PPDB Pesantren Tahfidz Qur'an dan Digital Ar-Rahman"
-        ),
-    },
-    {
-        "event_key": "selection_reminder_d1",
-        "label": "Pengingat Seleksi H-1",
-        "channel": "both",
-        "email_subject": "Pengingat: Seleksi PPDB (H-1)",
-        "body": (
-            "Halo {nama_peserta},\n\n"
-            "Seleksi {nama_gelombang} akan dilaksanakan besok, {tanggal_seleksi}. "
-            "Pastikan Anda hadir tepat waktu.\n\n"
-            "Terima kasih,\nPanitia PPDB Pesantren Tahfidz Qur'an dan Digital Ar-Rahman"
-        ),
-    },
-    {
-        "event_key": "selection_result",
-        "label": "Pengumuman Hasil Seleksi",
-        "channel": "both",
-        "email_subject": "Hasil Seleksi PPDB",
-        "body": (
-            "Halo {nama_peserta},\n\n"
-            "Pengumuman hasil seleksi PPDB telah dirilis. Silakan cek status Anda "
-            "pada dashboard pendaftar.\n\n"
-            "Terima kasih,\nPanitia PPDB Pesantren Tahfidz Qur'an dan Digital Ar-Rahman"
-        ),
-    },
 ]
-
 
 def _now() -> str:
     from src.core.database import utcnow

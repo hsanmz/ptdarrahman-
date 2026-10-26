@@ -1,18 +1,15 @@
-import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import { Badge, Button, Card, CardDescription, CardHeader, CardTitle, Skeleton } from "@/components/ui"
+import { Badge, Card, CardDescription, CardHeader, CardTitle, Skeleton } from "@/components/ui"
 import { DocTrigger } from '@repo/ui'
 import {
   CheckCircle, Lock, Wallet, FileUp, Trophy, AlertCircle,
-  Compass, ArrowLeftRight, ShieldCheck, BookOpen, MessageSquare, ArrowRight,
-  CreditCard, DollarSign,
+  BookOpen, MessageSquare, ArrowRight,
 } from 'lucide-react'
 import { apiFetch } from '@/api/client'
 import { useQuery } from '@tanstack/react-query'
 import { useToast } from '@/components/Toast'
 import SupportFab from './components/SupportFab'
-import ChangePathModal from './components/ChangePathModal'
 import { cn } from '@/lib/utils'
 
 const STATUS_LABEL: Record<string, string> = {
@@ -33,8 +30,6 @@ export default function ApplicantDashboardPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  const [showChangePath, setShowChangePath] = useState(false)
-
   const transactionQuery = useQuery({
     queryKey: ['my-transaction'],
     queryFn: () => apiFetch<any>('/payment/my-transaction'),
@@ -50,9 +45,6 @@ export default function ApplicantDashboardPage() {
   const loading = transactionQuery.isLoading || documentsQuery.isLoading
 
   const inSelection = ['document_approved', 'selection', 'passed', 'failed'].includes(status)
-
-  // Banner Ganti Jalur tampil selama belum diverifikasi/lulus ke tahap selanjutnya
-  const canChangePath = !['document_approved', 'selection', 'passed', 'failed'].includes(status)
 
   const selectionQuery = useQuery({
     queryKey: ['my-selection'],
@@ -85,22 +77,19 @@ export default function ApplicantDashboardPage() {
 
   const contactInfo = contactQuery.data ?? null
 
-  const regPath = (applicant?.registration_path || '').toLowerCase()
-  const isTiuPath = ['reguler', 'tiu', 'tes', 'reguler_tiu'].includes(regPath) || regPath.includes('tiu')
-  const tiuScore = selectionQuery.data?.result?.scores?.find((s: any) =>
-    (s.criteria_name || '').toLowerCase().includes('tiu') ||
-    (s.category_name || '').toLowerCase().includes('tiu')
-  )?.score
   const hasTahfidzScore = selectionQuery.data?.sessionData?.has_tahfidz_score || false
   const hasInterviewScore = selectionQuery.data?.sessionData?.has_interview_score || false
 
-  const financials = transactionQuery.data?.financials
   const isLoaSigned = Boolean(applicant?.is_loa_signed || loaQuery.data?.is_loa_signed)
-  const isDpPaid = Boolean(financials?.dp_paid)
-  const isLunas = Boolean(financials?.is_lunas)
 
-  // Step definition dinamis (Granular) mengarah ke halaman baru/terpisah
-  const steps = isTiuPath ? [
+  const hasActiveSchedule = Boolean(
+    (selectionQuery.data?.sessionData?.all_schedules && selectionQuery.data.sessionData.all_schedules.length > 0) ||
+    selectionQuery.data?.sessionData?.tahfidz_session ||
+    selectionQuery.data?.sessionData?.interview_session
+  )
+
+  // Step definition dinamis (Granular) — alur berhenti sampai penandatanganan LoA resmi
+  const steps = [
     {
       number: 1,
       title: 'Pembayaran Formulir',
@@ -112,7 +101,7 @@ export default function ApplicantDashboardPage() {
     {
       number: 2,
       title: 'Upload Dokumen',
-      description: 'Mengunggah berkas persyaratan sesuai jalur pilihan.',
+      description: 'Mengunggah seluruh berkas persyaratan wajib.',
       icon: FileUp,
       status: ['document_approved', 'selection', 'passed', 'failed'].includes(status) ? 'completed' :
               applicant?.payment_status === 'paid' ? 'active' : 'locked',
@@ -120,90 +109,23 @@ export default function ApplicantDashboardPage() {
     },
     {
       number: 3,
-      title: 'Ujian TIU Online',
-      description: 'Tes Skolastik & Akademik via Safe Exam Browser (SEB).',
-      icon: ShieldCheck,
-      status: tiuScore !== undefined || ['passed', 'failed'].includes(status) ? 'completed' :
+      title: 'Tes Seleksi',
+      description: hasActiveSchedule
+        ? 'Jadwal dan hasil ujian seleksi akademik, psikologi, dan tahfidz.'
+        : 'Dokumen disetujui. Menunggu jadwal seleksi diterbitkan panitia.',
+      icon: BookOpen,
+      status: (hasTahfidzScore || selectionQuery.data?.result?.cbt_results?.akademik || ['passed', 'failed'].includes(status)) ? 'completed' :
               ['document_approved', 'selection'].includes(status) ? 'active' : 'locked',
-      path: '/applicant/ujian-tiu',
+      path: '/applicant/tes-seleksi',
     },
     {
       number: 4,
-      title: 'Seleksi Tahfidz (1:1)',
-      description: "Jadwal dan ujian tartil serta tahfidz Al-Qur'an.",
-      icon: BookOpen,
-      status: hasTahfidzScore || ['passed', 'failed'].includes(status) ? 'completed' :
-              ['document_approved', 'selection'].includes(status) && (tiuScore !== undefined) ? 'active' : 'locked',
-      path: '/applicant/seleksi-tahfidz',
-    },
-    {
-      number: 5,
-      title: 'Seleksi Wawancara (1:1)',
+      title: 'Wawancara',
       description: 'Wawancara calon santri dan orang tua/wali.',
       icon: MessageSquare,
       status: hasInterviewScore || ['passed', 'failed'].includes(status) ? 'completed' :
-              ['document_approved', 'selection'].includes(status) && hasTahfidzScore ? 'active' : 'locked',
-      path: '/applicant/seleksi-wawancara',
-    },
-    {
-      number: 6,
-      title: 'Hasil Kelulusan & LoA',
-      description: 'Pengumuman kelulusan dan penandatanganan LoA resmi.',
-      icon: Trophy,
-      status: status === 'passed' ? (isLoaSigned ? 'completed' : 'active') : status === 'failed' ? 'completed' : 'locked',
-      path: '/applicant/pengumuman',
-    },
-    {
-      number: 7,
-      title: 'Bayar DP & Sertifikat',
-      description: 'Pembayaran Uang Muka (DP) & klaim Sertifikat SKD resmi.',
-      icon: CreditCard,
-      status: status === 'passed' && isLoaSigned ? (isDpPaid ? 'completed' : 'active') : 'locked',
-      path: '/applicant/bayar-dp',
-    },
-    {
-      number: 8,
-      title: 'Pembayaran Tahap 2',
-      description: 'Monitoring sisa tagihan pendidikan dan cicilan bertahap.',
-      icon: DollarSign,
-      status: status === 'passed' && isDpPaid ? (isLunas ? 'completed' : 'active') : 'locked',
-      path: '/applicant/pembayaran-tahap2',
-    },
-  ] : [
-    {
-      number: 1,
-      title: 'Pembayaran Formulir',
-      description: 'Menyelesaikan pembayaran pendaftaran PPDB.',
-      icon: Wallet,
-      status: applicant?.payment_status === 'paid' ? 'completed' : 'pending',
-      path: '/applicant/kuitansi',
-    },
-    {
-      number: 2,
-      title: 'Upload Dokumen',
-      description: 'Mengunggah berkas persyaratan sesuai jalur pilihan.',
-      icon: FileUp,
-      status: ['document_approved', 'selection', 'passed', 'failed'].includes(status) ? 'completed' :
-              applicant?.payment_status === 'paid' ? 'active' : 'locked',
-      path: '/applicant/dokumen',
-    },
-    {
-      number: 3,
-      title: 'Seleksi Tahfidz (1:1)',
-      description: "Jadwal dan ujian tartil serta tahfidz Al-Qur'an.",
-      icon: BookOpen,
-      status: hasTahfidzScore || ['passed', 'failed'].includes(status) ? 'completed' :
               ['document_approved', 'selection'].includes(status) ? 'active' : 'locked',
-      path: '/applicant/seleksi-tahfidz',
-    },
-    {
-      number: 4,
-      title: 'Seleksi Wawancara (1:1)',
-      description: 'Wawancara calon santri dan orang tua/wali.',
-      icon: MessageSquare,
-      status: hasInterviewScore || ['passed', 'failed'].includes(status) ? 'completed' :
-              ['document_approved', 'selection'].includes(status) && hasTahfidzScore ? 'active' : 'locked',
-      path: '/applicant/seleksi-wawancara',
+      path: '/applicant/wawancara',
     },
     {
       number: 5,
@@ -212,22 +134,6 @@ export default function ApplicantDashboardPage() {
       icon: Trophy,
       status: status === 'passed' ? (isLoaSigned ? 'completed' : 'active') : status === 'failed' ? 'completed' : 'locked',
       path: '/applicant/pengumuman',
-    },
-    {
-      number: 6,
-      title: 'Bayar DP & Sertifikat',
-      description: 'Pembayaran Uang Muka (DP) & klaim Sertifikat SKD resmi.',
-      icon: CreditCard,
-      status: status === 'passed' && isLoaSigned ? (isDpPaid ? 'completed' : 'active') : 'locked',
-      path: '/applicant/bayar-dp',
-    },
-    {
-      number: 7,
-      title: 'Pembayaran Tahap 2',
-      description: 'Monitoring sisa tagihan pendidikan dan cicilan bertahap.',
-      icon: DollarSign,
-      status: status === 'passed' && isDpPaid ? (isLunas ? 'completed' : 'active') : 'locked',
-      path: '/applicant/pembayaran-tahap2',
     },
   ]
 
@@ -236,8 +142,11 @@ export default function ApplicantDashboardPage() {
   const fullName = applicant?.full_name || user?.full_name || 'Pendaftar'
   const firstName = fullName.split(' ')[0]
 
-  const paymentLabel = applicant?.payment_status === 'paid' ? 'Tahap 1 Lunas' : 'Menunggu Bayar'
-  const statusLabel = STATUS_LABEL[status] || status || 'Menunggu Pembayaran'
+  const paymentLabel = applicant?.payment_status === 'paid' ? 'Formulir Lunas' : 'Menunggu Bayar'
+  let statusLabel = STATUS_LABEL[status] || status || 'Menunggu Pembayaran'
+  if (status === 'selection' && !hasActiveSchedule) {
+    statusLabel = 'Menunggu Jadwal Seleksi'
+  }
 
   if (loading) {
     return (
@@ -269,10 +178,6 @@ export default function ApplicantDashboardPage() {
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold text-white ring-1 ring-white/25">
                   {statusLabel}
                 </span>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-semibold text-white ring-1 ring-white/30 capitalize">
-                  <Compass className="h-3.5 w-3.5" />
-                  Jalur: {applicant?.registration_path || '-'}
-                </span>
               </div>
             </div>
             <div className="shrink-0 flex items-center sm:flex-col sm:items-end justify-between gap-3 border-t border-white/10 sm:border-t-0 pt-3 sm:pt-0">
@@ -287,43 +192,6 @@ export default function ApplicantDashboardPage() {
             </div>
           </div>
         </div>
-
-        {/* Banner Container Ganti Jalur (Satu-satunya CTA) */}
-        {canChangePath && (
-          <div className="relative overflow-hidden rounded-3xl border-2 border-emerald-300 bg-gradient-to-br from-emerald-50 via-teal-50/60 to-white p-4 sm:p-6 shadow-sm">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 sm:gap-5">
-              <div className="flex items-start gap-3 sm:gap-4">
-                <div className="rounded-2xl bg-emerald-600 p-2.5 sm:p-3 text-white shrink-0 shadow-sm mt-0.5">
-                  <ArrowLeftRight className="h-5 w-5 sm:h-6 sm:w-6" />
-                </div>
-                <div className="space-y-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] sm:text-xs font-bold uppercase tracking-wider border border-emerald-200">
-                      Opsi Ganti Jalur Pendaftaran
-                    </span>
-                    <span className="text-xs text-slate-500 font-medium">
-                      Jalur Aktif: <strong className="text-emerald-900 capitalize font-bold">{applicant?.registration_path || '-'}</strong>
-                    </span>
-                  </div>
-                  <h3 className="text-base sm:text-lg font-bold text-slate-900 font-heading">
-                    Ingin Memilih Jalur Seleksi yang Berbeda?
-                  </h3>
-                  <p className="text-xs sm:text-sm text-slate-600 max-w-2xl leading-relaxed">
-                    Salah memilih jalur pendaftaran atau ingin beralih ke jalur <strong>Reguler, Prestasi, Tahfidz, atau Rapor</strong>? Anda bebas mengganti jalur seleksi selama belum diverifikasi ke tahap selanjutnya.
-                  </p>
-                </div>
-              </div>
-              <Button
-                type="button"
-                onClick={() => setShowChangePath(true)}
-                className="w-full md:w-auto shrink-0 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-sm px-5 py-3 rounded-xl shadow-md gap-2 h-auto cursor-pointer transition-transform hover:scale-102 active:scale-98"
-              >
-                <ArrowLeftRight className="h-4 w-4" />
-                Ganti Jalur
-              </Button>
-            </div>
-          </div>
-        )}
 
         {status === 'document_rejected' && (
           <div className="bg-red-50 border border-red-200 p-5 rounded-2xl shadow-sm relative overflow-hidden">
@@ -341,7 +209,7 @@ export default function ApplicantDashboardPage() {
 
         {/* Visual Timeline (Stepper) */}
         <div className="bg-white rounded-3xl p-4 sm:p-6 shadow-sm border border-slate-200 overflow-x-auto touch-pan-x">
-          <div className="min-w-[880px] pb-1">
+          <div className="min-w-[700px] pb-1">
             <div className="flex items-center justify-between relative">
               <div className="absolute left-6 right-6 top-1/2 -translate-y-1/2 h-1 bg-slate-100 rounded-full z-0" />
               <div
@@ -485,14 +353,6 @@ export default function ApplicantDashboardPage() {
           phone={contactInfo.phone_primary}
           whatsapp={contactInfo.whatsapp}
           email={contactInfo.email_primary}
-        />
-      )}
-
-      {showChangePath && (
-        <ChangePathModal
-          open={showChangePath}
-          onOpenChange={setShowChangePath}
-          currentPath={applicant?.registration_path || ''}
         />
       )}
     </>

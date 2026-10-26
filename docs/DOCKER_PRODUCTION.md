@@ -77,7 +77,6 @@ nano apps/api/.env  # sesuaikan
   ```
   https://ptdarrahman.sch.id,https://ppdb.ptdarrahman.sch.id,https://admin.ptdarrahman.sch.id
   ```
-- `TIU_WEBHOOK_SECRET` (jika pakai webhook Apps Script)
 - `WA_SERVICE_URL=http://whatsapp:3100`
 - `WA_SERVICE_API_KEY` = sama dengan `API_KEY` di `apps/whatsapp/.env`
 - `WA_WEBHOOK_SECRET` = sama dengan `WEBHOOK_SECRET` di `apps/whatsapp/.env`

@@ -102,7 +102,7 @@ function Section({
 
 /**
  * Tampilan detail pendaftar (read-only) yang datanya lengkap & tersusun
- * mengikuti formulir pendaftaran: Jalur, Identitas, Orang Tua/Wali, Kontak,
+ * mengikuti formulir pendaftaran: Identitas, Orang Tua/Wali, Kontak,
  * Domisili, dan Kuesioner Identifikasi Kesehatan.
  */
 export default function ApplicantDetailView({
@@ -123,17 +123,13 @@ export default function ApplicantDetailView({
         </div>
       )}
 
-      {/* 1. Jalur Pendaftaran */}
+      {/* 1. Informasi Registrasi */}
       <Section
         icon={Compass}
-        title="Jalur Pendaftaran"
-        subtitle="Bagian 1 formulir pendaftaran"
+        title="Informasi Registrasi"
+        subtitle="Data awal registrasi pendaftar"
       >
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <InfoRow
-            label="Jalur Pendaftaran"
-            value={<span className="capitalize">{detail.registration_path || '-'}</span>}
-          />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <InfoRow label="Nomor Pendaftar" value={detail.id} mono />
           <InfoRow label="Tanggal Daftar" value={formatDate(detail.created_at)} />
         </div>

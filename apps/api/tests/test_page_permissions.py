@@ -28,7 +28,6 @@ PPDB_KEYS = {
     "periods",
     "pengumuman",
     "rubrik",
-    "tiu-settings",
     "arsip",
     "notifications",
 }

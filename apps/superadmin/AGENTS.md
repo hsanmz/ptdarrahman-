@@ -56,9 +56,10 @@ The application is a Single Page Application (SPA) with the following routes:
 - **System Design:** Rujuk ke [**README.md**](../../README.md) untuk arsitektur teknis lengkap dan RBAC matrix.
 - **No education-level selection.** This system has no list of jenjang (`SMP`, `SMK`, ...) and no jenjang picker anywhere.
 - **Health form replaces Medcheck.** Applicants self-fill the health identification form during registration (10 questions + attestation). It is stored as sensitive data viewable only in detailed admin dossiers.
-- **Superadmin Boundary:** Superadmin manages user accounts, roles, permissions, WhatsApp connection, and platform activity logs. Day-to-day PPDB registration, document review, exam scoring, and stage payments are managed in the PPDB Backoffice (`apps/ppdb`), not in this panel.
+- **Standar Naming (PTDARRAHMAN):** Gunakan selalu `PTDARRAHMAN` untuk branding panel, title browser, dan sebutan entitas. Nama resmi penuh adalah `Pesantren Tahfidz Qur'an dan Digital Ar-Rahman`. Dilarang keras menggunakan `Yayasan Pesantren Ar-Rahman` atau `Pesantren Ar-Rahman`.
+- **Superadmin Boundary:** Superadmin manages user accounts, roles, permissions, WhatsApp connection, and platform activity logs. Day-to-day PPDB registration, document review, exam scoring, and LoA issuance are managed in the PPDB Backoffice (`apps/ppdb`), not in this panel.
 
 ## Development & Build Commands
-- `npm run dev`: Start Vite development server (port `5173` on local Vite dev; mapped to port `5174` in Docker preview).
+- `npm run dev`: Start Vite development server (port `5173`, selaras dengan Docker preview).
 - `npm run build`: Compile TypeScript and build (`tsc -b && vite build`).
 - `npm run preview`: Preview build locally.

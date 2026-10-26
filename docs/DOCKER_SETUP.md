@@ -13,7 +13,7 @@
 
 ```
 docker-compose.yml
-├── frontend  (Node/pnpm)  → menyajikan UI di host :3000 (Next), :5173 (Vite ppdb), :5174 (Vite superadmin)
+├── frontend  (Node/pnpm)  → menyajikan UI di host :3000 (Next), :5173 (Vite superadmin), :5174 (Vite ppdb)
 ├── api       (Python/FastAPI) → host :8080 (→ container 8000); akses DB MySQL + Redis; SSE
 ├── whatsapp  (Node/npm)  → hanya bind 127.0.0.1:3100 (internal-only, BUKAN untuk akses browser)
 └── redis     (redis:7-alpine) → internal only (tidak di-expose)
@@ -205,8 +205,8 @@ Setup nyata owner memakai **dua copy repo**, dan ini sumber kebingungan paling s
   ```
 - Browser Windows: buka
   - `http://<vm-ip>:3000`  → Company Profile (Next.js)
-  - `http://<vm-ip>:5173`  → PPDB App (Vite)
-  - `http://<vm-ip>:5174`  → Superadmin (Vite)
+  - `http://<vm-ip>:5173`  → Superadmin (Vite)
+  - `http://<vm-ip>:5174`  → PPDB App (Vite)
   - `http://<vm-ip>:8080/health` → API FastAPI (harus 200)
 - `localhost:8080` dari Windows adalah service Windows sendiri (bisa Apache/httpd lain) — **BUKAN api kita**.
 - Agar bundle frontend memanggil API yang benar, set `FRONTEND_VITE_API_URL`/`FRONTEND_NEXT_PUBLIC_API_URL`
@@ -225,9 +225,9 @@ docker exec project-ppdb-api-1 python3 -c "import socket; print(socket.gethostby
 #   → harus IP publik (bukan error)
 
 curl -s http://127.0.0.1:8080/health; echo        # → api respond (isi json/ok)
-curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000    # 200
-curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:5173    # 200
-curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:5174    # 200
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:3000    # 200 (Company Profile)
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:5173    # 200 (Superadmin)
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:5174    # 200 (PPDB App)
 
 # WhatsApp QR ready:
 API_KEY=$(grep -E '^API_KEY=' apps/whatsapp/.env | cut -d= -f2-)

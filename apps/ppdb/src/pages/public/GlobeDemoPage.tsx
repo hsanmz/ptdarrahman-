@@ -45,12 +45,12 @@ export default function GlobeDemoPage() {
         align: 'center',
       },
       {
-        id: 'pilihan',
-        badge: 'Pilihan Jalur',
+        id: 'seleksi',
+        badge: 'Seleksi Terpadu',
         title: 'Sesuai Kebutuhan',
         subtitle: 'Anak & Orang Tua',
         description:
-          'Pilihan jalur seleksi (Reguler, Prestasi, Tahfidz, dan Rapot) dibuka sesuai gelombang yang aktif. Halaman pendaftaran otomatis menyembunyikan opsi yang belum dibuka.',
+          'Tahapan seleksi terpadu dengan tes tahfidz dan wawancara personal yang dibuka sesuai gelombang yang aktif.',
         align: 'left',
         features: [
           {

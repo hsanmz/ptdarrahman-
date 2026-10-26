@@ -20,6 +20,7 @@ from __future__ import annotations
 import asyncio
 import datetime
 import logging
+import random
 import uuid
 from typing import Any, cast
 from zoneinfo import ZoneInfo
@@ -41,6 +42,7 @@ async def _async_send_to_wa_service(
     event_key: str,
     recipient_user_id: str,
     template_id: str | None = None,
+    log_id: str | None = None,
     priority: str = "normal",
 ) -> dict[str, Any]:
     """
@@ -61,6 +63,8 @@ async def _async_send_to_wa_service(
     }
     if template_id:
         payload["templateId"] = template_id
+    if log_id:
+        payload["logId"] = log_id
 
     async with httpx.AsyncClient(
         base_url=settings.wa_service_url,
@@ -99,8 +103,9 @@ def _render_template(template: dict[str, Any], ctx: dict[str, Any]) -> tuple[str
     subject = template.get("email_subject") or ""
     body = template.get("body") or ""
     for k, v in ctx.items():
-        subject = subject.replace(f"{{{k}}}", str(v))
-        body = body.replace(f"{{{k}}}", str(v))
+        rendered_value = "" if v is None else str(v)
+        subject = subject.replace(f"{{{k}}}", rendered_value)
+        body = body.replace(f"{{{k}}}", rendered_value)
     return subject, body
 
 
@@ -295,6 +300,7 @@ async def _async_send_notifications(
                             event_key=event_key,
                             recipient_user_id=str(user["id"]),
                             template_id=template_id,
+                            log_id=log_id,
                         )
                         job_id = result.get("data", {}).get("jobId")
                         if job_id and log_id:
@@ -436,10 +442,14 @@ async def _async_send_custom_notifications(
                             message=body,
                             event_key=event_key,
                             recipient_user_id=user["id"],
+                            log_id=log_id,
                         )
                         job_id = result.get("data", {}).get("jobId")
                         if job_id and log_id:
                             _update_log_status(log_id, wa_message_id=str(job_id))
+                        # Anti-ban staggering pause between blast recipients
+                        if len(recipient_user_ids) > 1:
+                            await asyncio.sleep(random.uniform(1.5, 3.0))
                     except httpx.HTTPStatusError as e:
                         logger.error(
                             "WA microservice HTTP error for custom blast user %s: %s",

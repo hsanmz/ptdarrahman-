@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useState, useEffect, useMemo } from 'react'
+import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as api from '@/api/client'
 import { useToast } from '@/components/Toast'
@@ -25,6 +25,7 @@ import {
   Home,
   AlertCircle,
   School,
+  CheckCircle2,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -33,6 +34,8 @@ export default function SessionEvaluationPage() {
     sessionType: string
     sessionId: string
   }>()
+  const [searchParams] = useSearchParams()
+  const applicantId = searchParams.get('applicant_id')
   const navigate = useNavigate()
   const { toast } = useToast()
   const queryClient = useQueryClient()
@@ -41,49 +44,80 @@ export default function SessionEvaluationPage() {
   const isTahfidz = sessionType.toLowerCase().includes('tahfidz')
   const sessionLabel = isTahfidz ? 'Ujian Tahfidz' : 'Wawancara'
 
+  // Tab mode for Wawancara: santri, ortu, or semua
+  const initialMode = (searchParams.get('mode') as any) || 'santri'
+  const [wawancaraMode, setWawancaraMode] = useState<'santri' | 'ortu' | 'semua'>(initialMode)
+
   // Tab switch for screens smaller than lg (mobile & tablet)
   const [mobileTab, setMobileTab] = useState<'rubric' | 'dossier'>('rubric')
 
+  // Back navigation target (always returns to the specific session room)
+  const handleBack = () => {
+    if (isTahfidz) {
+      navigate(sessionId ? `/admin/jadwal-seleksi/tahfidz/${sessionId}` : '/admin/jadwal-seleksi/tahfidz')
+    } else {
+      navigate(sessionId ? `/admin/jadwal-seleksi/wawancara/${sessionId}` : '/admin/jadwal-seleksi/wawancara')
+    }
+  }
+
   // Fetch session evaluation details (includes session, full applicant profile, and rubric)
+  // refetchInterval 5000 ensures real-time polling so multiple admins grading simultaneously see updates
   const { data, isLoading, error } = useQuery({
-    queryKey: ['session-evaluation', sessionId],
+    queryKey: ['session-evaluation', sessionId, applicantId],
     queryFn: async () => {
       if (!sessionId) throw new Error('ID Sesi tidak ditemukan')
-      return await api.apiFetch<any>(`/selection/sessions/${sessionId}/evaluation`)
+      const url = applicantId
+        ? `/selection/sessions/${sessionId}/evaluation?applicant_id=${applicantId}`
+        : `/selection/sessions/${sessionId}/evaluation`
+      return await api.apiFetch<any>(url)
     },
     enabled: !!sessionId,
+    refetchInterval: 5000,
   })
 
-  // State for rubric scores
+  // State for rubric scores & notes
   const [scores, setScores] = useState<Record<string, number>>({})
-  const [notes, setNotes] = useState<string>('')
+  const [notesTahfidz, setNotesTahfidz] = useState<string>('')
+  const [notesSantri, setNotesSantri] = useState<string>('')
+  const [notesOrtu, setNotesOrtu] = useState<string>('')
 
   // Helper untuk membaca dan memisahkan catatan Tahfidz dan Wawancara
   const parseNotes = (raw?: string | null) => {
-    if (!raw) return { tahfidz: '', wawancara: '', general: '' }
+    if (!raw) return { tahfidz: '', santri: '', ortu: '', general: '' }
     const text = raw.trim()
     const tahfidzMatch = text.match(/(?:^|\n)\[Tahfidz\]:\s*([\s\S]*?)(?=(?:\n\[|$))/i)
-    const wawancaraMatch = text.match(/(?:^|\n)\[Wawancara\]:\s*([\s\S]*?)(?=(?:\n\[|$))/i)
-    if (tahfidzMatch || wawancaraMatch) {
+    const santriMatch =
+      text.match(/(?:^|\n)\[Wawancara Santri\]:\s*([\s\S]*?)(?=(?:\n\[|$))/i) ||
+      text.match(/(?:^|\n)\[Wawancara\]:\s*([\s\S]*?)(?=(?:\n\[|$))/i)
+    const ortuMatch =
+      text.match(/(?:^|\n)\[Wawancara Ortu\]:\s*([\s\S]*?)(?=(?:\n\[|$))/i) ||
+      text.match(/(?:^|\n)\[Wawancara Orang Tua\]:\s*([\s\S]*?)(?=(?:\n\[|$))/i)
+
+    if (tahfidzMatch || santriMatch || ortuMatch) {
       return {
         tahfidz: tahfidzMatch ? tahfidzMatch[1].trim() : '',
-        wawancara: wawancaraMatch ? wawancaraMatch[1].trim() : '',
+        santri: santriMatch ? santriMatch[1].trim() : '',
+        ortu: ortuMatch ? ortuMatch[1].trim() : '',
         general: '',
       }
     }
-    return { tahfidz: '', wawancara: '', general: text }
+    return { tahfidz: '', santri: text, ortu: '', general: text }
   }
 
   // Helper untuk menggabungkan catatan Tahfidz dan Wawancara saat simpan
-  const buildNotes = (newNote: string, existingRaw?: string | null) => {
+  const buildNotes = (existingRaw?: string | null) => {
     const parsed = parseNotes(existingRaw)
-    const trimmed = newNote.trim()
-    const tahfidzNote = isTahfidz ? trimmed : parsed.tahfidz
-    const wawancaraNote = !isTahfidz ? trimmed : parsed.wawancara
-
     const parts: string[] = []
-    if (tahfidzNote) parts.push(`[Tahfidz]: ${tahfidzNote}`)
-    if (wawancaraNote) parts.push(`[Wawancara]: ${wawancaraNote}`)
+
+    if (isTahfidz) {
+      if (notesTahfidz.trim()) parts.push(`[Tahfidz]: ${notesTahfidz.trim()}`)
+      if (parsed.santri) parts.push(`[Wawancara Santri]: ${parsed.santri}`)
+      if (parsed.ortu) parts.push(`[Wawancara Ortu]: ${parsed.ortu}`)
+    } else {
+      if (parsed.tahfidz) parts.push(`[Tahfidz]: ${parsed.tahfidz}`)
+      if (notesSantri.trim()) parts.push(`[Wawancara Santri]: ${notesSantri.trim()}`)
+      if (notesOrtu.trim()) parts.push(`[Wawancara Ortu]: ${notesOrtu.trim()}`)
+    }
 
     if (parts.length === 0 && parsed.general) {
       return parsed.general
@@ -99,11 +133,9 @@ export default function SessionEvaluationPage() {
       }
       if (data.evaluator_notes) {
         const parsed = parseNotes(data.evaluator_notes)
-        if (isTahfidz) {
-          setNotes(parsed.tahfidz || parsed.general || '')
-        } else {
-          setNotes(parsed.wawancara || parsed.general || '')
-        }
+        setNotesTahfidz(parsed.tahfidz || '')
+        setNotesSantri(parsed.santri || parsed.general || '')
+        setNotesOrtu(parsed.ortu || '')
       }
     }
   }, [data, isTahfidz])
@@ -112,6 +144,23 @@ export default function SessionEvaluationPage() {
   const saveMutation = useMutation({
     mutationFn: async () => {
       if (!data?.applicant?.id) throw new Error('Data pendaftar tidak ada')
+
+      // Validasi Catatan Wajib Diisi (Mandatory Notes)
+      if (isTahfidz) {
+        if (!notesTahfidz.trim()) {
+          throw new Error('Catatan hasil ujian Tahfidz wajib diisi sebelum menyimpan nilai!')
+        }
+      } else {
+        if (wawancaraMode === 'santri' && !notesSantri.trim()) {
+          throw new Error('Catatan hasil wawancara calon santri wajib diisi sebelum menyimpan nilai!')
+        }
+        if (wawancaraMode === 'ortu' && !notesOrtu.trim()) {
+          throw new Error('Catatan hasil wawancara orang tua/wali wajib diisi sebelum menyimpan nilai!')
+        }
+        if (wawancaraMode === 'semua' && !notesSantri.trim() && !notesOrtu.trim()) {
+          throw new Error('Catatan wawancara santri atau orang tua wajib diisi sebelum menyimpan nilai!')
+        }
+      }
 
       const scoreItems = Object.entries(scores).map(([criteriaId, val]) => ({
         criteria_id: criteriaId,
@@ -122,14 +171,14 @@ export default function SessionEvaluationPage() {
         throw new Error('Masukkan minimal satu nilai kriteria rubrik')
       }
 
-      const combinedNotes = buildNotes(notes, data.evaluator_notes)
+      const combinedNotes = buildNotes(data.evaluator_notes)
 
       return await api.apiFetch('/selection/results', {
         method: 'POST',
         body: JSON.stringify({
           applicant_id: data.applicant.id,
           scores: scoreItems,
-          notes: combinedNotes.trim() || undefined,
+          notes: combinedNotes.trim(),
         }),
       })
     },
@@ -162,31 +211,110 @@ export default function SessionEvaluationPage() {
         <AlertCircle className="h-12 w-12 text-rose-500" />
         <h2 className="text-lg font-bold text-slate-900">Gagal Membuka Sesi</h2>
         <p className="max-w-md text-sm text-slate-600">
-          {(error as any)?.message || 'Sesi ini belum diambil oleh calon santri atau tidak ditemukan.'}
+          {(error as any)?.message || 'Belum ada pendaftar yang terdaftar di sesi ini atau data tidak ditemukan.'}
         </p>
         <Button
-          onClick={() => navigate(`/admin/sessions/${isTahfidz ? 'tahfidz' : 'wawancara'}`)}
+          onClick={handleBack}
           variant="outline"
           className="gap-2"
         >
-          <ArrowLeft className="h-4 w-4" /> Kembali ke Daftar Sesi
+          <ArrowLeft className="h-4 w-4" /> Kembali ke Ruang Sesi
         </Button>
       </div>
     )
   }
 
-  const { session, applicant, categories } = data
+  const { session, applicant, categories = [] } = data
 
-  // All criteria flat list
-  const allCriteria = categories.flatMap((cat: any) =>
-    (cat.criteria || []).map((cr: any) => ({
-      ...cr,
-      categoryName: cat.name,
-    }))
-  )
+  const isSantriCategory = (catName: string) => {
+    const n = (catName || '').toLowerCase()
+    return !n.includes('orang tua') && !n.includes('ortu')
+  }
+
+  const isOrtuCategory = (catName: string) => {
+    const n = (catName || '').toLowerCase()
+    return n.includes('orang tua') || n.includes('ortu')
+  }
+
+  const santriCriteria = useMemo(() => {
+    return categories
+      .filter((cat: any) => isSantriCategory(cat.name))
+      .flatMap((cat: any) =>
+        (cat.criteria || []).map((cr: any) => ({ ...cr, categoryName: cat.name }))
+      )
+  }, [categories])
+
+  const ortuCriteria = useMemo(() => {
+    return categories
+      .filter((cat: any) => isOrtuCategory(cat.name))
+      .flatMap((cat: any) =>
+        (cat.criteria || []).map((cr: any) => ({ ...cr, categoryName: cat.name }))
+      )
+  }, [categories])
+
+  const isSantriEvaluated =
+    santriCriteria.length > 0 &&
+    santriCriteria.every(
+      (c: any) =>
+        scores[c.id] !== undefined &&
+        scores[c.id] !== null &&
+        typeof scores[c.id] === 'number' &&
+        !isNaN(scores[c.id])
+    ) &&
+    !!notesSantri.trim()
+
+  const isOrtuEvaluated =
+    ortuCriteria.length > 0 &&
+    ortuCriteria.every(
+      (c: any) =>
+        scores[c.id] !== undefined &&
+        scores[c.id] !== null &&
+        typeof scores[c.id] === 'number' &&
+        !isNaN(scores[c.id])
+    ) &&
+    !!notesOrtu.trim()
+
+  const displayedCategories = useMemo(() => {
+    if (isTahfidz) return categories
+    if (wawancaraMode === 'santri') {
+      const list = categories.filter((c: any) => isSantriCategory(c.name))
+      return list.length > 0 ? list : categories
+    }
+    if (wawancaraMode === 'ortu') {
+      const list = categories.filter((c: any) => isOrtuCategory(c.name))
+      return list.length > 0 ? list : categories
+    }
+    return categories
+  }, [categories, isTahfidz, wawancaraMode])
+
+  // Active criteria for score header & status counter
+  const activeCriteria = useMemo(() => {
+    if (isTahfidz) {
+      return categories.flatMap((cat: any) =>
+        (cat.criteria || []).map((cr: any) => ({ ...cr, categoryName: cat.name }))
+      )
+    }
+    if (wawancaraMode === 'santri') {
+      return santriCriteria.length > 0
+        ? santriCriteria
+        : categories.flatMap((cat: any) =>
+            (cat.criteria || []).map((cr: any) => ({ ...cr, categoryName: cat.name }))
+          )
+    }
+    if (wawancaraMode === 'ortu') {
+      return ortuCriteria.length > 0
+        ? ortuCriteria
+        : categories.flatMap((cat: any) =>
+            (cat.criteria || []).map((cr: any) => ({ ...cr, categoryName: cat.name }))
+          )
+    }
+    return categories.flatMap((cat: any) =>
+      (cat.criteria || []).map((cr: any) => ({ ...cr, categoryName: cat.name }))
+    )
+  }, [categories, isTahfidz, wawancaraMode, santriCriteria, ortuCriteria])
 
   // Calculate weighted or average final score
-  const totalWeight = allCriteria.reduce((sum: number, c: any) => sum + (c.weight || 0), 0)
+  const totalWeight = activeCriteria.reduce((sum: number, c: any) => sum + (c.weight || 0), 0)
   const isWeighted = totalWeight > 0
 
   let calculatedScore: number
@@ -194,7 +322,7 @@ export default function SessionEvaluationPage() {
 
   if (isWeighted) {
     let weightedSum = 0
-    allCriteria.forEach((c: any) => {
+    activeCriteria.forEach((c: any) => {
       if (scores[c.id] !== undefined && !isNaN(scores[c.id])) {
         weightedSum += (scores[c.id] * (c.weight || 0)) / 100
         filledCriteriaCount++
@@ -203,7 +331,7 @@ export default function SessionEvaluationPage() {
     calculatedScore = Math.min(100, Math.round(weightedSum * 10) / 10)
   } else {
     let sum = 0
-    allCriteria.forEach((c: any) => {
+    activeCriteria.forEach((c: any) => {
       if (scores[c.id] !== undefined && !isNaN(scores[c.id])) {
         sum += scores[c.id]
         filledCriteriaCount++
@@ -249,7 +377,7 @@ export default function SessionEvaluationPage() {
           )}
         >
           <FileText className="h-3.5 w-3.5 shrink-0" />
-          <span>Lembar Rubrik ({filledCriteriaCount}/{allCriteria.length})</span>
+          <span>Lembar Rubrik ({filledCriteriaCount}/{activeCriteria.length})</span>
         </button>
         <button
           type="button"
@@ -286,8 +414,8 @@ export default function SessionEvaluationPage() {
                   variant="ghost"
                   size="sm"
                   className="h-8 w-8 sm:h-9 sm:w-auto sm:px-2.5 p-0 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl shrink-0"
-                  onClick={() => navigate(`/admin/sessions/${isTahfidz ? 'tahfidz' : 'wawancara'}`)}
-                  title="Kembali ke Daftar Sesi"
+                  onClick={handleBack}
+                  title="Kembali ke Ruang Sesi"
                 >
                   <ArrowLeft className="h-4 w-4 sm:mr-1.5" />
                   <span className="hidden sm:inline text-xs font-semibold">Kembali</span>
@@ -344,7 +472,13 @@ export default function SessionEvaluationPage() {
             <div className="flex items-center gap-3 sm:gap-4 self-end md:self-center shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 w-full md:w-auto justify-between md:justify-end">
               <div className="text-left md:text-right">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                  SKOR AKHIR
+                  {!isTahfidz
+                    ? wawancaraMode === 'santri'
+                      ? 'SKOR SANTRI'
+                      : wawancaraMode === 'ortu'
+                      ? 'SKOR ORANG TUA'
+                      : 'SKOR TOTAL'
+                    : 'SKOR AKHIR'}
                 </span>
                 <span className="text-2xl sm:text-3xl font-black text-emerald-800 tracking-tight leading-none">
                   {calculatedScore.toLocaleString('id-ID', {
@@ -361,29 +495,108 @@ export default function SessionEvaluationPage() {
                   className="h-10 px-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl gap-2 text-xs sm:text-sm font-semibold shadow-xs transition-all active:scale-98 shrink-0"
                 >
                   <Save className="h-4 w-4 shrink-0" />
-                  <span>{saveMutation.isPending ? 'Menyimpan...' : 'Simpan'}</span>
+                  <span>
+                    {saveMutation.isPending
+                      ? 'Menyimpan...'
+                      : !isTahfidz
+                      ? wawancaraMode === 'santri'
+                        ? 'Simpan Nilai Santri'
+                        : wawancaraMode === 'ortu'
+                        ? 'Simpan Nilai Orang Tua'
+                        : 'Simpan Wawancara'
+                      : 'Simpan Nilai Tahfidz'}
+                  </span>
                 </Button>
               )}
+
             </div>
           </div>
         </div>
 
         {/* ── Area Konten Rubrik (Scroll Mandiri tanpa batasan kaku, scrollbar tersembunyi) ── */}
         <div className="flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-6 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden no-scrollbar pb-24 sm:pb-32">
+          {/* Mode Switcher untuk Wawancara (Santri / Orang Tua / Semua) */}
+          {!isTahfidz && (
+            <div className="bg-slate-100/90 p-1.5 rounded-2xl flex items-center gap-1.5 border border-slate-200">
+              <button
+                type="button"
+                onClick={() => setWawancaraMode('santri')}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-2 py-2 px-3 text-xs font-bold rounded-xl transition-all",
+                  wawancaraMode === 'santri'
+                    ? "bg-white text-blue-800 shadow-xs border border-blue-100"
+                    : "text-slate-600 hover:text-slate-900"
+                )}
+              >
+                <User className="h-3.5 w-3.5 text-blue-600" />
+                <span>Wawancara Calon Santri</span>
+                {isSantriEvaluated ? (
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-semibold inline-flex items-center gap-0.5">
+                    <CheckCircle2 className="h-2.5 w-2.5" /> Sudah
+                  </span>
+                ) : (
+                  <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full font-semibold">
+                    Belum
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setWawancaraMode('ortu')}
+                className={cn(
+                  "flex-1 flex items-center justify-center gap-2 py-2 px-3 text-xs font-bold rounded-xl transition-all",
+                  wawancaraMode === 'ortu'
+                    ? "bg-white text-emerald-800 shadow-xs border border-emerald-100"
+                    : "text-slate-600 hover:text-slate-900"
+                )}
+              >
+                <Users className="h-3.5 w-3.5 text-emerald-600" />
+                <span>Wawancara Orang Tua / Wali</span>
+                {isOrtuEvaluated ? (
+                  <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-semibold inline-flex items-center gap-0.5">
+                    <CheckCircle2 className="h-2.5 w-2.5" /> Sudah
+                  </span>
+                ) : (
+                  <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full font-semibold">
+                    Belum
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setWawancaraMode('semua')}
+                className={cn(
+                  "py-2 px-3 text-xs font-semibold rounded-xl transition-all",
+                  wawancaraMode === 'semua'
+                    ? "bg-white text-slate-900 shadow-xs border border-slate-200"
+                    : "text-slate-500 hover:text-slate-800"
+                )}
+              >
+                Semua
+              </button>
+            </div>
+          )}
+
           {/* Status Kelengkapan Pengisian */}
           <div className="flex items-center justify-between pb-2 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <FileCheck className="h-4 w-4 text-emerald-600 shrink-0" />
               <h2 className="text-sm font-bold text-slate-900">
-                Kriteria Penilaian {sessionLabel}
+                {!isTahfidz
+                  ? wawancaraMode === 'santri'
+                    ? 'Rubrik Wawancara Calon Santri'
+                    : wawancaraMode === 'ortu'
+                    ? 'Rubrik Wawancara Orang Tua / Wali'
+                    : 'Seluruh Kriteria Rubrik Wawancara'
+                  : 'Kriteria Penilaian Ujian Tahfidz'}
               </h2>
             </div>
             <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-              {filledCriteriaCount} / {allCriteria.length} Kriteria Terisi
+              {filledCriteriaCount} / {activeCriteria.length} Kriteria Terisi
             </span>
           </div>
 
-          {categories.length === 0 ? (
+          {displayedCategories.length === 0 ? (
             <div className="p-8 text-center border border-dashed rounded-2xl bg-slate-50 text-slate-500 text-sm">
               Belum ada kriteria rubrik yang dikonfigurasi untuk kategori {sessionLabel}.
               <div className="mt-2">
@@ -393,7 +606,7 @@ export default function SessionEvaluationPage() {
               </div>
             </div>
           ) : (
-            categories.map((cat: any) => (
+            displayedCategories.map((cat: any) => (
               <div key={cat.id} className="space-y-3">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-700">
@@ -492,24 +705,83 @@ export default function SessionEvaluationPage() {
             ))
           )}
 
-          {/* Catatan Khusus Penguji (Full Width, tidak terpotong) */}
-          <div className="space-y-2 pt-4 border-t border-slate-100">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                <FileText className="h-3.5 w-3.5 text-slate-600" />
-                Catatan Khusus Penguji (Opsional)
-              </label>
-              <span className="text-[11px] text-muted-foreground">Tersimpan otomatis bersama skor</span>
+          {/* Catatan Khusus Penguji (Wawancara Santri & Ortu Terpisah, atau Tahfidz) */}
+          {isTahfidz ? (
+            <div className="space-y-2 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                  <FileText className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>Catatan Ujian Tahfidz</span>
+                  <span className="text-rose-500 font-bold">*</span>
+                  <span className="text-[10px] text-rose-500 font-semibold">(Wajib Diisi)</span>
+                </label>
+                <span className="text-[11px] text-muted-foreground">Tersimpan otomatis bersama skor</span>
+              </div>
+              <Textarea
+                rows={4}
+                disabled={!canCrud}
+                placeholder={canCrud ? "Tuliskan catatan kelancaran tahfidz, makhraj, tajwid, atau rekomendasi pembinaan..." : "Tidak ada catatan evaluasi"}
+                value={notesTahfidz}
+                onChange={(e) => setNotesTahfidz(e.target.value)}
+                className="text-xs resize-none rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/20 leading-relaxed p-3.5 disabled:opacity-80 disabled:bg-slate-50"
+              />
             </div>
-            <Textarea
-              rows={4}
-              disabled={!canCrud}
-              placeholder={canCrud ? "Tuliskan catatan evaluasi, kekuatan santri, rekomendasi pembinaan, atau poin penting lainnya..." : "Tidak ada catatan evaluasi"}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="text-xs resize-none rounded-xl border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/20 leading-relaxed p-3.5 disabled:opacity-80 disabled:bg-slate-50"
-            />
-          </div>
+          ) : (
+            <div className="space-y-4 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
+                  Penginputan Catatan Hasil Wawancara
+                </span>
+                <span className="text-[11px] text-muted-foreground">Tersimpan otomatis bersama skor</span>
+              </div>
+
+              {/* 1. Catatan Wawancara Calon Santri */}
+              {(wawancaraMode === 'santri' || wawancaraMode === 'semua') && (
+                <div className="p-3.5 rounded-xl border border-blue-200/80 bg-blue-50/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                      <User className="h-3.5 w-3.5 text-blue-600" />
+                      <span>1. Catatan Hasil Wawancara Calon Santri / Siswa</span>
+                      <span className="text-rose-500 font-bold">*</span>
+                      <span className="text-[10px] text-rose-500 font-semibold">(Wajib Diisi)</span>
+                    </label>
+                    <span className="text-[10px] text-blue-800/80 font-medium">Kepribadian, Akhlak & Kesiapan Mondok</span>
+                  </div>
+                  <Textarea
+                    rows={3}
+                    disabled={!canCrud}
+                    placeholder={canCrud ? "Tuliskan hasil observasi wawancara calon santri: motivasi mondok, kemandirian, pergaulan, adab, dll..." : "Belum ada catatan wawancara santri"}
+                    value={notesSantri}
+                    onChange={(e) => setNotesSantri(e.target.value)}
+                    className="text-xs resize-none rounded-lg border-blue-200 bg-white focus:border-blue-500 focus:ring-blue-500/20 leading-relaxed p-3 disabled:opacity-80 disabled:bg-slate-50"
+                  />
+                </div>
+              )}
+
+              {/* 2. Catatan Wawancara Orang Tua / Wali */}
+              {(wawancaraMode === 'ortu' || wawancaraMode === 'semua') && (
+                <div className="p-3.5 rounded-xl border border-emerald-200/80 bg-emerald-50/30 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
+                      <Users className="h-3.5 w-3.5 text-emerald-600" />
+                      <span>2. Catatan Hasil Wawancara Orang Tua / Wali</span>
+                      <span className="text-rose-500 font-bold">*</span>
+                      <span className="text-[10px] text-rose-500 font-semibold">(Wajib Diisi)</span>
+                    </label>
+                    <span className="text-[10px] text-emerald-800/80 font-medium">Komitmen Pendidikan & Kesiapan Orang Tua</span>
+                  </div>
+                  <Textarea
+                    rows={3}
+                    disabled={!canCrud}
+                    placeholder={canCrud ? "Tuliskan hasil wawancara orang tua/wali: komitmen mendukung pendidikan santri, kesiapan biaya, kesepahaman aturan pesantren, dll..." : "Belum ada catatan wawancara orang tua"}
+                    value={notesOrtu}
+                    onChange={(e) => setNotesOrtu(e.target.value)}
+                    className="text-xs resize-none rounded-lg border-emerald-200 bg-white focus:border-emerald-500 focus:ring-emerald-500/20 leading-relaxed p-3 disabled:opacity-80 disabled:bg-slate-50"
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Rangkuman Skor Bawah */}
           <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 flex items-center justify-between">
@@ -518,7 +790,7 @@ export default function SessionEvaluationPage() {
                 Total {isWeighted ? 'Terbobot' : 'Rata-Rata'}
               </span>
               <span className="text-xs text-slate-600 font-medium">
-                {filledCriteriaCount} dari {allCriteria.length} Kriteria Terisi
+                {filledCriteriaCount} dari {activeCriteria.length} Kriteria Terisi
               </span>
             </div>
             <div className="text-right">
@@ -535,7 +807,7 @@ export default function SessionEvaluationPage() {
       </div>
 
       {/* ════════════════════════════════════════════════════════════
-          KOLOM KANAN: IDENTITAS CALON SANTRI (Nempel Pojok Kanan seperti Panduan TIU,
+          KOLOM KANAN: IDENTITAS CALON SANTRI (Nempel Pojok Kanan,
           scroll mandiri tanpa scrollbar, tanpa Riwayat Nilai)
           ════════════════════════════════════════════════════════════ */}
       <aside
@@ -544,7 +816,7 @@ export default function SessionEvaluationPage() {
           mobileTab !== 'dossier' && "hidden lg:flex"
         )}
       >
-        {/* Header Identitas (Simple, no card container — persis seperti Panduan TIU) */}
+        {/* Header Identitas (Simple, no card container) */}
         <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200/70 shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 rounded-lg bg-emerald-100 text-emerald-800">
@@ -556,7 +828,7 @@ export default function SessionEvaluationPage() {
             </div>
           </div>
           <Badge variant="outline" className="text-xs capitalize font-semibold bg-white text-emerald-800 border-emerald-200 shrink-0">
-            Jalur {applicant.registration_path || 'Reguler'}
+            {applicant.wave_name || 'Gelombang 1'}
           </Badge>
         </div>
 

@@ -38,17 +38,6 @@ export interface DocSection {
   content: React.ReactNode
 }
 
-const getApiWebhookUrl = () => {
-  if (typeof window === 'undefined') return 'https://api.ptdarrahman.sch.id/ppdb/webhook/tiu'
-  const { protocol, hostname } = window.location
-  if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return `${protocol}//${hostname}:8000/ppdb/webhook/tiu`
-  }
-  const rootHost = hostname.replace(/^(?:ppdb|admin|superadmin)\./i, '')
-  return `${protocol}//api.${rootHost}/ppdb/webhook/tiu`
-}
-
-
 export interface DocItem {
   title: string
   subtitle: string
@@ -58,6 +47,68 @@ export interface DocItem {
 
 export const SYSTEM_DOCS: Record<string, DocItem> = {
   // ── PPDB ADMIN DOCS ──────────────────────────────────────────────────────────
+  'ppdb-dashboard': {
+    title: 'Dashboard Operasional PPDB',
+    subtitle: 'Petunjuk navigasi metrik utama, pemantauan gelombang aktif, dan aksi cepat.',
+    sections: [
+      {
+        number: 1,
+        title: 'Apa itu Dashboard Admin?',
+        icon: Sparkles,
+        content: (
+          <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            Halaman <strong>Dashboard Admin</strong> menyajikan ringkasan metrik operasional Penerimaan Peserta Didik Baru (PPDB) pada periode dan gelombang yang aktif. Anda dapat memantau jumlah pendaftar, status pembayaran formulir, berkas yang perlu diverifikasi, serta progres ujian seleksi dan kelulusan.
+          </p>
+        ),
+      },
+      {
+        number: 2,
+        title: 'Aturan 1 Periode & 1 Gelombang Aktif',
+        icon: Activity,
+        content: (
+          <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <p>
+              Sistem menerapkan prinsip <strong>Single Active Period & Wave</strong>. Hanya satu periode dan satu gelombang pendaftaran yang aktif secara global.
+            </p>
+            <p>
+              Seluruh pendaftar baru yang mendaftar secara otomatis ditautkan ke gelombang aktif tanpa perlu memilih secara manual.
+            </p>
+          </div>
+        ),
+      },
+      {
+        number: 3,
+        title: 'Kartu Sesi 1:1 Milik Anda',
+        icon: Clock,
+        content: (
+          <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <p>
+              Pada bagian bawah dashboard, terdapat ringkasan kartu sesi 1:1 (Tahfidz/Wawancara) yang dibuat oleh akun Anda.
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-slate-600">
+              <li><strong>Merah:</strong> Sesi belum diambil oleh pendaftar.</li>
+              <li><strong>Kuning:</strong> Sesi telah di-booking santri dan siap dinilai (klik untuk input nilai).</li>
+              <li><strong>Hijau:</strong> Sesi telah selesai dinilai.</li>
+            </ul>
+          </div>
+        ),
+      },
+      {
+        number: 4,
+        title: 'Alur Cepat Operasional Panitia',
+        icon: Layers,
+        content: (
+          <ol className="list-decimal list-inside text-xs text-slate-700 space-y-1.5 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <li><strong>Verifikasi Dokumen:</strong> Periksa berkas dan kuesioner kesehatan pendaftar yang telah melunasi formulir.</li>
+            <li><strong>Sesi 1:1:</strong> Siapkan slot jadwal Tahfidz dan Wawancara untuk santri yang berkasnya valid.</li>
+            <li><strong>Hasil Seleksi:</strong> Tetapkan kelulusan dan rilis LoA resmi.</li>
+            <li><strong>Review LoA:</strong> Pantau tanda tangan digital orang tua & santri hingga alur PPDB tuntas.</li>
+          </ol>
+        ),
+      },
+    ],
+  },
+
   'ppdb-data-pendaftar': {
     title: 'Data Pendaftar PPDB',
     subtitle: 'Petunjuk operasional pemantauan dan pengelolaan biodata calon santri.',
@@ -99,7 +150,7 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
                 Tahap Seleksi
               </Badge>
               <p className="text-xs text-slate-700 leading-relaxed">
-                Dokumen dinyatakan lengkap dan disetujui. Santri berhak mengikuti ujian TIU (Safe Exam Browser) dan memilih jadwal Session 1:1 Tahfidz serta Wawancara.
+                Dokumen dinyatakan lengkap dan disetujui. Santri berhak memilih jadwal Session 1:1 Tahfidz serta Wawancara.
               </p>
             </div>
             <div className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/50 flex items-start gap-3">
@@ -107,7 +158,7 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
                 Lulus / Diterima
               </Badge>
               <p className="text-xs text-slate-700 leading-relaxed">
-                Telah menyelesaikan seluruh rangkaian tes dan dinyatakan lulus seleksi oleh penguji/panitia. Santri dapat mengunduh LoA dan menyelesaikan tagihan tahap 2.
+                Telah menyelesaikan seluruh rangkaian tes dan dinyatakan lulus seleksi oleh penguji/panitia. Santri dapat mengunduh serta menandatangani LoA digital resmi untuk menyelesaikan alur PPDB.
               </p>
             </div>
           </div>
@@ -256,7 +307,7 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
         content: (
           <ol className="list-decimal list-inside text-xs text-slate-700 space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <li>Cek bukti transfer yang diunggah pendaftar pada tab <strong>Menunggu Konfirmasi</strong>.</li>
-            <li>Cocokkan nominal dan nama rekening pengirim dengan mutasi bank yayasan.</li>
+            <li>Cocokkan nominal dan nama rekening pengirim dengan mutasi rekening resmi PTDARRAHMAN.</li>
             <li>Klik tombol <strong>Konfirmasi Lunas</strong>. Status pendaftar akan otomatis berubah menjadi aktif dan membuka tahap upload dokumen.</li>
           </ol>
         ),
@@ -264,64 +315,6 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
     ],
   },
 
-  'ppdb-pembayaran-tahap2': {
-    title: 'Pembayaran Tahap 2 (Daftar Ulang)',
-    subtitle: 'Panduan pengelolaan tagihan dan cicilan biaya masuk santri baru.',
-    sections: [
-      {
-        number: 1,
-        title: 'Apa itu Pembayaran Tahap 2?',
-        icon: CreditCard,
-        content: (
-          <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-            Pembayaran Tahap 2 adalah tagihan <strong>Daftar Ulang</strong> yang diterbitkan khusus untuk calon santri yang telah dinyatakan <strong>LULUS</strong> seleksi. Komponen tagihan mencakup Dana Pengembangan Pendidikan (DP3/Gedung), SPP bulan pertama, seragam, buku, dan kegiatan tahunan.
-          </p>
-        ),
-      },
-      {
-        number: 2,
-        title: 'Skema Pembayaran: Lunas & Cicilan',
-        icon: Layers,
-        content: (
-          <div className="space-y-2 text-xs text-slate-700">
-            <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
-              <strong className="text-slate-900 block mb-0.5">1. Pembayaran Lunas:</strong>
-              Membayar 100% total tagihan daftar ulang sekaligus sebelum tenggat waktu.
-            </div>
-            <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
-              <strong className="text-slate-900 block mb-0.5">2. Pembayaran Bertahap (Cicilan / Minimal DP):</strong>
-              Pendaftar dapat membayar uang muka (DP) minimal sesuai ketentuan gelombang pendaftaran, kemudian melunasi sisa tagihan dalam termin yang disepakati.
-            </div>
-          </div>
-        ),
-      },
-      {
-        number: 3,
-        title: 'Klausul Dana Tidak Dapat Dikembalikan (Non-Refundable)',
-        icon: ShieldAlert,
-        content: (
-          <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-950 leading-relaxed space-y-1.5">
-            <p className="font-semibold text-amber-900">⚠️ Klausul Finansial Mutlak:</p>
-            <p>
-              Seluruh dana yang telah disetorkan untuk pembayaran daftar ulang tahap 2 bersifat <strong>non-refundable (tidak dapat ditarik kembali)</strong> apabila santri mengundurkan diri, sesuai klausul yang tercantum pada Letter of Acceptance (LoA) dan perjanjian registrasi.
-            </p>
-          </div>
-        ),
-      },
-      {
-        number: 4,
-        title: 'Alur Verifikasi Bukti Pembayaran Tahap 2',
-        icon: FileText,
-        content: (
-          <ol className="list-decimal list-inside text-xs text-slate-700 space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <li>Buka kartu tagihan santri pada tabel Pembayaran Tahap 2.</li>
-            <li>Klik pada bukti transfer pembayaran untuk melihat bukti setoran.</li>
-            <li>Klik <strong>Verifikasi Pembayaran</strong> untuk mengonfirmasi nominal masuk. Sistem otomatis memperbarui sisa tagihan dan riwayat termin santri.</li>
-          </ol>
-        ),
-      },
-    ],
-  },
 
   'ppdb-penilaian': {
     title: 'Hasil Seleksi & Penilaian Akhir',
@@ -334,19 +327,15 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
         content: (
           <div className="space-y-2 text-xs text-slate-700 leading-relaxed">
             <p className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-              Total nilai seleksi calon santri dihitung dari tiga pilar evaluasi:
+              Total nilai seleksi calon santri dihitung dari dua pilar evaluasi:
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-              <div className="p-3 rounded-xl border border-blue-200 bg-blue-50/50">
-                <p className="font-bold text-blue-900 text-xs">1. Tes TIU (Otomatis)</p>
-                <p className="text-[11px] text-blue-800 mt-1">Dihitung otomatis via Google Form SEB. Admin tidak menginput nilai ini.</p>
-              </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/50">
-                <p className="font-bold text-emerald-900 text-xs">2. Session Tahfidz</p>
+                <p className="font-bold text-emerald-900 text-xs">1. Session Tahfidz</p>
                 <p className="text-[11px] text-emerald-800 mt-1">Diinput penguji 1:1 berdasarkan rubrik hafalan, tajwid & makhraj.</p>
               </div>
               <div className="p-3 rounded-xl border border-purple-200 bg-purple-50/50">
-                <p className="font-bold text-purple-900 text-xs">3. Session Wawancara</p>
+                <p className="font-bold text-purple-900 text-xs">2. Session Wawancara</p>
                 <p className="text-[11px] text-purple-800 mt-1">Diinput pewawancara 1:1 berdasarkan kesiapan dan komitmen santri/wali.</p>
               </div>
             </div>
@@ -362,7 +351,7 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
             <div className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/50 flex items-start gap-3">
               <Badge variant="success" className="text-[10px] uppercase font-bold shrink-0 mt-0.5">Lulus</Badge>
               <p className="text-xs text-slate-700 leading-relaxed">
-                Santri berhak menerima Letter of Acceptance (LoA) resmi dan diarahkan untuk melakukan daftar ulang / pembayaran tahap 2.
+                Santri berhak menerima Letter of Acceptance (LoA) resmi dan menandatangani dokumen LoA secara digital sebagai penetapan akhir penerimaan.
               </p>
             </div>
             <div className="p-3.5 rounded-xl border border-red-200 bg-red-50/50 flex items-start gap-3">
@@ -403,7 +392,7 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
               <li><strong>Gelombang hanya boleh aktif jika periode induknya aktif</strong>. Menonaktifkan periode otomatis menonaktifkan seluruh gelombang di dalamnya.</li>
               <li><strong>Dalam 1 periode, maksimal hanya ada 1 gelombang aktif</strong>. Mengaktifkan gelombang lain otomatis menggantikan gelombang aktif sebelumnya.</li>
               <li>Pendaftar otomatis masuk ke gelombang aktif; pendaftar tidak memilih gelombang sendiri.</li>
-              <li><strong>Tanpa Jenjang Pendidikan:</strong> Sistem PPDB bebas dari pilihan jenjang (SMP/SMK/dll). Jalur hanya memuat tipe seleksi, bukan jenjang.</li>
+              <li><strong>Tanpa Jenjang Pendidikan &amp; Bebas Jalur:</strong> Sistem PPDB bebas dari pilihan jenjang (SMP/SMK/dll) dan menerapkan proses pendaftaran terpadu tanpa pemisahan jalur pendaftaran.</li>
             </ul>
           </div>
         ),
@@ -423,8 +412,8 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
               Biaya registrasi awal serta batas maksimal pembayaran formulir yang diterima sistem.
             </div>
             <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
-              <strong className="text-slate-900 block mb-0.5">Diskon & Minimal DP:</strong>
-              Diskon early bird untuk X pendaftar pertama yang lunas bayar formulir, diskon SPP/DP3, serta nominal minimal uang muka daftar ulang.
+              <strong className="text-slate-900 block mb-0.5">Diskon Pendaftar Pertama:</strong>
+              Diskon early bird untuk X pendaftar pertama yang lunas bayar formulir registrasi.
             </div>
           </div>
         ),
@@ -445,17 +434,17 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
     ],
   },
 
-  'ppdb-loa-skd': {
-    title: 'Template & Preview LoA / SKD',
-    subtitle: 'Panduan konfigurasi Surat Kelulusan (LoA) dan Surat Keputusan Direktur.',
+  'ppdb-loa': {
+    title: 'Template & Preview LoA',
+    subtitle: 'Panduan konfigurasi Surat Penerimaan Resmi (LoA).',
     sections: [
       {
         number: 1,
-        title: 'Apa itu LoA & SKD?',
+        title: 'Apa itu LoA?',
         icon: FileText,
         content: (
           <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-            <strong>Letter of Acceptance (LoA)</strong> adalah surat resmi ucapan selamat dan pernyataan kelulusan seleksi bagi santri baru. Sedangkan <strong>SKD</strong> (Surat Keputusan Direktur) memuat surat keputusan penerimaan santri baru bernomor registrasi resmi pesantren.
+            <strong>Letter of Acceptance (LoA)</strong> adalah surat resmi penerimaan bagi pendaftar yang dinyatakan lulus. Setelah LoA ditandatangani, alur PPDB dinyatakan selesai.
           </p>
         ),
       },
@@ -467,7 +456,7 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
           <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-950 leading-relaxed space-y-1.5">
             <p className="font-semibold text-amber-900">🔒 Klausul Wajib:</p>
             <p>
-              LoA secara permanen memuat klausul bahwa seluruh dana pembayaran biaya masuk / daftar ulang yang telah disetorkan tidak dapat dikembalikan dengan alasan apa pun.
+              LoA secara permanen memuat klausul bahwa seluruh dana formulir dan biaya pendidikan yang telah disetorkan tidak dapat dikembalikan (non-refundable) dengan alasan apa pun.
             </p>
           </div>
         ),
@@ -513,10 +502,6 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
               <strong className="text-purple-900 block mb-0.5">2. Rubrik Wawancara:</strong>
               Kriteria wawancara kesiapan santri dan orang tua (contoh: Kesiapan Mondok, Motivasi Belajar, dan Komitmen Orang Tua).
             </div>
-            <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
-              <strong className="text-slate-900 block mb-0.5">3. Tes TIU (Tanpa Rubrik Manual):</strong>
-              Nilai TIU murni bersumber otomatis dari pilihan ganda Google Form SEB. Tidak memerlukan rubrik manual di menu ini.
-            </div>
           </div>
         ),
       },
@@ -536,87 +521,299 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
     ],
   },
 
-  'ppdb-tiu-settings': {
-    title: 'Pengaturan TIU & Safe Exam Browser (SEB)',
-    subtitle: 'Panduan integrasi ujian Google Form pre-filled token dan webhook Apps Script.',
+  'ppdb-review-loa': {
+    title: 'Review & Monitoring LoA Santri',
+    subtitle: 'Panduan pemantauan Surat Penerimaan Resmi (LoA) dan tanda tangan digital santri serta orang tua/wali.',
     sections: [
       {
         number: 1,
-        title: 'Konsep Integrasi TIU Global',
-        icon: Sparkles,
+        title: 'Fungsi Menu Review LoA',
+        icon: FileCheck,
         content: (
           <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-            Tes Inteligensi Umum (TIU) menggunakan soal dari Google Form yang dikerjakan via <strong>Safe Exam Browser (SEB)</strong> di komputer/laptop. Pengaturan TIU bersifat <strong>global</strong> untuk seluruh gelombang.
+            Menu <strong>Review LoA</strong> menampilkan seluruh calon santri yang telah dinyatakan lulus seleksi dan diterbitkan Letter of Acceptance (LoA) resmi. Panitia dapat memantau status tanda tangan digital serta mengunduh berkas LoA sah.
           </p>
         ),
       },
       {
         number: 2,
-        title: '3 Parameter Konfigurasi Kunci',
-        icon: Settings,
+        title: 'Tanda Tangan Digital Santri & Wali',
+        icon: CheckCircle2,
         content: (
-          <div className="space-y-2 text-xs text-slate-700">
-            <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
-              <strong className="text-slate-900 block mb-0.5">1. Pre-filled Google Form URL:</strong>
-              Tautan Google Form dengan placeholder <code>{'{token}'}</code> pada pertanyaan short answer token. Contoh: <code>...viewform?entry.12345={'{token}'}</code>.
-            </div>
-            <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
-              <strong className="text-slate-900 block mb-0.5">2. Durasi Ujian (Menit):</strong>
-              <p className="mb-1">Bukan timer tampilan Google Form, tetapi <strong>validasi server-side guard</strong>.</p>
-              <p className="mb-1">Saat file <code>.seb</code> diunduh, server mencatat <strong>waktu mulai</strong> (<code>created_at</code>). Webhook akan menolak submit jika:</p>
-              <code className="bg-white px-1.5 py-0.5 rounded text-slate-800">{'waktu_submit > waktu_mulai + durasi_menit + 5_menit_toleransi'}</code>
-              <p className="mt-1">Ditolak dengan HTTP 400 & nilai <strong>tidak</strong> tersimpan. Timer di Google Form hanya bersifat visual/pengingat.</p>
-            </div>
-            <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
-              <strong className="text-slate-900 block mb-0.5">3. Webhook Secret (X-TIU-Secret):</strong>
-              Kunci rahasia untuk memvalidasi kiriman skor nilai dari Google Apps Script ke backend PPDB.
-            </div>
+          <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <p>
+              Santri bersama orang tua/wali menandatangani dokumen LoA secara digital melalui portal mandiri pendaftar sebagai pernyataan persetujuan dan komitmen resmi.
+            </p>
+            <p>
+              Setelah LoA ditandatangani, data pendaftar terkunci permanen (<code>is_locked = true</code>) dan seluruh alur proses PPDB dinyatakan tuntas.
+            </p>
           </div>
         ),
       },
       {
         number: 3,
-        title: 'Keamanan: 1 Attempt & Layar Terkunci',
-        icon: ShieldAlert,
+        title: 'Akhir Alur PPDB',
+        icon: Award,
         content: (
-          <div className="p-4 rounded-xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-950 leading-relaxed space-y-1.5">
-            <p className="font-semibold text-amber-900">🛡️ Proteksi Anti-Kecurangan:</p>
+          <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
             <p>
-              SEB mengunci seluruh layar peserta dan menyembunyikan bilah URL browser. Peserta hanya memiliki <strong>1 kali attempt ujian</strong>. Nilai yang masuk via webhook langsung dicatat idempoten dan memicu notifikasi WhatsApp nilai ke peserta.
+              Penandatanganan LoA oleh pendaftar dan orang tua/wali menandai selesainya alur PPDB.
+            </p>
+            <p>
+              Status LoA yang sudah ditandatangani dapat dipantau pada dashboard admin PPDB.
             </p>
           </div>
         ),
       },
       {
         number: 4,
-        title: 'Cara Memastikan TIU Berfungsi (Verifikasi Wajib)',
-        icon: BookOpen,
+        title: 'Penyetoran Biaya Pendidikan di Luar Aplikasi',
+        icon: CreditCard,
         content: (
-          <div className="space-y-2 text-xs text-slate-700">
-            <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
-              <strong className="text-slate-900 block mb-1">Langkah 1: Uji Backend (cURL)</strong>
-              <p className="mb-1 leading-relaxed">Unduh <code>.seb</code> (fresh), ambil <code>token</code> dari <code>startURL</code>, lalu kirim:</p>
-              <pre className="mt-1 bg-slate-900 text-slate-100 p-2 rounded text-[10px] overflow-x-auto whitespace-pre-wrap break-all">
-{`curl -X POST "${getApiWebhookUrl()}" \\
-  -H "Content-Type: application/json" \\
-  -H "X-TIU-Secret: WEBHOOK_SECRET" \\
-  -d '{"token":"TOKEN","score":80}'`}
-              </pre>
-              <p className="mt-1 leading-relaxed"><strong>Expected:</strong> <code>200 OK</code> → <code>{'{"status":"success","score":80}'}</code>. <code>401</code>=secret salah, <code>404</code>=token tidak ditemukan, <code>400</code>=lewat batas waktu.</p>
-            </div>
-            <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
-              <strong className="text-slate-900 block mb-1">Langkah 2: Cek Apps Script</strong>
-              <p className="leading-relaxed">Pastikan <code>PPDB_API_BASE</code> menggunakan <strong>API publik</strong> (bukan <code>localhost</code>). Buat submit uji → <strong>Apps Script → Executions</strong> harus <strong>Completed</strong> dan log <code>Status Webhook: 200</code>.</p>
-            </div>
-            <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
-              <strong className="text-slate-900 block mb-1">Langkah 3: End-to-End via SEB</strong>
-              <p className="leading-relaxed">Download <code>.seb</code> baru, jalankan di SEB → Google Form terbuka dengan <strong>Token terisi otomatis</strong> → Submit → Nilai TIU harus <strong>langsung muncul</strong> di Dashboard/Admin dalam hitungan detik.</p>
-            </div>
-            <div className="p-3 rounded-xl border border-amber-200 bg-amber-50">
-              <strong className="text-amber-900 block mb-0.5">Penting</strong>
-              <p className="text-amber-950 leading-relaxed">Jangan hanya mengandalkan copy-paste. Lakukan verifikasi di atas minimal 1x sebelum hari H untuk memastikan sistem bekerja dengan pasti.</p>
-            </div>
+          <div className="p-3.5 rounded-xl bg-amber-50/80 border border-amber-200/80 text-xs text-amber-950 leading-relaxed space-y-1.5">
+            <p className="font-semibold text-amber-900">ℹ️ Rincian Biaya Pendidikan:</p>
+            <p>
+              Rincian biaya masuk/biaya pendidikan disajikan transparan pada lembar LoA santri. Penyetoran biaya pendidikan dilakukan <strong>di luar aplikasi</strong> (transfer rekening resmi PTDARRAHMAN / tunai di kantor bendahara pesantren). Di dalam sistem PPDB tidak ada pembayaran online tahap 2.
+            </p>
           </div>
+        ),
+      },
+    ],
+  },
+
+  'ppdb-diskonasi': {
+    title: 'Diskonasi Komponen Biaya Gelombang',
+    subtitle: 'Panduan konfigurasi diskon reguler dan diskon pendaftar awal (early bird) per komponen biaya pendidikan.',
+    sections: [
+      {
+        number: 1,
+        title: 'Struktur Biaya Periode & Diskonasi Gelombang',
+        icon: Sparkles,
+        content: (
+          <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            Master komponen biaya pendidikan (uang pangkal, SPP, seragam, dsb.) dikonfigurasi di tingkat <strong>Periode</strong>. Gelombang pendaftaran tidak membuat biaya dari nol, melainkan cukup mengatur <strong>diskonasi</strong> terhadap komponen biaya periode tersebut.
+          </p>
+        ),
+      },
+      {
+        number: 2,
+        title: 'Diskon Reguler vs Diskon Pendaftar Awal (Early Bird)',
+        icon: Clock,
+        content: (
+          <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <p>
+              <strong>Diskon Reguler:</strong> Berlaku standar untuk seluruh santri yang mendaftar pada gelombang ini (dapat berupa persentase % atau nominal Rupiah).
+            </p>
+            <p>
+              <strong>Diskon Pendaftar Awal (Early Bird):</strong> Berlaku khusus untuk sejumlah kuota pendaftar pertama yang pembayaran formulirnya berhasil terkonfirmasi.
+            </p>
+          </div>
+        ),
+      },
+      {
+        number: 3,
+        title: 'Kalkulasi Otomatis pada LoA',
+        icon: FileText,
+        content: (
+          <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            Diskon yang dikonfigurasi akan otomatis mengurangi tagihan rincian biaya pendidikan santri pada Surat Penerimaan (LoA) resmi saat santri dinyatakan lulus seleksi.
+          </p>
+        ),
+      },
+      {
+        number: 4,
+        title: 'Penyetoran di Luar Aplikasi',
+        icon: CreditCard,
+        content: (
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed space-y-1.5">
+            <p>
+              Penyetoran dana biaya pendidikan dilakukan di luar sistem aplikasi melalui transfer manual ke rekening resmi PTDARRAHMAN atau tunai di kantor bendahara pesantren.
+            </p>
+          </div>
+        ),
+      },
+    ],
+  },
+
+  'ppdb-session-evaluation': {
+    title: 'Lembar Evaluasi Ujian 1:1',
+    subtitle: 'Panduan pengisian penilaian kriteria rubrik Tahfidz/Wawancara dan tinjauan dossier santri.',
+    sections: [
+      {
+        number: 1,
+        title: 'Format Workspace Dua Kolom',
+        icon: Layers,
+        content: (
+          <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <p>
+              Halaman evaluasi didesain dengan dua area independen:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-slate-600">
+              <li><strong>Kolom Kiri:</strong> Formulir penilaian kriteria rubrik terbobot, input nilai (0-100), kalkulasi skor akhir otomatis, dan catatan penguji.</li>
+              <li><strong>Kolom Kanan:</strong> Dossier lengkap pendaftar (biodata santri, orang tua/wali lengkap, identifikasi kesehatan 10 soal, dan berkas persyaratan).</li>
+            </ul>
+          </div>
+        ),
+      },
+      {
+        number: 2,
+        title: 'Kalkulasi Nilai Terbobot',
+        icon: Award,
+        content: (
+          <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            Setiap kriteria memiliki bobot persentase (%) sesuai konfigurasi di menu Rubrik. Skor akhir terhitung otomatis secara proporsional secara real-time saat Anda menginput nilai tiap kriteria.
+          </p>
+        ),
+      },
+      {
+        number: 3,
+        title: 'Catatan Penguji (Evaluator Notes)',
+        icon: FileText,
+        content: (
+          <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            Catatan penguji untuk Tahfidz dan Wawancara disimpan secara terpisah dan terstruktur. Catatan ini akan menjadi rujukan utama bagi panitia saat rapat penentuan kelulusan santri di menu Penilaian Akhir.
+          </p>
+        ),
+      },
+    ],
+  },
+
+  'ppdb-bank-soal': {
+    title: 'Bank Soal CBT (Akademik & Psikologi)',
+    subtitle: 'Panduan penyusunan dan pengelolaan materi ujian pilihan ganda (MCQ) resmi.',
+    sections: [
+      {
+        number: 1,
+        title: 'Kategori Bank Soal Per Periode',
+        icon: Sparkles,
+        content: (
+          <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            Bank Soal dikonfigurasi per periode ajaran untuk dua kategori utama: <strong>Seleksi Akademik</strong> (kemampuan dasar, matematika, bahasa, keislaman) dan <strong>Seleksi Psikologi</strong> (tes potensi, kecerdasan logis, dan kecocokan psikologis santri).
+          </p>
+        ),
+      },
+      {
+        number: 2,
+        title: 'Format Soal Pilihan Ganda (MCQ)',
+        icon: FileText,
+        content: (
+          <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <p>
+              Setiap butir soal memiliki 5 pilihan jawaban (A, B, C, D, E), satu kunci jawaban resmi (<code>is_correct</code>), dan bobot poin tertentu.
+            </p>
+            <p>
+              Total poin default adalah 100 dengan durasi pengerjaan yang dapat disesuaikan per bank soal (standar 60 menit).
+            </p>
+          </div>
+        ),
+      },
+      {
+        number: 3,
+        title: 'Import Massal Berkas CSV',
+        icon: FileCheck,
+        content: (
+          <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            Panitia dapat mengunduh format template CSV melalui tombol <strong>Unduh Template Soal (.csv)</strong>, mengisi butir pertanyaan dan opsi jawaban, kemudian mengunggahnya secara instan untuk membuat bank soal baru.
+          </p>
+        ),
+      },
+    ],
+  },
+
+  'ppdb-jadwal-cbt': {
+    title: 'Jadwal Ujian Seleksi Massal (CBT)',
+    subtitle: 'Panduan penjadwalan ujian tertulis massal per gelombang dan kloter/batch.',
+    sections: [
+      {
+        number: 1,
+        title: 'Jadwal Ujian Massal Per Gelombang',
+        icon: CalendarDays,
+        content: (
+          <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            Ujian CBT dijadwalkan secara massal untuk seluruh calon santri di gelombang aktif yang telah lolos verifikasi berkas persyaratan. Jadwal dapat dikelompokkan ke dalam <strong>Batch / Kloter</strong> tertentu.
+          </p>
+        ),
+      },
+      {
+        number: 2,
+        title: 'PIN Sesi / Access Token Ujian',
+        icon: KeyRound,
+        content: (
+          <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <p>
+              Setiap sesi memiliki <strong>PIN Sesi / Access Token</strong> unik (contoh: <code>AKAD-8921</code>).
+            </p>
+            <p>
+              Peserta wajib memasukkan kata sandi akun PPDB dan PIN sesi tersebut di gerbang autentikasi sebelum lembar soal dapat dibuka.
+            </p>
+          </div>
+        ),
+      },
+      {
+        number: 3,
+        title: 'Aturan Cutoff H-1 & Reminder WhatsApp',
+        icon: Clock,
+        content: (
+          <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <p>
+              Penutupan slot suatu batch berlaku otomatis <strong>24 jam (H-1)</strong> sebelum ujian batch pertama dimulai. Pendaftar yang berkasnya tervalidasi setelah batas cutoff akan dimasukkan ke batch berikutnya.
+            </p>
+            <p>
+              Sistem secara otomatis mengirimkan notifikasi pengingat ke nomor WhatsApp calon santri pada H-2, H-1, dan 1 jam sebelum ujian berlangsung.
+            </p>
+          </div>
+        ),
+      },
+    ],
+  },
+
+  'ppdb-cbt-monitoring': {
+    title: 'Pemantauan Ujian CBT Real-Time',
+    subtitle: 'Panduan pengawasan pengerjaan live peserta ujian, timer, pelanggaran, dan unfreeze.',
+    sections: [
+      {
+        number: 1,
+        title: 'Konsol Pengawasan Real-Time',
+        icon: Activity,
+        content: (
+          <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            Halaman pemantauan menyajikan data live pengerjaan seluruh peserta pada jadwal ujian aktif: status pengerjaan (Belum Mulai, Sedang Mengerjakan, Terkunci, atau Selesai), sisa waktu, dan jumlah soal yang telah dijawab.
+          </p>
+        ),
+      },
+      {
+        number: 2,
+        title: 'Deteksi Pelanggaran & Status Terkunci',
+        icon: ShieldAlert,
+        content: (
+          <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <p>
+              Sistem memantau perpindahan tab browser atau fokus layar keluar dari ruang ujian lebih dari 5 detik.
+            </p>
+            <p>
+              Setiap insiden dicatat dalam log pelanggaran. Peserta yang melebihi batas toleransi otomatis terkunci (<code>locked</code>) dan tidak dapat melanjutkan menjawab tanpa izin pengawas.
+            </p>
+          </div>
+        ),
+      },
+      {
+        number: 3,
+        title: 'Fitur Buka Kunci (Unfreeze) Peserta',
+        icon: CheckCircle2,
+        content: (
+          <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            Pengawas berwenang membuka kunci peserta yang terkena status locked (misal akibat kendala teknis atau browser restart) melalui tombol <strong>Buka Kunci</strong> pada baris peserta terkait.
+          </p>
+        ),
+      },
+      {
+        number: 4,
+        title: 'Autosave & Auto-Submit Saat Timer Habis',
+        icon: Clock,
+        content: (
+          <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            Setiap klik opsi jawaban peserta tersimpan secara instan di database. Saat durasi ujian berakhir, sistem secara otomatis mensubmit seluruh lembar jawaban peserta dan menghitung skor akhir seketika.
+          </p>
         ),
       },
     ],
@@ -648,9 +845,9 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
               <li>Data lengkap Orang Tua / Wali (Ayah, Ibu, Wali).</li>
               <li>Kuesioner Identifikasi Kesehatan santri.</li>
               <li>Seluruh dokumen persyaratan yang pernah diunggah & riwayat verifikasinya.</li>
-              <li>Hasil ujian TIU, jadwal & lembar evaluasi Session 1:1 Tahfidz & Wawancara.</li>
-              <li>Keputusan kelulusan, LoA, dan SKD resmi jika sudah terbit.</li>
-              <li>Riwayat transaksi pembayaran formulir dan tagihan daftar ulang tahap 2.</li>
+              <li>Jadwal & lembar evaluasi Session 1:1 Tahfidz & Wawancara.</li>
+              <li>Keputusan pendaftaran dan LoA beserta status tanda tangan.</li>
+              <li>Riwayat transaksi pembayaran formulir pendaftaran.</li>
             </ul>
           </div>
         ),
@@ -707,8 +904,8 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
               Konfirmasi jadwal ujian tatap muka kepada santri dan penguji pembuat jadwal.
             </div>
             <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
-              <strong className="text-slate-900 block mb-0.5">Hasil TIU & LoA Kelulusan:</strong>
-              Pemberitahuan hasil tes kuis TIU dan pengumuman akhir kelulusan santri.
+              <strong className="text-slate-900 block mb-0.5">Pengumuman & LoA Kelulusan:</strong>
+              Pemberitahuan kelulusan dan penerbitan Surat Penerimaan (LoA) resmi santri.
             </div>
           </div>
         ),
@@ -981,16 +1178,12 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
       },
       {
         number: 3,
-        title: 'Tahap 3: Ujian TIU & Session 1:1 Tatap Muka',
+        title: 'Tahap 3: Ujian Seleksi Session 1:1',
         icon: GraduationCap,
         content: (
           <div className="space-y-2 text-xs text-slate-700 leading-relaxed">
-            <div className="p-3 rounded-xl border border-blue-200 bg-blue-50/50">
-              <strong className="text-blue-950 block mb-0.5">1. Ujian TIU (Safe Exam Browser):</strong>
-              Bagi pendaftar jalur tes, kerjakan ujian kuis menggunakan komputer/laptop dengan aplikasi Safe Exam Browser (SEB). Anda hanya memiliki 1 kali kesempatan ujian.
-            </div>
             <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/50">
-              <strong className="text-emerald-950 block mb-0.5">2. Booking Jadwal Session 1:1:</strong>
+              <strong className="text-emerald-950 block mb-0.5">Booking Jadwal Session 1:1:</strong>
               Pilih slot jadwal tes Tahfidz dan Wawancara yang tersedia sesuai kenyamanan Anda (tersedia mode Online via Zoom atau Offline di pesantren).
             </div>
           </div>
@@ -998,12 +1191,12 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
       },
       {
         number: 4,
-        title: 'Tahap 4: Pengumuman Kelulusan & Daftar Ulang',
+        title: 'Tahap 4: Pengumuman Kelulusan & Tanda Tangan LoA',
         icon: Award,
         content: (
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed space-y-1.5">
             <p>
-              Setelah penilaian selesai, periksa hasil kelulusan di dashboard. Jika dinyatakan <strong>LULUS</strong>, unduh surat kelulusan (LoA) resmi dan selesaikan pembayaran daftar ulang tahap 2 sesuai instruksi termin yang tersedia.
+              Setelah penilaian selesai, periksa hasil kelulusan di dashboard. Jika dinyatakan <strong>LULUS</strong>, unduh surat penerimaan (LoA) resmi dan lakukan tanda tangan digital bersama orang tua/wali untuk menuntaskan alur pendaftaran. Penyetoran biaya pendidikan dilakukan di luar aplikasi (transfer rekening resmi PTDARRAHMAN / tunai di bendahara pesantren).
             </p>
           </div>
         ),
@@ -1013,21 +1206,21 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
 
   'applicant-documents': {
     title: 'Upload & Kirim Dokumen Persyaratan',
-    subtitle: 'Panduan pengunggahan berkas wajib, berkas tambahan jalur, batas ukuran, dan proses verifikasi panitia.',
+    subtitle: 'Panduan pengunggahan 9 berkas wajib persyaratan, batas ukuran, dan proses verifikasi panitia.',
     sections: [
       {
         number: 1,
-        title: 'Dokumen Wajib vs Berkas Tambahan Jalur',
+        title: '9 Berkas Wajib Persyaratan (Seragam)',
         icon: FileText,
         content: (
           <div className="space-y-2 text-xs text-slate-700 leading-relaxed">
             <div className="p-3 rounded-xl border border-slate-200 bg-slate-50/70">
-              <strong className="text-slate-900 block mb-0.5">Dokumen Wajib (Semua Jalur):</strong>
-              Kartu Keluarga (KK), Akta Kelahiran, Rapor/Ijazah terakhir, dan Pasfoto santri wajib diunggah oleh seluruh pendaftar tanpa terkecuali.
+              <strong className="text-slate-900 block mb-0.5">Dokumen Wajib Santri:</strong>
+              Surat Keterangan/Bukti NISN, Kartu Keluarga (KK), Akta Kelahiran, dan Pasfoto berwarna santri.
             </div>
             <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/60">
-              <strong className="text-emerald-950 block mb-0.5">Berkas Tambahan Khusus Jalur:</strong>
-              Jika Anda mendaftar melalui jalur non-reguler (seperti Jalur Prestasi, Tahfidz, atau Afirmasi), Anda wajib mengunggah sertifikat, piagam kejuaraan, syahadah tahfidz, atau dokumen pendukung terkait sebagai syarat validasi kelayakan jalur Anda.
+              <strong className="text-emerald-950 block mb-0.5">Berkas Orang Tua &amp; Akademik:</strong>
+              KTP Asli Orang Tua / Wali serta 4 Rapor Terakhir (Rapor Semester 1, 2, 3, dan 4) wajib diunggah secara lengkap oleh seluruh pendaftar.
             </div>
           </div>
         ),
@@ -1077,21 +1270,6 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
           </div>
         ),
       },
-      {
-        number: 5,
-        title: 'Ketentuan Ganti Jalur Pendaftaran',
-        icon: ShieldAlert,
-        content: (
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed space-y-1.5">
-            <p>
-              Anda dapat berpindah jalur pendaftaran selama Anda <strong>belum pernah mengirimkan dokumen persyaratan untuk verifikasi</strong>.
-            </p>
-            <p>
-              Setelah dokumen pertama kali dikirimkan atau diverifikasi panitia, jalur pendaftaran akan dikunci secara permanen dan tidak dapat diubah lagi.
-            </p>
-          </div>
-        ),
-      },
     ],
   },
 
@@ -1109,7 +1287,7 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
               Kuitansi digital ini merupakan bukti sah bahwa biaya formulir pendaftaran PPDB Pesantren Tahfidz Qur&apos;an dan Digital Ar-Rahman telah terbayar dan lunas di sistem keuangan kami.
             </p>
             <p>
-              Kuitansi mencantumkan Nomor Transaksi, Nama Santri, Jalur Pendaftaran, Metode Pembayaran, Waktu Transaksi, dan Stempel Status <strong>LUNAS</strong>.
+              Kuitansi mencantumkan Nomor Transaksi, Nama Santri, Gelombang, Metode Pembayaran, Waktu Transaksi, dan Stempel Status <strong>LUNAS</strong>.
             </p>
           </div>
         ),
@@ -1137,73 +1315,6 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
             </p>
             <p>
               Tautan publik yang dibagikan hanya menampilkan kuitansi bersih tanpa menu navigasi internal dashboard, sehingga aman dibagikan ke pihak luar.
-            </p>
-          </div>
-        ),
-      },
-    ],
-  },
-
-  'applicant-tiu': {
-    title: 'Ujian TIU (Safe Exam Browser)',
-    subtitle: 'Petunjuk teknis pelaksanaan Tes Intelegensi Umum menggunakan aplikasi Safe Exam Browser (SEB).',
-    sections: [
-      {
-        number: 1,
-        title: 'Khusus Pendaftar Jalur Reguler',
-        icon: Sparkles,
-        content: (
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed space-y-1.5">
-            <p>
-              Ujian Tes Intelegensi Umum (TIU) diwajibkan bagi calon santri <strong>Jalur Reguler</strong> setelah berkas diverifikasi dan disetujui oleh panitia.
-            </p>
-            <p>
-              Pendaftar jalur khusus (Tahfidz, Prestasi, Afirmasi) tidak perlu mengerjakan ujian TIU dan dapat langsung melanjutkan ke Seleksi 1:1 Tahfidz.
-            </p>
-          </div>
-        ),
-      },
-      {
-        number: 2,
-        title: 'Aplikasi Safe Exam Browser (SEB)',
-        icon: Shield,
-        content: (
-          <div className="p-3.5 rounded-xl bg-blue-50/70 border border-blue-200 text-xs text-blue-950 leading-relaxed space-y-1.5">
-            <p>
-              Ujian wajib dikerjakan menggunakan komputer atau laptop yang telah terinstal aplikasi <strong>Safe Exam Browser (SEB)</strong> versi 3.x ke atas.
-            </p>
-            <p>
-              Unduh file konfigurasi <code>.seb</code> dari tombol yang tersedia di halaman ini. Buka file tersebut untuk masuk ke antarmuka ujian yang terkunci aman.
-            </p>
-          </div>
-        ),
-      },
-      {
-        number: 3,
-        title: 'Satu Kali Kesempatan & Timer Ujian',
-        icon: Clock,
-        content: (
-          <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 text-xs text-amber-950 leading-relaxed space-y-1.5">
-            <p>
-              Timer pengerjaan ujian dicatat di sisi server backend sejak file <code>.seb</code> berhasil di-generate dan diunduh.
-            </p>
-            <p>
-              Anda hanya memiliki <strong>1 (satu) kali kesempatan ujian</strong>. Pastikan perangkat dan koneksi internet stabil sebelum membuka ujian.
-            </p>
-          </div>
-        ),
-      },
-      {
-        number: 4,
-        title: 'Penilaian Otomatis & Notifikasi Nilai',
-        icon: CheckCircle2,
-        content: (
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed space-y-1.5">
-            <p>
-              Nilai TIU diproses otomatis melalui integrasi webhook begitu Anda menekan tombol Submit pada formulir ujian SEB.
-            </p>
-            <p>
-              Hasil nilai akan langsung tersimpan di sistem, dan notifikasi konfirmasi hasil TIU akan dikirimkan otomatis ke nomor WhatsApp pendaftar.
             </p>
           </div>
         ),
@@ -1249,7 +1360,7 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
               2. <strong>Tartil & Kelancaran:</strong> Kecepatan, kefasihan ritme, serta kejelasan lantunan ayat Al-Qur'an.
             </p>
             <p>
-              3. <strong>Hafalan Al-Qur'an:</strong> Daya ingat, sambung ayat, dan jumlah hafalan juz/surat sesuai kriteria jalur pendaftaran.
+              3. <strong>Hafalan Al-Qur'an:</strong> Daya ingat, sambung ayat, dan capaian hafalan juz/surat santri.
             </p>
           </div>
         ),
@@ -1315,9 +1426,36 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
     ],
   },
 
+  'applicant-selection': {
+    title: 'Tes Seleksi & Ujian 1:1',
+    subtitle: 'Petunjuk tahapan ujian tatap muka langsung (Session 1:1 Tahfidz & Wawancara).',
+    sections: [
+      {
+        number: 1,
+        title: 'Tahapan Seleksi Personal 1:1',
+        icon: Users,
+        content: (
+          <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            Calon santri menjalani dua tahapan seleksi utama: <strong>Ujian Tahfidz Al-Qur'an</strong> bersama asatidz penguji dan <strong>Wawancara Komitmen</strong> bersama calon santri dan orang tua/wali.
+          </p>
+        ),
+      },
+      {
+        number: 2,
+        title: 'Pemilihan Jadwal Mandiri',
+        icon: Clock,
+        content: (
+          <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            Setelah dokumen persyaratan disetujui panitia, calon santri dapat memilih slot jadwal penguji yang tersedia secara mandiri melalui menu Seleksi di portal ini.
+          </p>
+        ),
+      },
+    ],
+  },
+
   'applicant-result': {
     title: 'Hasil Kelulusan & LoA Resmi',
-    subtitle: 'Petunjuk melihat pengumuman kelulusan, unduh dokumen LoA resmi, dan prosedur daftar ulang tahap 2.',
+    subtitle: 'Petunjuk melihat pengumuman kelulusan, unduh dokumen LoA resmi, dan tanda tangan digital dokumen persetujuan.',
     sections: [
       {
         number: 1,
@@ -1326,7 +1464,7 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
         content: (
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed space-y-1.5">
             <p>
-              Hasil seleksi diumumkan secara transparan di halaman ini setelah seluruh penilaian (TIU, Tahfidz, Wawancara) selesai direkapitulasi dan disidangkan oleh panitia penerimaan santri baru.
+              Hasil seleksi diumumkan secara transparan di halaman ini setelah seluruh penilaian (Tahfidz dan Wawancara) selesai direkapitulasi dan disidangkan oleh panitia penerimaan santri baru.
             </p>
           </div>
         ),
@@ -1341,22 +1479,22 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
               Calon santri yang dinyatakan <strong>LULUS</strong> dapat langsung mengunduh <strong>Letter of Acceptance (LoA)</strong> resmi.
             </p>
             <p>
-              Surat ini memuat nomor registrasi resmi, ketetapan kelulusan, serta rincian biaya komitmen pendidikan yang telah disetujui.
+              Surat ini memuat nomor registrasi resmi, ketetapan kelulusan, serta ketentuan persetujuan santri baru.
             </p>
           </div>
         ),
       },
       {
         number: 3,
-        title: 'Daftar Ulang & Pembayaran Tahap 2',
-        icon: CreditCard,
+        title: 'Tanda Tangan Digital Dokumen LoA',
+        icon: FileCheck,
         content: (
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed space-y-1.5">
             <p>
-              Selesaikan daftar ulang tahap 2 (uang pangkal/gedung, SPP bulan pertama, seragam, dll.) sesuai pilihan termin pembayaran yang Anda tentukan sebelum batas waktu berakhir.
+              Santri dan orang tua/wali melakukan tanda tangan digital langsung pada dokumen LoA sebagai komitmen dan persetujuan resmi penerimaan santri baru.
             </p>
             <p>
-              Jika membayar melalui transfer bank, unggah bukti pembayaran pada formulir yang disediakan agar dapat diverifikasi oleh admin keuangan pesantren.
+              Setelah LoA ditandatangani, seluruh rangkaian alur PPDB telah selesai.
             </p>
           </div>
         ),

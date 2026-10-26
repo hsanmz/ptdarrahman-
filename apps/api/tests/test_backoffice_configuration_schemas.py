@@ -4,7 +4,6 @@ import pytest
 from pydantic import ValidationError
 
 from src.modules.ppdb.schemas import (
-    TIUQuestionInput,
     WaveBase,
     WaveFeeItemCreate,
 )
@@ -14,7 +13,6 @@ from src.modules.selection.schemas import SessionCreate
 def _wave_payload(**overrides):
     return {
         "name": "Gelombang 1",
-        "allowed_paths": "reguler,rapot",
         "registration_start_date": date(2026, 1, 1),
         "registration_end_date": date(2026, 1, 31),
         "document_upload_end_date": date(2026, 2, 5),
@@ -84,24 +82,6 @@ def test_selection_session_requires_schedule_and_mode_details():
             mode="online",
             officer_name="Ibu Siti",
             meeting_url="https://zoom.us/j/123",
-        )
-
-
-def test_tiu_sync_question_requires_unique_options_and_valid_answer():
-    with pytest.raises(ValidationError, match="tidak boleh duplikat"):
-        TIUQuestionInput(
-            id="q1",
-            title="Hitung 1 + 1",
-            options=["2", "2"],
-            correct_option_index=0,
-        )
-
-    with pytest.raises(ValidationError, match="menunjuk salah satu opsi"):
-        TIUQuestionInput(
-            id="q1",
-            title="Hitung 1 + 1",
-            options=["2", "3"],
-            correct_option_index=2,
         )
 
 

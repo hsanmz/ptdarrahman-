@@ -1,6 +1,6 @@
-[1. AKSES WEBSITE & KLIK DAFTAR]
-       │
-       ▼
+﻿[1. AKSES WEBSITE & KLIK DAFTAR]
+       â”‚
+       â–¼
 [2. ISI FORMULIR PENDAFTARAN AWAL]
 Pendaftar mengisi form pendaftaran berseri (wizard) dengan 7 tahapan:
 - Pilih Jalur (tanpa pemilihan jenjang pendidikan).
@@ -11,80 +11,77 @@ Pendaftar mengisi form pendaftaran berseri (wizard) dengan 7 tahapan:
 - Identifikasi Kesehatan (Riwayat kesehatan, alergi, operasi, kebutuhan khusus, darurat, dll).
 - Pernyataan & Persetujuan (Wajib menyetujui seluruh klausul dengan mencentang 4 kotak sebelum submit).
 - Sistem otomatis menautkan pendaftar ke satu-satunya gelombang aktif di periode aktif.
-       │
-       ▼
-[3. SISTEM GENERATE KREDENSIAL] ──► (Kirim Notif WA: Username, Password, Link Login)
-       │
-       ▼
+       â”‚
+       â–¼
+[3. SISTEM GENERATE KREDENSIAL] â”€â”€â–º (Kirim Notif WA: Username, Password, Link Login)
+       â”‚
+       â–¼
 [4. USER LOGIN KE APLIKASI/WEB]
-       │
-       ▼
+       â”‚
+       â–¼
 [5. PEMBAYARAN BIAYA FORMULIR (PAK KASIR)]
-       │ (Webhook mencatat pembayaran ke pendaftar; periode/gelombang diambil dari relasi pendaftar)
-       ▼
+       â”‚ (Webhook mencatat pembayaran ke pendaftar; periode/gelombang diambil dari relasi pendaftar)
+       â–¼
 [6. DASHBOARD USER: PILIHAN GANTI JALUR & UPLOAD DOKUMEN]
 *(Fitur Ganti Jalur hanya terbuka SEBELUM pendaftar melakukan Upload Dokumen)*
-       │
-       ▼
+       â”‚
+       â–¼
 [7. UPLOAD DOKUMEN (1 MODUL SEKALIGUS)]
 (Dokumen Wajib: NISN, KK, Akte Kelahiran, Pas Foto 3x4 / 4x6)
-       │
-       ├─────────────────────────────────────────────────┐
-       ▼                                                 ▼
+       â”‚
+       â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+       â–¼                                                 â–¼
 (JALUR TIU)                                        (JALUR SELAIN TIU)
 Hanya Upload Dokumen Wajib                         Upload Dokumen Wajib + Dokumen Tambahan
                                                    Sesuai Jalurnya (Sertifikat (minimal 3 sertifikat, max 10)/Raport (4 rapot terakhir)/Bukti Hafalan (bukti hafalan max 3, UTAMAKAN PENGAKUAN HAFALAN BUKAN DOKUMENTASI HAFALAN))
-       │                                                 │
-       └────────────────────────┬────────────────────────┘
-                                ▼
-[8. ADMIN VERIFIKASI DOKUMEN (MANUAL)] ──► (REVISI) ──► [NOTIF WA: UPLOAD ULANG]
-                                │
-                                ▼ (DOKUMEN VALID & APPROVED)
+       â”‚                                                 â”‚
+       â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                â–¼
+[8. ADMIN VERIFIKASI DOKUMEN (MANUAL)] â”€â”€â–º (REVISI) â”€â”€â–º [NOTIF WA: UPLOAD ULANG]
+                                â”‚
+                                â–¼ (DOKUMEN VALID & APPROVED)
 [9. SISTEM BACA JALUR PENDAFTARAN (VALIDASI TAKE SESI TAHFIDZ)]
-                                │
-       ┌────────────────────────┴────────────────────────┐
-       ▼ (Jalur Tes/TIU)                                 ▼ (Jalur Non-TIU)
+                                â”‚
+       â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+       â–¼ (Jalur Tes/TIU)                                 â–¼ (Jalur Non-TIU)
 [10a. UJIAN TIU DI APLIKASI PPDB]                 [10b. LANGSUNG BISA TAKE SESSION]
 (Pendaftar klik Mulai; tes berjalan                (Bisa Take Session Tahfidz
 di Safe Exam Browser dengan timer server.          setelah Dokumen Valid, kecuali Jalur TIU dia harus menyelesaikan TIU baru bisa take Session Tahfidz)
-Waktu habis → auto-submit & auto-nilai;
+Waktu habis â†’ auto-submit & auto-nilai;
 hasil langsung tampil, tanpa input admin.)
 TIU wajib dari komputer desktop/laptop Windows atau macOS dengan Safe Exam Browser; ponsel/tablet tidak didukung. Panduan instalasi dan penggunaan disediakan sebelum hari ujian. Setiap pendaftar hanya mendapat satu attempt; tidak ada retake setelah selesai atau waktu habis. Jawaban disimpan otomatis selama ujian.
 Jika koneksi terputus, login kembali dan buka TIU untuk melanjutkan attempt yang sama melalui SEB. Jawaban yang tersimpan di server dipulihkan agar peserta melanjutkan dari jawaban terakhir; ini bukan attempt baru. Timer tetap berjalan selama koneksi terputus dan tidak di-reset. Jika waktu habis sebelum peserta tersambung kembali, jawaban tersimpan dikumpulkan dan dinilai otomatis. Kendala listrik/perangkat harus segera dilaporkan ke panitia untuk ditinjau.
 Setelah webhook Apps Script berhasil memasukkan nilai TIU ke sistem, peserta menerima notifikasi WhatsApp dan dapat melihat nilai serta tahapan berikutnya di dashboard.
-       │                                                 │
-       └────────────────────────┬────────────────────────┘
-                                ▼
+       â”‚                                                 â”‚
+       â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                â–¼
 [11. TAKE SESSION & UJIAN TAHFIDZ (SEMUA JALUR WAJIB)]
 (1 Slot = 1 Pendaftar. Hasil nilai Tahfidz wajib diinput oleh penguji)
-                                │
-                                ▼
-[12. TAKE SESSION WAWANCARA] ◄── (SISTEM KUNCI: HANYA BISA JIKA HASIL TAHFIDZ SUDAH ADA)
-                                │
-                                ▼
+                                â”‚
+                                â–¼
+[12. TAKE SESSION WAWANCARA] â—„â”€â”€ (SISTEM KUNCI: HANYA BISA JIKA HASIL TAHFIDZ SUDAH ADA)
+                                â”‚
+                                â–¼
 [13. WAWANCARA (ONLINE / OFFLINE SESUAI JADWAL)]
-                                │
-                                ▼
+                                â”‚
+                                â–¼
 [14. PENGUMUMAN KELULUSAN (OLEH ADMIN)]
-                                │
-       ┌────────────────────────┴────────────────────────┐
-       ▼ (TIDAK LULUS)                                   ▼ (LULUS)
+                                â”‚
+       â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+       â–¼ (TIDAK LULUS)                                   â–¼ (LULUS)
 [NOTIF: MOHON MAAF GAGAL]                      [15. MENDAPATKAN LoA (Letter of Acceptance)]
-       │                                       *(MoU Dihold)*
-   (SELESAI)                                   *Info Wajib di LoA: "Seluruh dana yang
+       â”‚                                          (SELESAI)                                   *Info Wajib di LoA: "Seluruh dana yang
                                                 dibayarkan tidak dapat dikembalikan"*
-                                                         │
-                                                         ▼
+                                                         â”‚
+                                                         â–¼
                                                [16. PEMBAYARAN TAHAP 2 DI APLIKASI (PAK KASIR)]
                                                - Bayar DP (Syarat utama diterima). DP di luar tagihan.
                                                - Pendaftar mengatur skema cicilan untuk sisa tagihan
                                                  (Pilih dibagi berapa kali cicilan/tagihan).
                                                - *Tersedia fitur bayar rapel cicilan sekaligus (misal ngaret)*.
-                                                         │
-                                                         ▼ (DP MASUK & SETTING CICILAN SELESAI)
-                                               [17. INFO LINK GROUP WHATSAPP & SKD]
+                                                         â”‚
+                                                         â–¼ (DP MASUK & SETTING CICILAN SELESAI)
                                                (Link WA Group HANYA muncul di dashboard setelah Tahap 2 selesai)
-                                               (Sistem Generate SKD / No Registrasi)
-                                                         │
-                                                         ▼
+                                                         â”‚
+                                                         â–¼
                                                      (SELESAI)

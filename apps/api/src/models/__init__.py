@@ -28,8 +28,10 @@ from src.models.ppdb import (
     PPDBApplicantDiscount,
     PPDBPaymentTransaction,
     PPDBPeriod,
+    PPDBPeriodFeeItem,
     PPDBStage2Bill,
     PPDBWave,
+    PPDBWaveFeeDiscount,
     PPDBWaveFeeItem,
 )
 from src.models.selection import (
@@ -38,6 +40,14 @@ from src.models.selection import (
     SelectionResult,
     SelectionScore,
     SelectionSession,
+)
+from src.models.cbt import (
+    ExamBank,
+    ExamQuestion,
+    ExamOption,
+    ExamSchedule,
+    ExamAttempt,
+    ExamAnswer,
 )
 
 __all__ = [
@@ -62,7 +72,9 @@ __all__ = [
     "FileUpload",
     "PPDBApplicant",
     "PPDBPeriod",
+    "PPDBPeriodFeeItem",
     "PPDBWave",
+    "PPDBWaveFeeDiscount",
     "PPDBWaveFeeItem",
     "PPDBApplicantDiscount",
     "PPDBStage2Bill",
@@ -74,4 +86,10 @@ __all__ = [
     "SelectionResult",
     "SelectionScore",
     "SelectionSession",
+    "ExamBank",
+    "ExamQuestion",
+    "ExamOption",
+    "ExamSchedule",
+    "ExamAttempt",
+    "ExamAnswer",
 ]

@@ -100,7 +100,7 @@ export default function ApplicantFormDocument({
         {/* Kolom Tengah: Judul Kop Lembaga Rata Tengah (1 Baris Utuh) */}
         <div className="flex-1 text-center px-1">
           <h2 className="text-[13.5px] sm:text-[14px] font-black tracking-tight text-slate-900 uppercase leading-tight whitespace-nowrap">
-            PESANTREN TAHFIDZ QUR&apos;AN DAN DIGITAL ARRAHMAN
+            PESANTREN TAHFIDZ QUR&apos;AN DAN DIGITAL AR-RAHMAN
           </h2>
           <p className="text-[9.5px] sm:text-[10px] font-bold text-emerald-800 uppercase tracking-wide mt-1 whitespace-nowrap">
             PANITIA PENERIMAAN PESERTA DIDIK BARU TAHUN AJARAN 2026/2027
@@ -171,9 +171,9 @@ export default function ApplicantFormDocument({
             <span className="font-mono font-bold text-emerald-950 text-xs">{regNo}</span>
           </div>
           <div>
-            <span className="text-[9.5px] text-slate-500 block uppercase font-bold">Jalur Pendaftaran</span>
+            <span className="text-[9.5px] text-slate-500 block uppercase font-bold">Gelombang</span>
             <span className="font-semibold text-slate-900 capitalize text-xs">
-              {applicant.registration_path || 'Reguler'}
+              {applicant.wave_name || 'Gelombang 1'}
             </span>
           </div>
           <div>
@@ -426,7 +426,7 @@ export default function ApplicantFormDocument({
             )}
             <div className="border-l border-emerald-900/30 pl-2.5">
               <h2 className="text-xs font-black tracking-tight text-slate-900 uppercase leading-snug">
-                PESANTREN TAHFIDZ QUR&apos;AN DAN DIGITAL ARRAHMAN
+                PESANTREN TAHFIDZ QUR&apos;AN DAN DIGITAL AR-RAHMAN
               </h2>
               <p className="text-[9px] font-bold text-emerald-800 uppercase tracking-wider">
                 LEMBAR FORMULIR PENDAFTARAN — HALAMAN 2

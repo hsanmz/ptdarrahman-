@@ -7,7 +7,6 @@ const applicant = {
   full_name: 'Muhammad Abdul Rahman Al-Fatih',
   email: 'muhammad.abdul.rahman.alfatih@contoh-domain-panjang.sch.id',
   phone: '081234567890',
-  registration_path: 'prestasi_beasiswa',
   wave_name: 'Gelombang 1 — 2026/2027',
   payment_status: 'paid',
   status: 'document_uploaded',
@@ -28,21 +27,20 @@ function renderTable(props: Partial<Parameters<typeof ApplicantsTable>[0]> = {})
 describe('ApplicantsTable — struktur & proporsi kolom', () => {
   it('menampilkan header ringkas yang tidak berhimpitan', () => {
     renderTable()
-    for (const label of ['Pendaftar', 'Kontak', 'Jalur', 'Pembayaran', 'Dokumen', 'Seleksi']) {
+    for (const label of ['Pendaftar', 'Kontak', 'Pembayaran', 'Dokumen', 'Seleksi']) {
       expect(screen.getByRole('columnheader', { name: label })).toBeInTheDocument()
     }
-    // Header panjang lama "Jalur Pendaftaran" diganti label ringkas "Jalur".
-    expect(screen.queryByRole('columnheader', { name: /jalur pendaftaran/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('columnheader', { name: /jalur/i })).not.toBeInTheDocument()
   })
 
   it('memakai colgroup eksplisit berjumlah sama dengan kolom (dengan seleksi)', () => {
     const { container } = renderTable()
-    expect(container.querySelectorAll('colgroup col')).toHaveLength(7)
+    expect(container.querySelectorAll('colgroup col')).toHaveLength(6)
   })
 
   it('memakai colgroup eksplisit berjumlah sama dengan kolom (tanpa seleksi)', () => {
     const { container } = renderTable({ showSelectionColumn: false })
-    expect(container.querySelectorAll('colgroup col')).toHaveLength(6)
+    expect(container.querySelectorAll('colgroup col')).toHaveLength(5)
     expect(screen.queryByRole('columnheader', { name: 'Seleksi' })).not.toBeInTheDocument()
   })
 
@@ -61,12 +59,6 @@ describe('ApplicantsTable — keterbacaan data', () => {
     expect(screen.getByTitle(applicant.email)).toBeInTheDocument()
     expect(screen.getByTitle(applicant.phone)).toBeInTheDocument()
     expect(container.querySelectorAll('.truncate').length).toBeGreaterThanOrEqual(3)
-  })
-
-  it('menampilkan jalur pendaftaran sebagai label yang dirapikan, bukan snake_case mentah', () => {
-    renderTable()
-    expect(screen.getByText('Prestasi Beasiswa')).toBeInTheDocument()
-    expect(screen.queryByText('prestasi_beasiswa')).not.toBeInTheDocument()
   })
 
   it('menampilkan status pembayaran, dokumen, dan seleksi secara konsisten', () => {

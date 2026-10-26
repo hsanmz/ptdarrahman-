@@ -39,7 +39,7 @@ export default function PaymentStep({ transaction, applicant }: PaymentStepProps
     ? `KUI-PPDB-${transaction!.id.replace(/-/g, '').slice(0, 12).toUpperCase()}`
     : '-'
   const applicantName = applicant?.full_name || 'Calon Santri'
-  const pathName = (applicant?.registration_path || 'Reguler').toUpperCase()
+  const waveName = applicant?.wave_name || 'Gelombang 1'
   // QR verifikasi berisi URL kuitansi publik. Hanya dibuat kalau transaksi
   // benar-benar ada, supaya tidak ada QR yang menunjuk ke kuitansi kosong.
   const verifyUrl = hasPayment ? `${window.location.origin}/kuitansi/${transaction!.id}` : null
@@ -56,7 +56,7 @@ export default function PaymentStep({ transaction, applicant }: PaymentStepProps
   const payMethod = (transaction?.method || 'TIDAK DIKETAHUI').toUpperCase()
   const statusLabel = isPaid ? 'LUNAS' : (transaction?.status || 'BELUM BAYAR').toUpperCase()
 
-  const shareText = `*KUITANSI PEMBAYARAN FORMULIR PPDB PTDARRAHMAN*\n\nNo. Kuitansi: ${receiptNo}\nNama: ${applicantName}\nJalur: ${pathName}\nNominal: ${amountStr}\nMetode: ${payMethod}\nTanggal: ${payDateStr}\nStatus: *${statusLabel}*\n\nBukti sah pendaftaran PPDB Pesantren Tahfidz Qur'an dan Digital Arrahman.`
+  const shareText = `*KUITANSI PEMBAYARAN FORMULIR PPDB PTDARRAHMAN*\n\nNo. Kuitansi: ${receiptNo}\nNama: ${applicantName}\nGelombang: ${waveName}\nNominal: ${amountStr}\nMetode: ${payMethod}\nTanggal: ${payDateStr}\nStatus: *${statusLabel}*\n\nBukti sah pendaftaran PPDB Pesantren Tahfidz Qur'an dan Digital Arrahman.`
 
   const handleCopy = async () => {
     if (!hasPayment) {
@@ -148,8 +148,8 @@ export default function PaymentStep({ transaction, applicant }: PaymentStepProps
               <p className="font-bold text-slate-900 mt-0.5">{applicantName}</p>
             </div>
             <div>
-              <p className="text-muted-foreground text-xs">Jalur Pendaftaran</p>
-              <p className="font-semibold text-emerald-700 mt-0.5">{pathName}</p>
+              <p className="text-muted-foreground text-xs">Gelombang</p>
+              <p className="font-semibold text-emerald-700 mt-0.5">{waveName}</p>
             </div>
             <div>
               <p className="text-muted-foreground text-xs">Tanggal Pembayaran</p>

@@ -22,9 +22,9 @@ Endpoints:
   ── CRON / TRIGGER ──────────────────────────────────────────────────────────
   POST /notifications/cron/payment-reminder-monday — Cron pengingat
   bayar formulir (Senin)
+  POST /notifications/cron/reminder-upload-docs-h3 — Pengingat dokumen H+3
   POST /notifications/trigger/wave-closed          — Trigger kuota
   penuh/penutupan gelombang
-  POST /notifications/webhook/tiu-result           — Webhook Apps Script nilai TIU
 
 WA calls harus SELALU melalui FastAPI — frontend tidak boleh memanggil
 WA microservice langsung karena itu akan mengekspos WA_API_KEY di browser.
@@ -36,7 +36,9 @@ import hashlib
 import hmac
 import logging
 import time
+from datetime import datetime, timedelta
 from typing import Any, cast
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
@@ -344,7 +346,6 @@ def _verify_wa_webhook(body_bytes: bytes, timestamp: str, signature: str) -> boo
         )
         return False  # FAIL-CLOSED
 
-    # Check timestamp tidak terlalu lama (max 5 menit) — cegah replay attack
     try:
         ts_int = int(timestamp)
         if abs(time.time() - ts_int) > 300:
@@ -356,8 +357,6 @@ def _verify_wa_webhook(body_bytes: bytes, timestamp: str, signature: str) -> boo
     except (ValueError, TypeError):
         return False
 
-    # FIX: pakai hmac.new() yang benar (bukan hmac.new tanpa panggilan)
-    # signature format dari WA service: "sha256=<hex>"
     try:
         message = f"{timestamp}.{body_bytes.decode('utf-8', errors='replace')}".encode()
         expected = hmac.new(
@@ -369,7 +368,6 @@ def _verify_wa_webhook(body_bytes: bytes, timestamp: str, signature: str) -> boo
         logger.exception("Gagal menghitung HMAC signature")
         return False
 
-    # Constant-time comparison untuk mencegah timing attack
     provided = signature.removeprefix("sha256=")
     if not provided:
         return False
@@ -382,7 +380,6 @@ async def wa_webhook(request: Request):
     Menerima delivery status callback dari WA microservice.
     Update notification_logs berdasarkan event yang diterima.
     """
-    # Baca body mentah terlebih dahulu — decode aman dengan error replacement
     try:
         body_bytes = await request.body()
     except Exception:
@@ -409,10 +406,6 @@ async def wa_webhook(request: Request):
     data = payload.get("data", {})
     job_id = data.get("jobId")
 
-    # ── Idempotency & Replay Protection ──────────────────────────────────────
-    # Timestamp tolerance mencegah replay attack jangka panjang (>300s).
-    # Namun event yang sama persis bisa dikirim ulang / direplay dalam jendela 5 menit.
-    # Simpan idempotency key secara atomik di Redis untuk menolak eksekusi ganda.
     from src.core.cache import get_redis
 
     r = get_redis()
@@ -423,8 +416,7 @@ async def wa_webhook(request: Request):
             is_new = r.set(idempotency_key, "1", nx=True, ex=600)
             if not is_new:
                 logger.info(
-                    "Webhook WA diabaikan: event %s untuk job %s "
-                    "sudah diproses sebelumnya (idempoten)",
+                    "Webhook WA diabaikan: event %s untuk job %s sudah diproses sebelumnya",
                     event,
                     job_id,
                 )
@@ -442,12 +434,6 @@ async def wa_webhook(request: Request):
         pool = get_raw_pool()
         with pool.connect() as conn:
             if event == "message.sent":
-                # FIX: Update by job_id saja — tidak boleh pakai OR event_key
-                # karena akan mengupdate log yang salah.
-                # notification_logs.id punya prefix "notiflog-" sehingga kita
-                # simpan job_id di kolom wa_message_id saat enqueue (future).
-                # Untuk sekarang: update baris terbaru yang matching event_key
-                # DAN masih dalam status queued, dibatasi 1 baris.
                 job_id = data.get("jobId")
                 wa_message_id = data.get("waMessageId")
                 event_key = data.get("eventKey", "")
@@ -552,11 +538,6 @@ async def wa_webhook(request: Request):
         if r is not None and idempotency_key and not db_committed:
             try:
                 r.delete(idempotency_key)
-                logger.info(
-                    "Idempotency key %s dibersihkan pasca DB failure "
-                    "agar retry berhasil",
-                    idempotency_key,
-                )
             except Exception as del_err:
                 logger.warning("Gagal membersihkan idempotency key: %s", del_err)
         raise exc
@@ -570,36 +551,109 @@ async def wa_webhook(request: Request):
 class MondayReminderRequest(BaseModel):
     """Body opsional — semua field punya default (cron bisa POST tanpa body)."""
 
-    dry_run: bool = False  # True = hitung dan return count, tapi jangan kirim notif
-    limit: int | None = None  # Batasi jumlah penerima (debug/testing)
+    dry_run: bool = False
+    limit: int | None = None
+
+
+class ScheduledReminderRequest(BaseModel):
+    dry_run: bool = False
+    limit: int | None = None
+
+
+def _already_notified_users(event_key: str, user_ids: list[str]) -> set[str]:
+    if not user_ids:
+        return set()
+    placeholders = ", ".join(f":uid{i}" for i in range(len(user_ids)))
+    params = {f"uid{i}": user_id for i, user_id in enumerate(user_ids)}
+    params["event_key"] = event_key
+    rows = execute_raw(
+        "SELECT DISTINCT recipient_user_id FROM notification_logs "
+        f"WHERE event_key = :event_key AND recipient_user_id IN ({placeholders}) "
+        "AND status IN ('queued', 'sent')",
+        params,
+    )
+    return {str(row["recipient_user_id"]) for row in rows}
+
+
+def _upload_docs_h3_candidates(limit: int | None) -> list[dict[str, Any]]:
+    pool = get_raw_pool()
+    cutoff = datetime.now(ZoneInfo("Asia/Jakarta")).replace(tzinfo=None) - timedelta(
+        days=3
+    )
+    with pool.connect() as conn:
+        rows = conn.execute(
+            text(
+                """
+                SELECT pa.id AS applicant_id, pa.user_id, pa.full_name
+                FROM ppdb_applicants pa
+                JOIN ppdb_payment_transactions tx ON tx.applicant_id = pa.id
+                WHERE pa.payment_status = 'paid'
+                  AND pa.deleted_at IS NULL
+                  AND tx.status = 'success'
+                  AND COALESCE(tx.confirmed_at, tx.updated_at, tx.created_at)
+                      <= :cutoff
+                  AND NOT EXISTS (
+                      SELECT 1 FROM file_uploads fu
+                      WHERE fu.entity_type LIKE 'ppdb_document:%'
+                        AND fu.entity_id = pa.id
+                  )
+                GROUP BY pa.id, pa.user_id, pa.full_name
+                ORDER BY MIN(COALESCE(tx.confirmed_at, tx.updated_at, tx.created_at))
+                """
+            ),
+            {"cutoff": cutoff},
+        ).mappings().all()
+        candidates = [dict(row) for row in rows]
+        if limit is not None:
+            candidates = candidates[:limit]
+        if not candidates:
+            return []
+
+        return candidates
+
+
+@router.post("/cron/reminder-upload-docs-h3")
+def cron_reminder_upload_docs_h3(
+    body: ScheduledReminderRequest = ScheduledReminderRequest(),
+    _: dict = Depends(require_cron_auth),
+):
+    candidates = _upload_docs_h3_candidates(body.limit)
+    user_ids = [str(row["user_id"]) for row in candidates]
+    already_notified = _already_notified_users("reminder_upload_docs_h3", user_ids)
+    sent = 0
+    skipped = 0
+    for row in candidates:
+        user_id = str(row["user_id"])
+        if user_id in already_notified:
+            skipped += 1
+            continue
+        if not body.dry_run:
+            send_notification(
+                "reminder_upload_docs_h3",
+                user_id,
+                {"link_aplikasi": f"{settings.ppdb_frontend_url}/applicant/dokumen"},
+            )
+        sent += 1
+    return {
+        "event_key": "reminder_upload_docs_h3",
+        "eligible": len(candidates),
+        "sent": sent,
+        "skipped_recent": skipped,
+        "dry_run": body.dry_run,
+    }
 
 
 @router.post("/cron/payment-reminder-monday")
-async def cron_payment_reminder_monday(
+def cron_payment_reminder_monday(
     body: MondayReminderRequest = MondayReminderRequest(),
     _: dict = Depends(require_cron_auth),
 ):
     """
     Endpoint cron yang dipanggil setiap hari Senin.
-
-    Mencari semua pendaftar yang:
-      1. Status applicant: 'pending_payment'
-      2. payment_status: 'pending'
-      3. deleted_at IS NULL (akun belum expired)
-      4. Gelombang masih buka (status = 'active', end_date >= TODAY)
-      5. Belum menerima reminder 'payment_reminder_monday' dalam 7 hari terakhir
-         (mencegah dobel kirim kalau cron dipanggil lebih dari sekali seminggu)
-
-    Mengirim notifikasi payment_reminder_monday ke masing-masing pendaftar.
-    Idempoten: cek riwayat log sebelum kirim.
-
-    Keamanan: endpoint ini dilindungi require_cron_auth (CRON_SECRET di .env).
-    Hanya dapat dipanggil oleh scheduler eksternal (cron job), bukan user biasa.
+    Mencari semua pendaftar yang belum menyelesaikan pembayaran formulir.
     """
     pool = get_raw_pool()
     with pool.connect() as conn:
-        # Ambil semua pendaftar yang memenuhi syarat
-        # Join ke ppdb_waves untuk memastikan gelombang masih aktif
         rows = (
             conn.execute(
                 text(
@@ -640,13 +694,11 @@ async def cron_payment_reminder_monday(
             "dry_run": body.dry_run,
         }
 
-    # Filter: skip jika sudah kirim dalam 7 hari terakhir
     user_ids_eligible = [r["user_id"] for r in eligible]
     sent_count = 0
     skipped_recent = 0
 
     with pool.connect() as conn:
-        # Bulk check riwayat 7 hari terakhir
         placeholders = ", ".join(f":uid{i}" for i in range(len(user_ids_eligible)))
         uid_params = {f"uid{i}": uid for i, uid in enumerate(user_ids_eligible)}
         recent_rows = (
@@ -675,7 +727,6 @@ async def cron_payment_reminder_monday(
             continue
 
         if not body.dry_run:
-            # Format tanggal tutup gelombang
             wave_end = r.get("wave_end_date")
             tanggal_tutup = (
                 wave_end.strftime("%d %B %Y") if wave_end else "sesuai jadwal"
@@ -711,192 +762,14 @@ async def cron_payment_reminder_monday(
     }
 
 
-# ── CRON: Pengingat Bayar DP Mingguan (3 bulan sejak lulus) ─────────────────
-
-
-class DPReminderRequest(BaseModel):
-    """Body opsional untuk cron pengingat DP mingguan."""
-
-    dry_run: bool = False
-    limit: int | None = None
-
-
-@router.post("/cron/dp-payment-reminder")
-async def cron_dp_payment_reminder(
-    body: DPReminderRequest = DPReminderRequest(),
-    _: dict = Depends(require_cron_auth),
-):
-    """
-    Cron mingguan: kirim pengingat bayar DP ke pendaftar yang sudah LULUS
-    tapi belum menyelesaikan pembayaran DP dalam batas 3 bulan.
-
-    Kriteria penerima:
-      1. applicant.status = 'passed'
-      2. Ada tagihan ppdb_stage2_bills berstatus 'pending' (belum bayar)
-      3. Belum lewat 3 bulan sejak applicant.updated_at (waktu lulus)
-      4. Belum menerima dp_payment_reminder dalam 7 hari terakhir (idempoten)
-
-    Keamanan: dilindungi require_cron_auth (CRON_SECRET di .env).
-    """
-    pool = get_raw_pool()
-
-    with pool.connect() as conn:
-        rows = (
-            conn.execute(
-                text(
-                    """
-                SELECT DISTINCT
-                    pa.id           AS applicant_id,
-                    pa.user_id,
-                    pa.full_name,
-                    pa.updated_at   AS passed_at
-                FROM ppdb_applicants pa
-                JOIN ppdb_stage2_bills b ON b.applicant_id = pa.id
-                WHERE pa.status = 'passed'
-                  AND b.status = 'pending'
-                  AND pa.deleted_at IS NULL
-                  AND pa.updated_at >= DATE_SUB(NOW(), INTERVAL 90 DAY)
-                ORDER BY pa.updated_at ASC
-                """
-                )
-            )
-            .mappings()
-            .all()
-        )
-
-    eligible = [dict(r) for r in rows]
-    if body.limit is not None:
-        eligible = eligible[: body.limit]
-
-    if not eligible:
-        return {
-            "message": "Tidak ada pendaftar yang memenuhi syarat",
-            "total_eligible": 0,
-            "sent": 0,
-            "skipped_recent": 0,
-            "dry_run": body.dry_run,
-        }
-
-    # Idempoten: skip jika sudah kirim dalam 7 hari terakhir
-    user_ids = [r["user_id"] for r in eligible]
-    with pool.connect() as conn:
-        placeholders = ", ".join(f":uid{i}" for i in range(len(user_ids)))
-        uid_params = {f"uid{i}": uid for i, uid in enumerate(user_ids)}
-        recent_rows = (
-            conn.execute(
-                text(
-                    f"""
-                SELECT recipient_user_id
-                FROM notification_logs
-                WHERE event_key = 'dp_payment_reminder'
-                  AND recipient_user_id IN ({placeholders})
-                  AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-                  AND status IN ('sent', 'queued')
-                """
-                ),
-                uid_params,
-            )
-            .mappings()
-            .all()
-        )
-    recently_notified = {str(r["recipient_user_id"]) for r in recent_rows}
-
-    sent_count = 0
-    skipped_recent = 0
-
-    for r in eligible:
-        user_id = str(r["user_id"])
-        if user_id in recently_notified:
-            skipped_recent += 1
-            continue
-
-        if not body.dry_run:
-            # Hitung sisa waktu: 90 hari sejak lulus
-            import datetime as _dt
-
-            passed_at = r.get("passed_at")
-            if passed_at:
-                deadline = (
-                    passed_at + _dt.timedelta(days=90)
-                    if isinstance(passed_at, _dt.datetime)
-                    else _dt.datetime.now()
-                )
-                tanggal_jatuh_tempo = deadline.strftime("%d %B %Y")
-                hari_tersisa = (deadline - _dt.datetime.now()).days
-                sisa_waktu = (
-                    f"{hari_tersisa} hari lagi"
-                    if hari_tersisa > 0
-                    else "hari ini (segera!)"
-                )
-            else:
-                tanggal_jatuh_tempo = "—"
-                sisa_waktu = "—"
-
-            send_notification(
-                event_key="dp_payment_reminder",
-                recipient_user_id=user_id,
-                context={
-                    "sisa_waktu": sisa_waktu,
-                    "tanggal_jatuh_tempo": tanggal_jatuh_tempo,
-                    "link_aplikasi": f"{settings.ppdb_frontend_url}/dashboard",
-                },
-            )
-        sent_count += 1
-
-    logger.info(
-        "Cron dp_payment_reminder: eligible=%d, sent=%d, skipped=%d, dry_run=%s",
-        len(eligible),
-        sent_count,
-        skipped_recent,
-        body.dry_run,
-    )
-
-    return {
-        "message": "Selesai"
-        if not body.dry_run
-        else "Dry run — tidak ada yang dikirim",
-        "total_eligible": len(eligible),
-        "sent": sent_count,
-        "skipped_recent": skipped_recent,
-        "dry_run": body.dry_run,
-    }
-
-
-# ── CRON: Pengingat Cicilan Bulanan (Tgl 5 Pkl 08:00 WIB) ───────────────────
-
-
-class InstallmentReminderRequest(BaseModel):
-    dry_run: bool = False
-    force: bool = False
-
-
-@router.post("/cron/installment-reminder")
-async def cron_installment_reminder(
-    body: InstallmentReminderRequest = InstallmentReminderRequest(),
-    _: dict = Depends(require_cron_auth),
-):
-    """
-    Cron / manual trigger pengingat cicilan bulanan:
-    Kirim notifikasi tagihan cicilan ke pendaftar yang sudah lulus dan bayar DP,
-    tetapi masih memiliki sisa tagihan (belum lunas).
-    """
-    from src.core.scheduler import run_monthly_installment_reminders
-
-    result = run_monthly_installment_reminders(
-        dry_run=body.dry_run,
-        force=body.force,
-    )
-    return result
-
-
 # ── TRIGGER: Gelombang Ditutup / Kuota Penuh ────────────────────────────────
 
 
 class WaveClosedTriggerRequest(BaseModel):
     """Payload dikirim saat gelombang ditutup (kuota penuh atau tanggal berakhir)."""
 
-    wave_id: str  # ID gelombang yang ditutup
-    reason: str = "quota_full"  # quota_full | date_expired | manual
+    wave_id: str
+    reason: str = "quota_full"
 
 
 @router.post("/trigger/wave-closed")
@@ -907,25 +780,12 @@ async def trigger_wave_closed(
     """
     Trigger notifikasi wave_closed_pending_payment ke semua pendaftar
     yang tagihan formulirnya masih pending saat gelombang ditutup.
-
-    Dipanggil oleh:
-    - ppdb_service.close_wave() saat kuota tercapai / tanggal berakhir
-    - Admin saat menutup gelombang secara manual
-
-    Alur:
-    1. Ambil semua pendaftar dengan status 'pending_payment' di wave tersebut
-    2. Batalkan ppdb_payment_transactions yang masih pending
-    3. Set applicant.status = 'expired' dan payment_status = 'failed'
-    4. Kirim notifikasi wave_closed_pending_payment ke masing-masing
-
-    Idempoten: pendaftar yang sudah 'expired'/'paid' dilewati.
     """
     if not body.wave_id:
         raise HTTPException(status_code=400, detail="wave_id tidak boleh kosong")
 
     pool = get_raw_pool()
 
-    # 1. Ambil data gelombang
     with pool.connect() as conn:
         wave_rows = (
             conn.execute(
@@ -940,7 +800,6 @@ async def trigger_wave_closed(
         raise HTTPException(status_code=404, detail="Gelombang tidak ditemukan")
     wave = dict(wave_rows[0])
 
-    # 2. Ambil pendaftar yang masih pending_payment di gelombang ini
     with pool.connect() as conn:
         applicant_rows = (
             conn.execute(
@@ -967,7 +826,6 @@ async def trigger_wave_closed(
     if applicants:
         with pool.connect() as conn:
             for ap in applicants:
-                # 3. Batalkan semua transaksi pending untuk applicant ini
                 conn.execute(
                     text(
                         """
@@ -985,7 +843,6 @@ async def trigger_wave_closed(
                     },
                 )
 
-                # 4. Update status pendaftar → expired
                 conn.execute(
                     text(
                         """
@@ -1003,7 +860,6 @@ async def trigger_wave_closed(
 
             conn.commit()
 
-        # 5. Kirim notifikasi (fire-and-forget, tidak block response)
         for ap in applicants:
             send_notification(
                 event_key="wave_closed_pending_payment",
@@ -1031,6 +887,3 @@ async def trigger_wave_closed(
         "cancelled_invoices": cancelled_count,
         "notified": notified_count,
     }
-
-
-# ── WEBHOOK: TIU Apps Script ─────────────────────────────────────────────────

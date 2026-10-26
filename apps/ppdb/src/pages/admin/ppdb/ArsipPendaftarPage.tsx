@@ -360,9 +360,6 @@ export default function ArsipPendaftarPage() {
                 Periode & Gelombang
               </TableHead>
               <TableHead className="text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                Jalur Pendaftaran
-              </TableHead>
-              <TableHead className="text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
                 Biaya Formulir
               </TableHead>
               <TableHead className="text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
@@ -381,7 +378,7 @@ export default function ArsipPendaftarPage() {
               <TableSkeletonRows cols={7} rows={6} />
             ) : applicants.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="py-12">
+                <TableCell colSpan={6} className="py-12">
                   <EmptyState
                     icon={UserRoundSearch}
                     title="Tidak Ada Data Terarsip"
@@ -412,11 +409,6 @@ export default function ArsipPendaftarPage() {
                     <div className="text-[11px] text-muted-foreground">
                       {a.wave_name || 'Gelombang'}
                     </div>
-                  </TableCell>
-                  <TableCell className="whitespace-nowrap">
-                    <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5 text-[11px] font-semibold capitalize text-slate-700">
-                      {a.registration_path || '-'}
-                    </span>
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
                     <PaymentStatusBadge status={a.payment_status} />

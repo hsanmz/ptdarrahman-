@@ -5,8 +5,8 @@
 #
 # Isi image ini HANYA 3 buah frontend:
 #   - companyprofile (Next.js 16)  → port 3000  (next start)
-#   - ppdb            (Vite/React) → port 5173  (vite preview)
-#   - superadmin      (Vite/React) → port 5174  (vite preview)
+#   - superadmin      (Vite/React) → port 5173  (vite preview)
+#   - ppdb            (Vite/React) → port 5174  (vite preview)
 #
 # Tidak ada backend/DB/Redis/WhatsApp di container ini. Semua lalu lintas API
 # diarahkan ke service `api` (FastAPI) lewat Build ARG:

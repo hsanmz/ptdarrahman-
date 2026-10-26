@@ -14,7 +14,6 @@ import {
 import {
   APPLICANT_STATUSES,
   PAYMENT_STATUSES,
-  REGISTRATION_PATHS,
 } from '../../lib/applicantOptions'
 
 const EMPTY_FORM: Record<string, string> = {
@@ -22,7 +21,6 @@ const EMPTY_FORM: Record<string, string> = {
   full_name: '',
   email: '',
   phone: '',
-  registration_path: 'reguler',
   gender: '',
   birth_place: '',
   birth_date: '',
@@ -229,7 +227,7 @@ export default function ApplicantForm({
   return (
     <form id={formId} onSubmit={handleSubmit} className="space-y-6">
       <section className="space-y-4">
-        <h4 className="text-sm font-semibold">Penempatan & Jalur</h4>
+        <h4 className="text-sm font-semibold">Penempatan Gelombang</h4>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <Label className="mb-1.5 block text-xs">
@@ -245,12 +243,6 @@ export default function ApplicantForm({
               Gelombang menentukan label periode pada daftar &amp; dashboard.
             </p>
           </div>
-          <SelectField
-            label="Jalur Pendaftaran"
-            options={REGISTRATION_PATHS}
-            value={form.registration_path}
-            onValueChange={(v) => set('registration_path', v)}
-          />
 
           <SelectField
             label="Status Pendaftaran"

@@ -18,17 +18,9 @@ import Footer from '@/components/layout/Footer'
 interface ActiveWave {
   active: boolean
   name?: string
-  allowed_paths?: string[]
   allowed_levels?: string[]
   registration_start_date?: string | null
   registration_end_date?: string | null
-}
-
-const PATH_LABEL: Record<string, string> = {
-  reguler: 'Reguler',
-  prestasi: 'Prestasi',
-  tahfidz: 'Tahfidz',
-  rapot: 'Rapot',
 }
 
 export default function LandingPage() {
@@ -126,10 +118,7 @@ export default function LandingPage() {
   }, [])
 
   const isOpen = wave?.active === true
-  const paths = (wave?.allowed_paths ?? []).map((p) => PATH_LABEL[p] ?? p)
   const year = new Date().getFullYear()
-
-  const waveMeta = paths.length > 0 ? `Jalur: ${paths.join(', ')}` : ''
 
   const scrollToAlur = () => {
     if (lenisRef.current) {
@@ -143,7 +132,7 @@ export default function LandingPage() {
     { icon: Wallet, title: 'Daftar & Bayar', desc: 'Isi formulir pendaftaran dan selesaikan biaya formulir pada gelombang yang aktif.' },
     { icon: FileUp, title: 'Upload Dokumen', desc: 'Unggah berkas persyaratan untuk diverifikasi oleh panitia.' },
     { icon: ClipboardCheck, title: 'Seleksi & Ujian', desc: 'Ikuti tahapan seleksi sesuai jadwal yang telah Anda pilih.' },
-    { icon: Trophy, title: 'Pengumuman & MOU', desc: 'Lihat hasil kelulusan, tanda tangani MOU, dan selesaikan daftar ulang.' },
+    { icon: Trophy, title: 'Pengumuman & LoA', desc: 'Lihat hasil kelulusan dan tanda tangani Letter of Acceptance (LoA) secara digital.' },
   ]
 
   // Radius navbar, dipakai bersama oleh <header> DAN wrapper garis progress
@@ -282,9 +271,6 @@ export default function LandingPage() {
                         </>
                       )}
                     </div>
-                    {waveMeta && (
-                      <p className="text-xs font-medium tracking-wide text-slate-500">{waveMeta}</p>
-                    )}
                   </div>
                 )}
 

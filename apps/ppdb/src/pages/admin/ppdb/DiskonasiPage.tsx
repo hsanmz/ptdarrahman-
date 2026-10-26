@@ -105,7 +105,6 @@ export default function DiskonasiPage() {
       setSelectedApplicant(null)
       queryClient.invalidateQueries({ queryKey: ['stage2-applicants'] })
       queryClient.invalidateQueries({ queryKey: ['stage2-bills'] })
-      queryClient.invalidateQueries({ queryKey: ['mou-applicants'] })
     },
     onError: (e: any) => toast('error', e.message || 'Gagal menyimpan diskon')
   })
@@ -167,7 +166,6 @@ export default function DiskonasiPage() {
             <TableHeader className="bg-primary/5">
               <TableRow>
                 <TableHead>Nama & Email</TableHead>
-                <TableHead>Jalur Pendaftaran</TableHead>
                 <TableHead>Total Tagihan</TableHead>
                 <TableHead>Status Diskon</TableHead>
                 <TableHead>Status Tagihan</TableHead>
@@ -176,10 +174,10 @@ export default function DiskonasiPage() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableSkeletonRows cols={6} rows={5} />
+                <TableSkeletonRows cols={5} rows={5} />
               ) : applicants.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-8">
+                  <TableCell colSpan={5} className="py-8">
                     <EmptyState
                       icon={hasActiveWave === false ? Waves : Percent}
                       title={hasActiveWave === false ? "Tidak Ada Gelombang Aktif" : "Tidak Ada Data"}
@@ -198,9 +196,6 @@ export default function DiskonasiPage() {
                     <TableCell>
                       <div className="font-medium">{a.full_name}</div>
                       <div className="text-xs text-muted-foreground">{a.email}</div>
-                    </TableCell>
-                    <TableCell>
-                      <span className="capitalize">{a.registration_path || '-'}</span>
                     </TableCell>
                     <TableCell>
                       <span className="text-sm">{a.total_bills} tagihan</span>

@@ -12,6 +12,7 @@ export default function ApplicantDocumentsPage() {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const [showSubmitConfirm, setShowSubmitConfirm] = useState(false)
+  const [isDeferred, setIsDeferred] = useState(false)
 
   const transactionQuery = useQuery({
     queryKey: ['my-transaction'],
@@ -29,7 +30,17 @@ export default function ApplicantDocumentsPage() {
   const isLoading = transactionQuery.isLoading || documentsQuery.isLoading
 
   const submitDocsMutation = useMutation({
-    mutationFn: () => apiFetch('/ppdb/documents/submit', { method: 'POST' }),
+    mutationFn: (deferred: boolean) =>
+      apiFetch('/ppdb/documents/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deferred_commitment: deferred,
+          deferred_note: deferred
+            ? 'Sebagian berkas rapor belum terbit dari sekolah asal dan diserahkan menyusul saat daftar ulang.'
+            : undefined,
+        }),
+      }),
     onSuccess: () => {
       toast('success', 'Dokumen berhasil dikirim untuk verifikasi')
       queryClient.invalidateQueries({ queryKey: ['my-transaction'] })
@@ -44,7 +55,7 @@ export default function ApplicantDocumentsPage() {
     <div className="mx-auto max-w-4xl w-full space-y-6">
       <ApplicantPageHeader
         title="Upload & Kirim Dokumen"
-        description="Unggah berkas persyaratan wajib dan berkas pendukung sesuai jalur pendaftaran Anda."
+        description="Unggah seluruh berkas persyaratan yang berlaku untuk setiap pendaftar."
         docKey="applicant-documents"
       />
 
@@ -61,7 +72,10 @@ export default function ApplicantDocumentsPage() {
             documents={documents}
             requiredDocuments={requiredDocuments}
             onDocumentsChange={() => queryClient.invalidateQueries({ queryKey: ['my-documents'] })}
-            onSubmitRequest={() => setShowSubmitConfirm(true)}
+            onSubmitRequest={(commitmentDeferred) => {
+              setIsDeferred(Boolean(commitmentDeferred))
+              setShowSubmitConfirm(true)
+            }}
           />
         </div>
       )}
@@ -71,11 +85,15 @@ export default function ApplicantDocumentsPage() {
         onClose={() => setShowSubmitConfirm(false)}
         onConfirm={() => {
           setShowSubmitConfirm(false)
-          submitDocsMutation.mutate()
+          submitDocsMutation.mutate(isDeferred)
         }}
         loading={submitDocsMutation.isPending}
         title="Kirim Dokumen"
-        message="Apakah Anda yakin semua dokumen sudah benar? Dokumen yang sudah dikirim tidak bisa diubah kembali."
+        message={
+          isDeferred
+            ? 'Anda mengajukan pengiriman berkas dengan komitmen bahwa berkas rapor yang belum terbit dari sekolah asal akan diserahkan menyusul saat daftar ulang. Lanjutkan kirim untuk verifikasi panitia?'
+            : 'Apakah Anda yakin semua dokumen sudah benar? Dokumen yang sudah dikirim tidak bisa diubah kembali.'
+        }
         confirmLabel="Kirim"
       />
     </div>

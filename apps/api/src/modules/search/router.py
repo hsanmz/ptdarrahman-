@@ -74,17 +74,7 @@ SEMANTIC_ONTOLOGY: dict[str, list[str]] = {
         "tanya jawab",
         "psikotes",
     ],
-    "tiu": [
-        "ujian",
-        "tes",
-        "seb",
-        "skor",
-        "nilai",
-        "akademik",
-        "google form",
-        "potensi",
-    ],
-    "lulus": ["kelulusan", "hasil", "loa", "skd", "diterima", "pengumuman", "lolos"],
+    "lulus": ["kelulusan", "hasil", "loa", "diterima", "pengumuman", "lolos"],
     "periode": [
         "gelombang",
         "kuota",
@@ -231,13 +221,12 @@ def semantic_search(
 
         app_sql = """
             SELECT id, full_name, registration_number, phone, status, payment_status,
-                   registration_path, nisn, created_at
+                   nisn, created_at
             FROM ppdb_applicants
             WHERE full_name LIKE :term
                OR registration_number LIKE :term
                OR phone LIKE :term
                OR nisn LIKE :term
-               OR registration_path LIKE :term
         """
         params: dict[str, Any] = {"term": like_term}
 
@@ -253,7 +242,6 @@ def semantic_search(
                 reg_no = a.get("registration_number") or a.get("id", "")[:8]
                 name = a.get("full_name") or "Tanpa Nama"
                 status = a.get("status", "pending")
-                path = a.get("registration_path", "reguler")
                 nisn = a.get("nisn")
 
                 # Score calculation
@@ -272,7 +260,7 @@ def semantic_search(
                     {
                         "id": f"applicant-{a['id']}",
                         "title": name,
-                        "subtitle": f"No. Reg: {reg_no} • Jalur {path.capitalize()} • Status: {status}",
+                        "subtitle": f"No. Reg: {reg_no} • Status: {status}",
                         "category": "Pendaftar",
                         "icon": "user-check",
                         "badge": status,

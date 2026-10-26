@@ -112,6 +112,12 @@ async function processMessage(
   try {
     waMessageId = await sessionManager.sendMessage(waId, message);
     _messagesSentThisMinute++;
+
+    // 4.1 Anti-Ban Human Jitter Delay (3.5s - 7s)
+    // Hindari burst pengiriman serentak agar nomor WA microservice tidak terdeteksi bot/banned Meta
+    const antiBanJitterMs = Math.floor(Math.random() * 3500) + 3500;
+    log.info(`[Worker] Applying anti-ban pause (${antiBanJitterMs}ms) before next dispatch`);
+    await new Promise((resolve) => setTimeout(resolve, antiBanJitterMs));
   } catch (err: unknown) {
     const e = err as Error & { code?: string };
     const errorCode = e.code ?? "unknown";

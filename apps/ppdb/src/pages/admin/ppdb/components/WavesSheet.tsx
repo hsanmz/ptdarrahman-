@@ -11,29 +11,13 @@ import {
   EmptyState, Alert, CurrencyInput
 } from '@/components/ui'
 import {
-  Plus, Edit, Trash2, CheckCircle, XCircle, Waves, Receipt, Check, Users, Banknote, Layers,
+  Plus, Edit, Trash2, CheckCircle, XCircle, Waves, Receipt, Check, Users, Banknote,
   Percent, Tag, Calculator, Sparkles, Save
 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-
-const PATH_OPTIONS = [
-  { value: 'reguler', label: 'Reguler' },
-  { value: 'prestasi', label: 'Prestasi' },
-  { value: 'tahfidz', label: 'Tahfidz' },
-  { value: 'rapot', label: 'Rapor' },
-]
-const PATH_LABELS: Record<string, string> = {
-  reguler: 'Reguler',
-  prestasi: 'Prestasi',
-  tahfidz: 'Tahfidz',
-  rapot: 'Rapor',
-}
-
-const parseCsv = (v?: string | null): string[] =>
-  (v || '').split(',').map(s => s.trim()).filter(Boolean)
 
 const localIso = (d: string): string => {
   const dt = new Date(d)
@@ -55,7 +39,6 @@ const getNextDayIso = (dStr?: string) => {
 
 const waveSchema = z.object({
   name: z.string().min(1, 'Nama gelombang wajib diisi'),
-  allowed_paths: z.array(z.string()).min(1, 'Pilih minimal satu jalur pendaftaran'),
   registration_start_date: z.string().min(1, 'Tanggal mulai pendaftaran wajib diisi'),
   registration_end_date: z.string().min(1, 'Tanggal akhir pendaftaran wajib diisi'),
   quota: z.number().min(1, 'Kuota harus diisi minimal 1'),
@@ -73,7 +56,6 @@ type WaveFormData = z.infer<typeof waveSchema>;
 
 const emptyWaveForm = (): WaveFormData => ({
   name: '',
-  allowed_paths: ['reguler', 'prestasi', 'tahfidz', 'rapot'],
   registration_start_date: '',
   registration_end_date: '',
   quota: 0,
@@ -107,12 +89,11 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [actionId, setActionId] = useState<{ id: string, type: 'activate' | 'deactivate' } | null>(null)
 
-  const { register, handleSubmit, setValue, getValues, control, reset, formState: { errors } } = useForm<WaveFormData>({
+  const { register, handleSubmit, setValue, control, reset, formState: { errors } } = useForm<WaveFormData>({
     resolver: zodResolver(waveSchema),
     defaultValues: emptyWaveForm()
   })
 
-  const allowedPaths = useWatch({ control, name: 'allowed_paths' }) ?? []
   const registrationFee = useWatch({ control, name: 'registration_fee' })
   const startDateWatch = useWatch({ control, name: 'registration_start_date' })
 
@@ -171,7 +152,8 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
   }
 
   const handleAddFeeItem = async () => {
-    if (!newFeeName.trim() || newFeeNominal <= 0) {
+    const item = { is_period_item: false }
+    if (!item.is_period_item && (!newFeeName.trim() || newFeeNominal <= 0)) {
       toast('error', 'Nama komponen dan nominal wajib diisi')
       return
     }
@@ -203,7 +185,30 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
   }
 
   const handleEditFeeItem = async (item: any) => {
-    if (!newFeeName.trim() || newFeeNominal <= 0) {
+    if (item.is_period_item) {
+      if (feeDiscountType && (feeDiscountValue <= 0 || (feeDiscountType === 'percent' && feeDiscountValue > 100))) {
+        toast('error', 'Nilai diskon reguler harus lebih dari 0 dan persentase maksimal 100%')
+        return
+      }
+      try {
+        await apiFetch(`/ppdb/waves/${feeDialogWave.id}/fee-discounts/${item.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            discount_type: feeDiscountType || null,
+            discount_value: feeDiscountType ? feeDiscountValue : 0,
+            early_discount_type: item.early_discount_type || null,
+            early_discount_value: item.early_discount_value || 0,
+          })
+        })
+        resetFeeItemForm()
+        fetchFeeItems(feeDialogWave.id)
+        toast('success', 'Diskon reguler berhasil diperbarui')
+      } catch (e: any) {
+        toast('error', e.message || 'Gagal memperbarui diskon')
+      }
+      return
+    }
+    if (!item.is_period_item && (!newFeeName.trim() || newFeeNominal <= 0)) {
       toast('error', 'Nama komponen dan nominal wajib diisi')
       return
     }
@@ -252,7 +257,27 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
     setFeeDiscountValue(0)
   }
 
-  const handleDeleteFeeItem = async (id: string) => {
+  const handleDeleteFeeItem = async (itemOrId: any) => {
+    const isPeriod = typeof itemOrId === 'object' && itemOrId?.is_period_item
+    const id = typeof itemOrId === 'object' ? itemOrId.id : itemOrId
+    if (isPeriod) {
+      try {
+        await apiFetch(`/ppdb/waves/${feeDialogWave.id}/fee-discounts/${id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            discount_type: null,
+            discount_value: 0,
+            early_discount_type: null,
+            early_discount_value: 0,
+          })
+        })
+        fetchFeeItems(feeDialogWave.id)
+        toast('success', 'Diskon gelombang berhasil direset ke standar')
+      } catch (e: any) {
+        toast('error', e.message || 'Gagal mereset diskon gelombang')
+      }
+      return
+    }
     try {
       await apiFetch(`/ppdb/waves/${feeDialogWave.id}/fee-items/${id}`, { method: 'DELETE' })
       fetchFeeItems(feeDialogWave.id)
@@ -264,6 +289,33 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
 
   // Handle Update Diskon Tambahan Pendaftar Awal (Tab 2)
   const handleSaveEarlyDiscount = async (item: any) => {
+    if (item.is_period_item) {
+      if (earlyDiscountType && (earlyDiscountValue <= 0 || (earlyDiscountType === 'percent' && earlyDiscountValue > 100))) {
+        toast('error', 'Nilai diskon tambahan harus lebih dari 0 dan persentase maksimal 100%')
+        return
+      }
+      if (earlyDiscountType && !(feeDialogWave?.early_discount_quota > 0)) {
+        toast('error', 'Atur kuota pendaftar awal pada gelombang terlebih dahulu')
+        return
+      }
+      try {
+        await apiFetch(`/ppdb/waves/${feeDialogWave.id}/fee-discounts/${item.id}`, {
+          method: 'PUT',
+          body: JSON.stringify({
+            discount_type: item.discount_type || null,
+            discount_value: item.discount_value || 0,
+            early_discount_type: earlyDiscountType || null,
+            early_discount_value: earlyDiscountType ? earlyDiscountValue : 0,
+          })
+        })
+        setEarlyEditingItem(null)
+        fetchFeeItems(feeDialogWave.id)
+        toast('success', 'Diskon pendaftar awal berhasil diperbarui')
+      } catch (e: any) {
+        toast('error', e.message || 'Gagal memperbarui diskon pendaftar awal')
+      }
+      return
+    }
     if (earlyDiscountType && (earlyDiscountValue <= 0 || (earlyDiscountType === 'percent' && earlyDiscountValue > 100))) {
       toast('error', 'Nilai diskon tambahan harus lebih dari 0 dan persentase maksimal 100%')
       return
@@ -371,7 +423,6 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
     setEditingWave(w)
     reset({
       name: w.name || '',
-      allowed_paths: parseCsv(w.allowed_paths),
       registration_start_date: (w.registration_start_date || '').split('T')[0],
       registration_end_date: (w.registration_end_date || '').split('T')[0],
       quota: w.quota ?? 0,
@@ -382,18 +433,11 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
     setShowForm(true)
   }
 
-  const toggleScope = (key: 'allowed_paths', value: string) => {
-    const list = getValues(key) ?? []
-    const next = list.includes(value) ? list.filter((v: string) => v !== value) : [...list, value]
-    setValue(key, next, { shouldValidate: true })
-  }
-
   const handleSave = async (data: WaveFormData) => {
     if (!canCrud || !period) return
     const payload = {
       ...data,
       name: data.name.trim(),
-      allowed_paths: data.allowed_paths.join(','),
     }
     setSaving(true)
     setFormError(null)
@@ -452,11 +496,11 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
         queryClient.invalidateQueries({ queryKey: ['waves'] }),
         queryClient.invalidateQueries({ queryKey: ['periods'] }),
         queryClient.invalidateQueries({ queryKey: ['applicants'] }),
-        queryClient.invalidateQueries({ queryKey: ['transactions'] }),
-        queryClient.invalidateQueries({ queryKey: ['stage2-bills'] })
+        queryClient.invalidateQueries({ queryKey: ['transactions'] })
+
       ])
-      queryClient.invalidateQueries({ queryKey: ['stage2-applicants'] })
-      queryClient.invalidateQueries({ queryKey: ['mou-applicants'] })
+
+
     } catch (e: any) {
       toast('error', e.message || `Gagal ${actionId.type} gelombang`)
     } finally {
@@ -588,7 +632,7 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                     </div>
 
                     {/* Metrics grid */}
-                    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="rounded-xl bg-slate-50 p-3">
                         <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
                           <Users className="h-3.5 w-3.5" /> Kuota Formulir
@@ -620,22 +664,6 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                             : 'Gratis'}
                         </p>
                         <p className="mt-1.5 text-[11px] text-slate-500">Ditarik saat pendaftaran awal</p>
-                      </div>
-
-                      <div className="rounded-xl bg-slate-50 p-3">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
-                          <Layers className="h-3.5 w-3.5" /> Jalur Pendaftaran
-                        </p>
-                        <div className="mt-2 flex flex-wrap gap-1.5">
-                          {parseCsv(w.allowed_paths).map((p: string) => (
-                            <Badge key={p} variant={p === 'reguler' ? 'info' : 'warning'}>
-                              {PATH_LABELS[p] || p}
-                            </Badge>
-                          ))}
-                        </div>
-                        <p className="mt-2 text-[11px] text-slate-500 leading-snug">
-                          {parseCsv(w.allowed_paths).length} jalur dibuka
-                        </p>
                       </div>
                     </div>
 
@@ -702,28 +730,6 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
               <Label htmlFor="wave-name">Nama Gelombang *</Label>
               <Input id="wave-name" {...register('name')} placeholder="Contoh: Gelombang 1" disabled={!canCrud} />
               {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
-            </div>
-
-            <div className="space-y-2">
-              <Label>Jalur Pendaftaran Dibuka *</Label>
-              <div className="flex flex-wrap gap-2 pt-1">
-                {PATH_OPTIONS.map(opt => {
-                  const active = (allowedPaths || []).includes(opt.value)
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      aria-pressed={active}
-                      disabled={!canCrud}
-                      onClick={() => toggleScope('allowed_paths', opt.value)}
-                      className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${active ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground'}`}
-                    >
-                      {opt.label}
-                    </button>
-                  )
-                })}
-              </div>
-              {errors.allowed_paths && <p className="text-xs text-red-500">{errors.allowed_paths.message}</p>}
             </div>
 
             <div className="space-y-3">
@@ -1012,8 +1018,8 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                       {editingFeeItem ? (
                         <>
                           <Button variant="outline" size="sm" onClick={resetFeeItemForm}>Batal</Button>
-                          <Button size="sm" onClick={() => handleEditFeeItem(editingFeeItem)} disabled={!newFeeName.trim() || newFeeNominal <= 0}>
-                            Simpan Perubahan
+                          <Button size="sm" onClick={() => handleEditFeeItem(editingFeeItem)} disabled={!editingFeeItem?.is_period_item && (!newFeeName.trim() || newFeeNominal <= 0)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                            {editingFeeItem?.is_period_item ? 'Simpan Diskon' : 'Simpan Perubahan'}
                           </Button>
                         </>
                       ) : (
@@ -1053,7 +1059,12 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                             <TableRow key={item.id}>
                               <TableCell className="text-center text-xs text-slate-400">{idx + 1}</TableCell>
                               <TableCell>
-                                <p className="font-semibold text-xs text-slate-800">{item.name}</p>
+                                <div className="flex items-center gap-1.5">
+                                  <p className="font-semibold text-xs text-slate-800">{item.name}</p>
+                                  {item.is_period_item && (
+                                    <Badge variant="outline" className="text-[9px] px-1 py-0 font-normal text-muted-foreground bg-slate-50">Master</Badge>
+                                  )}
+                                </div>
                                 {item.description && (
                                   <p className="text-[11px] text-slate-500 mt-0.5">{item.description}</p>
                                 )}
@@ -1090,8 +1101,8 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 text-rose-600 hover:bg-rose-50"
-                                    onClick={() => handleDeleteFeeItem(item.id)}
-                                    title="Hapus Komponen"
+                                    onClick={() => handleDeleteFeeItem(item)}
+                                    title={item.is_period_item ? "Reset Diskon ke Standar" : "Hapus Komponen"}
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />
                                   </Button>
@@ -1224,7 +1235,12 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                             <TableRow key={item.id}>
                               <TableCell className="text-center text-xs text-slate-400">{idx + 1}</TableCell>
                               <TableCell>
-                                <p className="font-semibold text-xs text-slate-800">{item.name}</p>
+                                <div className="flex items-center gap-1.5">
+                                  <p className="font-semibold text-xs text-slate-800">{item.name}</p>
+                                  {item.is_period_item && (
+                                    <Badge variant="outline" className="text-[9px] px-1 py-0 font-normal text-muted-foreground bg-slate-50">Master</Badge>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell className="text-xs font-medium text-slate-700">
                                 Rp {regNet.toLocaleString('id-ID')}
@@ -1318,7 +1334,12 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                                 {idx + 1}
                               </TableCell>
                               <TableCell>
-                                <p className="font-semibold text-xs text-slate-800">{item.name}</p>
+                                <div className="flex items-center gap-1.5">
+                                  <p className="font-semibold text-xs text-slate-800">{item.name}</p>
+                                  {item.is_period_item && (
+                                    <Badge variant="outline" className="text-[9px] px-1 py-0 font-normal text-muted-foreground bg-slate-50">Master</Badge>
+                                  )}
+                                </div>
                                 {item.description && (
                                   <p className="text-[11px] text-slate-400 mt-0.5">{item.description}</p>
                                 )}

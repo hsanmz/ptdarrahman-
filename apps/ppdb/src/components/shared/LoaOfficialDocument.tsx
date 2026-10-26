@@ -12,7 +12,7 @@ export interface LoaData {
   applicant: {
     id: string
     full_name: string
-    registration_path?: string
+    wave_name?: string
     nisn?: string
     nik?: string
     previous_school?: string
@@ -56,7 +56,7 @@ export default function LoaOfficialDocument({ data, page = 'both' }: LoaOfficial
   const fullName = app.full_name || 'CALON SANTRI'
   const regNo = data.registration_number || app.id?.slice(0, 8).toUpperCase() || 'REG-PENDARRAHMAN'
   const schoolOrigin = app.previous_school || '-'
-  const track = (app.registration_path || 'Reguler').toUpperCase()
+  const waveName = app.wave_name || 'Gelombang 1'
   const discountName = data.discount_name || 'Potongan Biaya Pembangunan (Early Bird Gelombang 1)'
 
   // Verification URL for QR Codes
@@ -94,7 +94,7 @@ export default function LoaOfficialDocument({ data, page = 'both' }: LoaOfficial
               Sdr/Sdri {fullName}
             </h2>
             <p className="text-xs text-slate-600 font-medium mt-0.5">
-              Jalur: {track}
+              {waveName}
             </p>
           </div>
           <div className="text-right">
@@ -126,7 +126,7 @@ export default function LoaOfficialDocument({ data, page = 'both' }: LoaOfficial
           <p className="text-xs leading-relaxed text-slate-800 text-justify">
             Anda telah dinyatakan <strong>LULUS</strong> seleksi dan dinyatakan <strong>DITERIMA</strong> sebagai
             santri / peserta didik baru <strong>Pesantren Tahfidz Qur&apos;an dan Digital Ar-Rahman</strong> dalam
-            Academic Year {data.academic_year} melalui jalur pendaftaran &quot;<strong>{track}</strong>&quot;.
+            Academic Year {data.academic_year} pada {waveName}.
           </p>
         </div>
 
@@ -237,13 +237,13 @@ export default function LoaOfficialDocument({ data, page = 'both' }: LoaOfficial
 
           {/* B. Pembayaran Cicilan Bertahap */}
           <div className="space-y-0.5 pt-0.5">
-            <p className="text-[11px] font-semibold text-slate-700">B. Pembayaran Dengan Cicilan Bertahap</p>
+            <p className="text-[11px] font-semibold text-slate-700">B. Pembayaran Bertahap / Cicilan (Di Luar Aplikasi)</p>
             <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-700 text-xs leading-relaxed space-y-1">
               <p className="text-justify">
-                Skema pembayaran cicilan bertahap untuk sisa tagihan biaya pendidikan calon santri bersifat <strong>kustom (customized)</strong> dan tidak ditentukan melalui tabel pembagian kaku.
+                Skema pembayaran biaya pendidikan calon santri dapat dilakukan secara lunas maupun bertahap (cicilan) melalui koordinasi langsung dengan bagian keuangan / bendahara pesantren di luar aplikasi.
               </p>
               <p className="text-justify text-[11px] text-slate-600">
-                Calon santri wajib menyetorkan <strong>Cicilan Pertama (Minimal Uang Muka / DP) sebesar {formatRupiah(data.minimum_dp)}</strong> untuk penguncian kursi. Selanjutnya, pembagian termin cicilan berikutnya dapat disepakati bersama dan diatur langsung secara mandiri melalui modul sistem pada dashboard pendaftar.
+                Calon santri disarankan menyetorkan <strong>Uang Muka / Minimal DP sebesar {formatRupiah(data.minimum_dp)}</strong> untuk penguncian kuota kursi santri. Pembayaran dilakukan melalui transfer rekening resmi PTDARRAHMAN atau tunai di kantor bendahara pesantren.
               </p>
             </div>
           </div>
@@ -315,7 +315,7 @@ export default function LoaOfficialDocument({ data, page = 'both' }: LoaOfficial
 
       {/* Footer Info */}
       <div className="border-t border-slate-200 pt-1 mt-auto flex justify-between items-center text-[10px] text-slate-400 font-mono">
-        <span>Letter of Acceptance (LoA) Resmi - Pesantren Ar-Rahman</span>
+        <span>Letter of Acceptance (LoA) Resmi - PTDARRAHMAN</span>
         <span>{regNo}</span>
       </div>
     </div>
@@ -346,7 +346,7 @@ export default function LoaOfficialDocument({ data, page = 'both' }: LoaOfficial
         {/* Header Page 2 */}
         <div className="text-center py-1.5 border-b-2 border-slate-900 mb-0.5 bg-slate-50/60">
           <h1 className="text-base font-extrabold text-slate-900 uppercase">
-            TATA CARA PEMBAYARAN BIAYA PENDIDIKAN
+            TATA CARA PEMBAYARAN BIAYA PENDIDIKAN (DI LUAR APLIKASI)
           </h1>
           <p className="text-xs font-semibold text-slate-600 uppercase mt-0.5">
             Academic Year {data.academic_year}
@@ -356,11 +356,11 @@ export default function LoaOfficialDocument({ data, page = 'both' }: LoaOfficial
         {/* Step 1 */}
         <div className="space-y-0.5">
           <h3 className="text-xs font-bold text-slate-900 uppercase flex items-center gap-1.5">
-            I. LANGKAH PERTAMA: Pembayaran Biaya Pendidikan di Aplikasi PPDB
+            I. LANGKAH PERTAMA: Penyetoran Biaya Pendidikan (Di Luar Aplikasi)
           </h3>
           <div className="bg-slate-50 border border-slate-200 rounded-lg p-2.5 text-justify leading-relaxed text-xs">
             <p>
-              Pembayaran Biaya Pendidikan dilakukan langsung melalui <strong>Dashboard Aplikasi PPDB Ar-Rahman</strong> menggunakan <strong>QRIS Resmi Terintegrasi</strong> (seluruh mobile banking & e-wallet) baik secara <strong>Lunas sebesar {formatRupiah(data.total_fee)}</strong> (tenggat waktu: <strong>{data.deadline_lunas}</strong>) maupun <strong>Cicilan Pertama (Minimal Uang Muka / DP) sebesar {formatRupiah(data.minimum_dp)}</strong>. Pembayaran yang melampaui batas waktu akan mengakibatkan status kuota kelulusan otomatis dialihkan ke pendaftar cadangan.
+              Penyetoran Biaya Pendidikan dilakukan langsung di luar aplikasi melalui <strong>Transfer Bank ke Rekening Resmi PTDARRAHMAN</strong> atau secara <strong>Tunai di Kantor Bendahara Pesantren</strong>, baik secara <strong>Lunas sebesar {formatRupiah(data.total_fee)}</strong> (tenggat waktu: <strong>{data.deadline_lunas}</strong>) maupun <strong>Uang Muka (Minimal DP) sebesar {formatRupiah(data.minimum_dp)}</strong>. Bukti transfer dapat dikonfirmasikan kepada panitia PPDB untuk verifikasi administrasi.
             </p>
           </div>
         </div>
@@ -385,7 +385,7 @@ export default function LoaOfficialDocument({ data, page = 'both' }: LoaOfficial
                 <td className="py-1.5 px-3 text-slate-700 leading-relaxed border border-slate-200">
                   <ol className="list-decimal pl-4 space-y-0.5">
                     <li>Akses dashboard resmi PPDB Ar-Rahman menggunakan nomor registrasi dan password akun pendaftaran Anda.</li>
-                    <li>Setelah pembayaran terverifikasi otomatis oleh sistem, unduh bukti kuitansi pembayaran dan Surat Keterangan Diterima (SKD).</li>
+                    <li>Setelah LoA ditandatangani digital oleh orang tua / wali, pantau status administrasi dan berkas kelulusan Anda.</li>
                   </ol>
                 </td>
               </tr>
@@ -428,7 +428,7 @@ export default function LoaOfficialDocument({ data, page = 'both' }: LoaOfficial
               1. Apabila pembayaran biaya pendidikan tidak dilakukan hingga batas waktu yang ditentukan, hak kursi dan kuota kelulusan santri dinyatakan gugur.
             </p>
             <p>
-              2. Pembayaran cicilan tahap selanjutnya disetorkan secara tertib sesuai skema mandiri yang disepakati melalui aplikasi.
+              2. Pelunasan biaya pendidikan bertahap dikoordinasikan secara tertib langsung bersama bagian bendahara / keuangan pesantren di luar aplikasi.
             </p>
             <p className="font-semibold text-red-700 bg-red-100/80 px-2 py-1 rounded border border-red-300">
               3. Seluruh dana/biaya yang telah disetorkan tidak dapat dikembalikan dengan kondisi dan alasan apapun (Non-Refundable).
@@ -439,10 +439,10 @@ export default function LoaOfficialDocument({ data, page = 'both' }: LoaOfficial
         {/* Rincian Kanal & Metode Pembayaran Terintegrasi Aplikasi */}
         <div className="space-y-0.5">
           <h3 className="text-xs font-bold text-slate-900 uppercase">
-            Rincian Kanal & Metode Pembayaran Resmi Aplikasi
+            Rincian Rekening & Kanal Pembayaran Resmi PTDARRAHMAN
           </h3>
           <p className="text-[11px] text-slate-600">
-            Sistem pembayaran terintegrasi otomatis 24 jam langsung di dalam Aplikasi PPDB. Tidak melayani transfer manual ke rekening perorangan:
+            Penyetoran biaya pendidikan resmi dilayani melalui rekening resmi PTDARRAHMAN atau kantor bendahara di luar aplikasi. Panitia tidak pernah meminta transfer ke rekening perorangan pribadi:
           </p>
           <table className="w-full text-xs border border-slate-200 border-collapse">
             <thead>
@@ -455,33 +455,33 @@ export default function LoaOfficialDocument({ data, page = 'both' }: LoaOfficial
             <tbody className="divide-y divide-slate-200">
               <tr>
                 <td className="py-1.5 px-2.5 font-semibold text-slate-800 border border-slate-200 align-top">
-                  Aplikasi Dashboard PPDB
-                  <span className="block text-[10px] text-slate-500 font-normal">Kanal Resmi Calon Santri</span>
+                  Bank Syariah Indonesia (BSI)
+                  <span className="block text-[10px] text-slate-500 font-normal">Rekening Resmi PTDARRAHMAN</span>
                 </td>
                 <td className="py-1.5 px-2.5 text-slate-700 border border-slate-200 leading-relaxed text-[11px]">
-                  Buka menu <strong>Hasil Kelulusan & LoA</strong> di dashboard pendaftar. Klik <strong>Bayar DP via QRIS</strong> atau <strong>Bayar Cicilan</strong> untuk menampilkan kode bayar dinamis.
+                  Transfer manual via Mobile Banking / ATM ke rekening resmi PTDARRAHMAN (hubungi narahubung panitia). Cantumkan berita transfer: <strong>{fullName} - {regNo}</strong>.
                 </td>
                 <td className="py-1.5 px-2.5 font-semibold text-emerald-700 border border-slate-200 align-top text-[11px]">
-                  Otomatis & Real-Time
-                  <span className="block text-[10px] text-slate-500 font-normal">Sistem langsung mengonfirmasi tanpa kirim bukti slip</span>
+                  Konfirmasi Panitia
+                  <span className="block text-[10px] text-slate-500 font-normal">Kirimkan bukti transfer slip ke WhatsApp Panitia</span>
                 </td>
               </tr>
               <tr className="bg-slate-50/50">
                 <td className="py-1.5 px-2.5 font-semibold text-slate-800 border border-slate-200 align-top">
-                  QRIS Payment Gateway
-                  <span className="block text-[10px] text-slate-500 font-normal">Standar QRIS Nasional</span>
+                  Kantor Bendahara Pesantren
+                  <span className="block text-[10px] text-slate-500 font-normal">Layanan Tatap Muka</span>
                 </td>
                 <td className="py-1.5 px-2.5 text-slate-700 border border-slate-200 leading-relaxed text-[11px]" colSpan={2}>
-                  Dapat dibayar melalui <strong>seluruh aplikasi Mobile Banking</strong> (BSI Mobile, BCA Mobile, Livin' Mandiri, BRImo, BNI Mobile, Muamalat DIN) serta <strong>seluruh Dompet Digital</strong> (GoPay, OVO, ShopeePay, DANA, LinkAja).
+                  Pembayaran tunai langsung dapat dilakukan pada hari & jam operasional kantor: Senin – Sabtu (08.00 – 16.00 WIB) di Kantor Administrasi & Bendahara PTDARRAHMAN.
                 </td>
               </tr>
               <tr>
                 <td className="py-1.5 px-2.5 font-semibold text-slate-800 border border-slate-200 align-top">
-                  Bukti Pembayaran Sah
-                  <span className="block text-[10px] text-slate-500 font-normal">Dokumen Terbit Otomatis</span>
+                  Kuitansi Pembayaran Resmi
+                  <span className="block text-[10px] text-slate-500 font-normal">Penerbitan Kuitansi</span>
                 </td>
                 <td className="py-1.5 px-2.5 text-slate-700 border border-slate-200 leading-relaxed text-[11px]" colSpan={2}>
-                  Kuitansi Pembayaran Sah Ber-QR Code serta dokumen Surat Keterangan Diterima (SKD) langsung aktif dan dapat diunduh di dashboard pendaftar setelah pembayaran terkonfirmasi.
+                  Bendahara pesantren menerbitkan kuitansi tanda terima resmi atas setiap pembayaran yang disetorkan sebagai bukti sah pelunasan biaya pendidikan santri.
                 </td>
               </tr>
             </tbody>
@@ -512,7 +512,7 @@ export default function LoaOfficialDocument({ data, page = 'both' }: LoaOfficial
 
       {/* Footer Info */}
       <div className="border-t border-slate-200 pt-1 mt-auto flex justify-between items-center text-[10px] text-slate-400 font-mono">
-        <span>Letter of Acceptance (LoA) Resmi - Pesantren Ar-Rahman</span>
+        <span>Letter of Acceptance (LoA) Resmi - PTDARRAHMAN</span>
         <span>Dokumen Sah Dihasilkan oleh Sistem PPDB</span>
       </div>
     </div>

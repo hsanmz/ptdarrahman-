@@ -38,7 +38,7 @@ export default function ApplicantReceiptPage() {
     id: transactionId,
     receipt_no: receiptNo,
     applicant_name: applicant?.full_name || 'Calon Santri',
-    registration_path: (applicant?.registration_path || 'Reguler').toUpperCase(),
+    wave_name: applicant?.wave_name || 'Gelombang 1',
     amount: transaction.amount,
     payment_method: (transaction.method || 'TIDAK DIKETAHUI').toUpperCase(),
     payment_date: transaction.updated_at || transaction.created_at,

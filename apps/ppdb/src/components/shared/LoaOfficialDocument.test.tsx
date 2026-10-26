@@ -12,7 +12,7 @@ const mockLoaData: LoaData = {
   applicant: {
     id: 'app-001',
     full_name: 'Ahmad Faiz Syamil',
-    registration_path: 'Reguler',
+    wave_name: 'Gelombang 1',
     nisn: '1234567890',
     nik: '3275000000000001',
     previous_school: 'SMP Islam Terpadu',

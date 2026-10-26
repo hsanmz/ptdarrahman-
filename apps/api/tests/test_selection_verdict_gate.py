@@ -1,7 +1,7 @@
 """Gerbang keputusan kelulusan seleksi.
 
 Keputusan lulus/tidak lulus hanya boleh ditetapkan (atau diubah) setelah
-seluruh nilai wajib masuk: TIU (jalur TIU), Tahfidz, dan Wawancara.
+seluruh nilai wajib masuk: Tahfidz dan Wawancara.
 """
 
 import uuid
@@ -68,7 +68,7 @@ def active_wave(db: Session):
     return wave
 
 
-def _make_applicant(db: Session, wave_id: str, registration_path: str) -> PPDBApplicant:
+def _make_applicant(db: Session, wave_id: str) -> PPDBApplicant:
     now = datetime.now()
     applicant = PPDBApplicant(
         id=str(uuid.uuid4()),
@@ -77,7 +77,6 @@ def _make_applicant(db: Session, wave_id: str, registration_path: str) -> PPDBAp
         full_name="Calon Santri Verdict",
         email=f"verdict-{uuid.uuid4().hex[:8]}@example.com",
         phone="081234567890",
-        registration_path=registration_path,
         status="selection",
         created_at=now,
         updated_at=now,
@@ -135,7 +134,7 @@ def _make_rubric(
 
 
 def test_gaps_reports_missing_components(db: Session, active_wave):
-    applicant = _make_applicant(db, active_wave.id, registration_path="reguler")
+    applicant = _make_applicant(db, active_wave.id)
 
     # Tahfidz: baru 1 dari 2 kriteria dinilai.
     _make_rubric(
@@ -147,16 +146,14 @@ def test_gaps_reports_missing_components(db: Session, active_wave):
         scores={"Kelancaran": 88.0},
     )
     # Wawancara: kriteria ada, belum ada skor sama sekali.
-    _make_rubric(db, active_wave.id, "Wawancara", ["Sikap", "Jawaban"])
-    # TIU: jalur reguler wajib, tapi belum ada nilai sama sekali.
 
     gaps = selection_score_gaps(db, applicant)
 
-    assert gaps == ["ujian TIU", "ujian Tahfidz", "ujian Wawancara"]
+    assert gaps == ["ujian Tahfidz", "ujian Wawancara"]
 
 
 def test_gaps_empty_when_all_scores_complete(db: Session, active_wave):
-    applicant = _make_applicant(db, active_wave.id, registration_path="reguler")
+    applicant = _make_applicant(db, active_wave.id)
 
     _make_rubric(
         db,
@@ -174,44 +171,12 @@ def test_gaps_empty_when_all_scores_complete(db: Session, active_wave):
         applicant_id=applicant.id,
         scores={"Sikap": 85.0, "Jawaban": 92.0},
     )
-    # Nilai TIU masuk otomatis via webhook pada kategori "TIU".
-    _make_rubric(
-        db,
-        active_wave.id,
-        "TIU",
-        ["Google Form"],
-        applicant_id=applicant.id,
-        scores={"Google Form": 78.0},
-    )
-
-    assert selection_score_gaps(db, applicant) == []
-
-
-def test_gaps_skips_tiu_for_non_tiu_path(db: Session, active_wave):
-    applicant = _make_applicant(db, active_wave.id, registration_path="prestasi")
-
-    _make_rubric(
-        db,
-        active_wave.id,
-        "Tahfidz",
-        ["Kelancaran"],
-        applicant_id=applicant.id,
-        scores={"Kelancaran": 88.0},
-    )
-    _make_rubric(
-        db,
-        active_wave.id,
-        "Wawancara",
-        ["Sikap"],
-        applicant_id=applicant.id,
-        scores={"Sikap": 85.0},
-    )
 
     assert selection_score_gaps(db, applicant) == []
 
 
 def test_verdict_rejected_while_scores_incomplete(db: Session, active_wave):
-    applicant = _make_applicant(db, active_wave.id, registration_path="reguler")
+    applicant = _make_applicant(db, active_wave.id)
     svc = SelectionService(SelectionRepository(db))
 
     with pytest.raises(HTTPException) as exc:
@@ -227,7 +192,7 @@ def test_verdict_rejected_while_scores_incomplete(db: Session, active_wave):
 
 
 def test_reset_to_selection_allowed_while_scores_incomplete(db: Session, active_wave):
-    applicant = _make_applicant(db, active_wave.id, registration_path="reguler")
+    applicant = _make_applicant(db, active_wave.id)
     svc = SelectionService(SelectionRepository(db))
 
     result = svc.update_applicant_status(
@@ -240,7 +205,7 @@ def test_reset_to_selection_allowed_while_scores_incomplete(db: Session, active_
 
 
 def test_verdict_accepted_when_scores_complete(db: Session, active_wave, monkeypatch):
-    applicant = _make_applicant(db, active_wave.id, registration_path="reguler")
+    applicant = _make_applicant(db, active_wave.id)
     svc = SelectionService(SelectionRepository(db))
 
     _make_rubric(
@@ -258,14 +223,6 @@ def test_verdict_accepted_when_scores_complete(db: Session, active_wave, monkeyp
         ["Sikap"],
         applicant_id=applicant.id,
         scores={"Sikap": 85.0},
-    )
-    _make_rubric(
-        db,
-        active_wave.id,
-        "TIU",
-        ["Google Form"],
-        applicant_id=applicant.id,
-        scores={"Google Form": 78.0},
     )
 
     monkeypatch.setattr(

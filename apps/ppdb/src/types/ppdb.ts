@@ -27,8 +27,6 @@ export interface Applicant {
   full_name: string
   email: string
   phone: string
-  registration_path: string
-  registration_level?: string
   registration_number?: string | null
   wave_name?: string
   wave_id?: string
@@ -39,6 +37,7 @@ export interface Applicant {
   birth_place?: string
   birth_date?: string
   gender?: string
+  graduation_year?: string
   nisn?: string
   nik?: string
   province?: string

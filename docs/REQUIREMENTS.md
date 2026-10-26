@@ -1,7 +1,7 @@
-# Requirement & Business Logic PPDB
+﻿# Requirement & Business Logic PPDB
 
-> **Versi:** 1.2.0
-> **Tanggal Terakhir Diperbarui:** 21 Oktober 2026
+> **Versi:** 1.5.0
+> **Tanggal Terakhir Diperbarui:** 26 Oktober 2026
 >
 > Dokumen ini memuat aturan bisnis utama untuk sistem Penerimaan Peserta Didik Baru (PPDB) Pesantren Tahfidz Qur'an dan Digital Ar-Rahman.
 > - Untuk arsitektur sistem, topologi kontainer, alur pembayaran, dan diagram teknis (System Design), rujuk ke [**README.md**](../README.md).
@@ -11,20 +11,26 @@
 
 ## Alur Konfigurasi Admin (Backoffice)
 Admin menyiapkan komponen berikut dari dashboard backoffice sebelum pendaftaran dibuka:
-1. **Gelombang pendaftaran** — tanggal buka/tutup, harga formulir, kuota pendaftar, diskon DP3/gedung/SPP, diskon untuk X pendaftar pertama, dan minimal DP.
-2. **Template dan LoA** — generate/preview LoA sebelum publish, klausul dana tidak dapat dikembalikan, dan latar SKD.
-3. **Rubrik penilaian** — kriteria, bobot, dan formulir evaluator untuk Tahfidz dan wawancara. Nilai TIU berasal otomatis dari ujian pilihan ganda dan webhook, tanpa input manual admin.
-4. **Session 1:1 Tahfidz** — jadwal, penguji, mode online/offline, serta tautan Zoom atau lokasi tatap muka.
-5. **Session 1:1 Wawancara** — jadwal, pewawancara, mode online/offline, serta tautan Zoom atau lokasi tatap muka.
-6. **Pengaturan TIU global** — Pre-filled Google Form URL (dengan placeholder `{token}`), webhook secret, durasi tes, dan Apps Script untuk menyinkronkan nilai ke aplikasi PPDB secara real-time. Pengaturan ini tidak dibuat per gelombang.
+1. **Periode & Master Komponen Biaya** â€” nama periode, tahun ajaran, dan master komponen biaya pendidikan (uang pangkal, SPP, seragam, matrikulasi, dll.) yang berlaku standar untuk seluruh gelombang.
+2. **Gelombang pendaftaran** â€” tanggal buka/tutup, harga formulir, kuota pendaftar, diskon untuk X pendaftar pertama formulir, dan diskonasi per komponen biaya master (diskon reguler & diskon early bird).
+4. **Rubrik penilaian** â€” kriteria, bobot, dan formulir evaluator untuk Tahfidz dan wawancara.
+5. **Bank Soal & Jadwal CBT (Akademik & Psikologi)** â€” pembuatan bank soal per periode untuk kategori Akademik dan Psikologi (pilihan ganda MCQ A-E, kunci jawaban, alokasi poin, durasi), serta penjadwalan ujian CBT massal per gelombang/batch lengkap dengan PIN sesi/access token.
+6. **Session 1:1 Tahfidz** â€” jadwal, penguji, mode online/offline, serta tautan Zoom atau lokasi tatap muka.
+7. **Session 1:1 Wawancara (Santri & Orang Tua/Wali)** â€” jadwal terpisah untuk wawancara calon santri dan wawancara orang tua/wali santri, pewawancara, mode online/offline, serta tautan Zoom atau lokasi tatap muka.
+8. **Pemantauan Ujian Real-Time** â€” konsol live monitoring ujian CBT untuk memantau status peserta, sisa waktu, deteksi pelanggaran, dan modal unfreeze peserta.
 
 Pendaftaran publik dibuka ketika ada gelombang aktif di periode aktif, jadwal pendaftaran sudah masuk, dan kuota pembayaran formulir belum penuh. Template LoA bukan prasyarat pendaftaran dibuka.
 
 ---
 
-## Periode dan Gelombang
+## Periode, Gelombang & Komponen Biaya
 
-- Gelombang berada di dalam periode dan memuat pengaturan pembukaan pendaftaran, kuota, diskon, dan komponen biaya.
+- **Master Biaya di Periode:** Seluruh master komponen biaya masuk / biaya pendidikan (uang pangkal, SPP, seragam, matrikulasi, dsb.) dikonfigurasi di tingkat Periode (`ppdb_period_fee_items`). Setiap gelombang dalam periode otomatis mewarisi komponen biaya standar yang seragam tanpa perlu input ulang.
+- **Diskonasi di Gelombang:** Gelombang (`ppdb_waves`) tidak membuat komponen biaya dari nol, melainkan cukup mengatur diskon per komponen biaya periode (`ppdb_wave_fee_discounts`):
+  - **Diskon Reguler:** Persentase (%) atau Nominal Rupiah (Rp).
+  - **Diskon Pendaftar Awal (Early Bird):** Dihitung dari sisa biaya setelah diskon reguler untuk X pendaftar awal.
+- **Biaya Pendidikan Sebagai Informasi Resmi:** Biaya pendidikan dihitung dan disajikan secara transparan sebagai rincian resmi pada Letter of Acceptance (LoA) calon santri yang lulus seleksi.
+- **Penyetoran di Luar Aplikasi:** Pembayaran biaya pendidikan dilakukan **di luar aplikasi** (transfer manual ke rekening resmi PTDARRAHMAN / tunai ke bendahara pesantren). Di dalam sistem PPDB **tidak ada** pembayaran online tahap 2, dan alur pendaftaran mandiri calon santri tuntas pada penandatanganan LoA.
 - **Hanya satu periode yang aktif secara global.** Mengaktifkan periode menonaktifkan periode lain beserta gelombang di luar periode itu; menonaktifkan periode menonaktifkan gelombang di dalamnya.
 - **Setiap periode hanya boleh memiliki satu gelombang aktif.** Gelombang hanya bisa aktif jika periode induknya aktif. Mengaktifkan gelombang baru menggantikan gelombang aktif sebelumnya.
 - Jumlah gelombang per periode fleksibel tanpa batas tetap.
@@ -36,23 +42,42 @@ Pendaftaran publik dibuka ketika ada gelombang aktif di periode aktif, jadwal pe
 ## Tanpa Pemilihan Jenjang Pendidikan
 
 - Sistem **tidak mengenal daftar jenjang pendidikan** (`SMP`, `SMK`, atau nilai lain) dan **tidak menyediakan pemilihan jenjang di mana pun**: tidak di formulir pendaftaran, tidak di dashboard pendaftar, tidak di konfigurasi gelombang, dan tidak di halaman publik. Pendaftar tidak memilih, tidak mengisi, dan tidak dapat mengubah jenjang.
-- Jenjang bukan data yang diinput pendaftar. Bila jenjang masih perlu dicantumkan pada dokumen (LoA, SKD, transkrip), perlakukan sebagai atribut tetap institusi yang diambil dari konfigurasi tingkat sekolah, bukan dari pilihan pengguna.
-- Scope/config gelombang hanya memuat jalur pendaftaran yang dipilih pendaftar.
-- Field/kolom jenjang yang sudah ada di implementasi lama adalah sisa flow lama: perlakukan sebagai artefak tidak aktif, jangan jadikan sumber kebenaran, dan jangan tambahkan UI atau endpoint baru yang bergantung padanya.
+- Sistem bebas jenjang dan bebas jalur pendaftaran (tanpa pemilihan jalur, seluruh pendaftar mengikuti skema terpadu yang sama).
+- Field/kolom jenjang dan jalur yang sudah ada di implementasi lama adalah sisa flow lama: perlakukan sebagai artefak tidak aktif, jangan jadikan sumber kebenaran, dan jangan tambahkan UI atau endpoint baru yang bergantung padanya.
+
+---
+
+## Standar Penulisan Nama Institusi & Entitas (Naming Convention)
+
+Untuk menjaga konsistensi komunikasi resmi dan dokumen sah di seluruh platform:
+
+1. **Nama Resmi Baku Institusi:**
+   - Bentuk resmi: **`Pesantren Tahfidz Qur'an dan Digital Ar-Rahman`** (atau huruf kapital penuh pada Kop dokumen: **`PESANTREN TAHFIDZ QUR'AN DAN DIGITAL AR-RAHMAN`**).
+   - Nama resmi ini **tidak boleh diubah, disingkat, atau ditambahi** frasa baru (seperti *PTDARRAHMAN (Pesantren Tahfidz Qur'an dan Digital Ar-Rahman)*). Biarkan teks baku tersebut tetap utuh.
+2. **Singkatan / Nama Entitas Pengenal:**
+   - Gunakan selalu: **`PTDARRAHMAN`** (atau **`PTD ARRAHMAN`** / **`PTD Ar-Rahman`**).
+   - Digunakan untuk:
+     - Branding aplikasi & judul tab portal (*Superadmin Panel - PTDARRAHMAN*, *PPDB PTDARRAHMAN*).
+     - Rincian kanal penyetoran biaya pendidikan: *Rekening Resmi PTDARRAHMAN*, *Kantor Administrasi & Bendahara PTDARRAHMAN*.
+     - Footer surat & watermark dokumen sah: *Letter of Acceptance (LoA) Resmi - PTDARRAHMAN*, *Sistem Resmi PPDB PTDARRAHMAN*.
+     - Penyebutan singkat profil institusi: *PTDARRAHMAN*.
+3. **Kata yang Dilarang Digunakan:**
+   - âŒ **DILARANG** menulis: **`Yayasan Pesantren Ar-Rahman`** atau **`Yayasan Pesantren Ar Rahman`**.
+   - âŒ **DILARANG** menulis: **`Pesantren Ar-Rahman`** atau **`Pesantren Ar Rahman`** (sebagai sebutan entitas tunggal tanpa kelanjutan *Tahfidz Qur'an dan Digital*).
+   - Jika ditemukan pada kode lama atau template, wajib diganti menjadi **`PTDARRAHMAN`**.
 
 ---
 
 ## Struktur Formulir Pendaftaran Publik
 
-Sistem menggunakan formulir pendaftaran bertahap (wizard) dengan 7 bagian (section) utama:
+Sistem menggunakan formulir pendaftaran bertahap (wizard) dengan 6 bagian (section) utama:
 
-1. **Pilih Jalur**: Pilihan jalur pendaftaran aktif berdasarkan gelombang. Opsi ditampilkan bersih tanpa embel-embel seperti `(Non-TIU)` atau `(Tes TIU)`.
-2. **Identitas Calon Murid**: Data pribadi santri dan asal sekolah.
-3. **Data Orang Tua/Wali**: Data lengkap meliputi Nama, Pekerjaan, dan Nomor WA untuk Ayah dan Ibu. Data Wali bersifat opsional. Terdapat juga input Email Orang Tua/Wali dan Penghasilan Per Bulan.
-4. **Kontak**: Email dan Nomor WA pendaftar. Sistem wajib meminta pengguna memverifikasi data ini kembali karena digunakan untuk pengiriman kredensial.
-5. **Domisili**: Alamat lengkap, Provinsi, Kabupaten/Kota, Kecamatan, Kelurahan/Desa, dan Kode Pos.
-6. **Identifikasi Kesehatan**: Kuesioner riwayat kesehatan yang menggantikan fungsi medcheck (berlabel "Identifikasi Kesehatan").
-7. **Pernyataan & Persetujuan**: Konfirmasi akhir dengan 4 persetujuan (checkbox) yang wajib dicentang sebelum tombol *submit* aktif.
+1. **Identitas Calon Murid**: Data pribadi santri dan asal sekolah.
+2. **Data Orang Tua/Wali**: Data lengkap meliputi Nama, Pekerjaan, dan Nomor WA untuk Ayah dan Ibu. Data Wali bersifat opsional. Terdapat juga input Email Orang Tua/Wali dan Penghasilan Per Bulan.
+3. **Kontak**: Email dan Nomor WA pendaftar. Sistem wajib meminta pengguna memverifikasi data ini kembali karena digunakan untuk pengiriman kredensial.
+4. **Domisili**: Alamat lengkap, Provinsi, Kabupaten/Kota, Kecamatan, Kelurahan/Desa, dan Kode Pos.
+5. **Identifikasi Kesehatan**: Kuesioner riwayat kesehatan yang menggantikan fungsi medcheck (berlabel "Identifikasi Kesehatan").
+6. **Pernyataan & Persetujuan**: Konfirmasi akhir dengan 4 persetujuan (checkbox) yang wajib dicentang sebelum tombol *submit* aktif.
 
 Data orang tua/wali yang terkumpul pada langkah ini wajib disinkronisasi tampilannya di seluruh *dashboard* operasional (Admin, Superadmin, dan profil Pendaftar) secara lengkap, bukan hanya direduksi menjadi satu baris `parent_name`.
 
@@ -63,13 +88,13 @@ Data orang tua/wali yang terkumpul pada langkah ini wajib disinkronisasi tampila
 Formulir ini menggantikan Medcheck. Diisi sendiri oleh pendaftar pada formulir pendaftaran (bukan oleh petugas medis), dan hasilnya disimpan sebagai data profil kesehatan pendaftar yang dapat dibuka admin pada halaman detail/dossier pendaftar.
 
 Struktur 10 pertanyaan baku:
-1. **Riwayat penyakit kronis** — Ya / Tidak. Jika **Ya**, isi kolom keterangan (sebutkan penyakitnya).
-2. **Pernah didiagnosis kondisi tertentu** — checkbox: Asma, Diabetes, Epilepsi, Penyakit jantung, Hipertensi, TBC, Lainnya. Opsi "Lainnya" punya isian bebas. Tersedia kolom keterangan untuk menjelaskan pilihan.
-3. **Alergi** — Ya / Tidak. Jika **Ya**, pilih jenis alergi dengan checkbox: Makanan, Obat, Debu, Lainnya (isian bebas). Tersedia kolom keterangan untuk menjelaskan pilihan.
-4. **Pengobatan rutin** — "Apakah Anda sedang menjalani pengobatan rutin atau mengonsumsi obat tertentu secara berkala?" Ya / Tidak. Jika **Ya**, isi kolom keterangan.
-5. **Keterbatasan fisik** — "Apakah Anda memiliki kondisi kesehatan atau keterbatasan fisik yang perlu diketahui sekolah?" Ya / Tidak. Jika **Ya**, isi kolom keterangan.
-6. **Riwayat rawat inap** — "Apakah Anda pernah menjalani rawat inap atau operasi dalam 2 tahun terakhir?" Ya / Tidak. Jika **Ya**, isi kolom keterangan.
-7. **Kebutuhan khusus** — "Apakah Anda memiliki kebutuhan khusus terkait kesehatan selama mengikuti kegiatan belajar?" Ya / Tidak. Jika **Ya**, isi kolom keterangan.
+1. **Riwayat penyakit kronis** â€” Ya / Tidak. Jika **Ya**, isi kolom keterangan (sebutkan penyakitnya).
+2. **Pernah didiagnosis kondisi tertentu** â€” checkbox: Asma, Diabetes, Epilepsi, Penyakit jantung, Hipertensi, TBC, Lainnya. Opsi "Lainnya" punya isian bebas. Tersedia kolom keterangan untuk menjelaskan pilihan.
+3. **Alergi** â€” Ya / Tidak. Jika **Ya**, pilih jenis alergi dengan checkbox: Makanan, Obat, Debu, Lainnya (isian bebas). Tersedia kolom keterangan untuk menjelaskan pilihan.
+4. **Pengobatan rutin** â€” "Apakah Anda sedang menjalani pengobatan rutin atau mengonsumsi obat tertentu secara berkala?" Ya / Tidak. Jika **Ya**, isi kolom keterangan.
+5. **Keterbatasan fisik** â€” "Apakah Anda memiliki kondisi kesehatan atau keterbatasan fisik yang perlu diketahui sekolah?" Ya / Tidak. Jika **Ya**, isi kolom keterangan.
+6. **Riwayat rawat inap** â€” "Apakah Anda pernah menjalani rawat inap atau operasi dalam 2 tahun terakhir?" Ya / Tidak. Jika **Ya**, isi kolom keterangan.
+7. **Kebutuhan khusus** â€” "Apakah Anda memiliki kebutuhan khusus terkait kesehatan selama mengikuti kegiatan belajar?" Ya / Tidak. Jika **Ya**, isi kolom keterangan.
 8. **Nama kontak darurat.**
 9. **Hubungan kontak darurat dengan calon peserta didik.**
 10. **Nomor telepon kontak darurat.**
@@ -85,41 +110,60 @@ Perilaku formulir:
 
 ---
 
-## Ujian TIU di Safe Exam Browser (SEB)
+## Sistem Ujian CBT (Akademik & Psikologi) & Seleksi Terpadu
 
-- Admin menyusun soal kuis di Google Form dan menambahkan 1 pertanyaan bertipe Short Answer bertema "Token" (Wajib Isi). Admin mengambil Pre-filled URL dari Google Form tersebut (dengan placeholder `{token}`) dan menyimpannya di Pengaturan TIU backoffice PPDB. Pengaturan URL, webhook secret Apps Script, dan durasi ujian berlaku secara global.
-- Setiap pendaftar jalur TIU hanya mendapat **satu attempt ujian**; tidak ada retake setelah ujian selesai atau waktu habis.
-- Dari portal pendaftar (`/applicant/ujian-tiu`), peserta mengunduh file `.seb` (`ujian-tiu.seb`) via endpoint `/selection/applicants/me/tiu-seb`. Saat file di-generate, server mengikat attempt tunggal peserta, membuat token unik, dan mencatat waktu mulai ujian (timer server).
-- File `.seb` berisi `StartURL` menuju Pre-filled Google Form dengan token peserta sudah terisi otomatis. Ujian wajib dikerjakan dari komputer desktop atau laptop (Windows 10/11 atau macOS) menggunakan Safe Exam Browser. SEB mengunci layar perangkat dan menyembunyikan bilah URL.
-- Setelah peserta menekan tombol **Submit** di Google Form, trigger `onSubmit` Apps Script membaca skor dan token, lalu mengirimkannya ke webhook backend PPDB (`POST /ppdb/webhook/tiu`) secara real-time dengan header `X-TIU-Secret`.
-- Backend memvalidasi header `X-TIU-Secret`, keabsahan token attempt, dan batas durasi (`waktu submit <= waktu mulai + durasi + 5 menit toleransi`).
-- Nilai disimpan idempoten dan memicu notifikasi WhatsApp hasil TIU (`tiu_result_ready`). Admin tidak menginput nilai TIU manual.
-- Jika terjadi kendala koneksi atau perangkat restart di tengah ujian, peserta dapat membuka kembali file `.seb` selama durasi server belum habis (Google Form mendukung autosave saat login). Timer server tetap berjalan dan tidak di-reset.
+Sistem PPDB mengintegrasikan modul Computer Based Test (CBT) mandiri dan sesi tatap muka terstruktur untuk evaluasi komprehensif calon santri:
+
+### 1. Bank Soal & Kategori CBT
+- Dikelola di level Periode (`ppdb_exam_banks`) untuk dua kategori utama:
+  1. **Seleksi Akademik**: Mengukur kemampuan dasar (matematika, bahasa, pengetahuan umum/keislaman).
+  2. **Seleksi Psikologi**: Mengukur potensi bakat, kecerdasan logis, dan kecocokan psikologis santri berasrama.
+- Struktur soal: Pilihan Ganda (Single Choice MCQ A-E) dengan kunci jawaban (`is_correct`), bobot poin per soal, dan alokasi total durasi waktu pengerjaan.
+- Tersedia fitur unduh template CSV dan import berkas bank soal massal oleh panitia.
+
+### 2. Jadwal Ujian Massal, Batching & Cutoff H-1
+- Jadwal ujian CBT (`ppdb_exam_schedules`) diset massal per gelombang pendaftaran dan dapat dikelompokkan berdasarkan **Batch / Kloter**.
+- **Aturan Cutoff H-1:** Pendaftaran slot jadwal suatu batch ditutup 24 jam sebelum ujian pertama di batch tersebut dimulai. Calon santri yang dokumennya baru disetujui setelah cutoff otomatis masuk ke batch berikutnya.
+- **Konsolidasi Notifikasi:** Jadwal ujian yang berlangsung pada tanggal yang sama dikonsolidasikan dalam 1 pesan WhatsApp terpadu.
+- **Pengingat Terjadwal Otomatis:** Sistem mengirimkan pengingat otomatis ke WhatsApp pendaftar pada H-2, H-1, dan 1 jam sebelum ujian dimulai via BullMQ queue.
+- Mode pelaksanaan fleksibel:
+  - `offline`: Dilaksanakan di Lab Komputer Pesantren (Kampus PTDARRAHMAN).
+  - `online`: Dilaksanakan secara virtual jarak jauh via video conference (Zoom / Google Meet).
+- Setiap jadwal memiliki **PIN Sesi / Token Akses** unik (misal: `AKAD-8921`) yang wajib dimasukkan peserta untuk memulai ujian.
+
+### 3. Ruang Ujian CBT & Perlindungan Integritas (Anti-Cheating)
+- **Gerbang Autentikasi:** Peserta mengakses ruang ujian melalui verifikasi kredensial ganda (kata sandi akun pendaftar + PIN sesi ujian).
+- **Autosave Real-Time:** Setiap klik pemilihan jawaban langsung tersimpan seketika di database (`ppdb_exam_answers`) untuk mencegah kehilangan data akibat kendala koneksi.
+- **Anti-Cheating Monitor:** Sistem mendeteksi perpindahan tab atau jendela browser ke luar layar ujian lebih dari 5 detik. Pelanggaran dicatat dalam `ppdb_exam_attempts` (`violations_count`). Jika melebihi ambang batas, status pengerjaan pendaftar otomatis terkunci (`locked`).
+- **Live Monitoring Panitia:** Pengawas ujian memantau progres seluruh peserta secara real-time dari halaman `/admin/monitoring/:category/:scheduleId`. Pengawas berwenang membuka kembali status ujian peserta yang terkunci via tombol **Unfreeze Peserta**.
+- **Auto-Submit & Auto-Grading:** Saat durasi timer habis, sistem otomatis menutup ujian, mengunci jawaban, dan menghitung skor akhir pendaftar.
+
+### 4. Sesi 1:1 Tahfidz & Wawancara (Santri dan Orang Tua/Wali)
+- **Sesi 1:1 Tahfidz:** Evaluasi tartil, tahsin, dan kemampuan hafalan Al-Qur'an bersama asatidz penguji dengan lembar rubrik berbobot resmi.
+- **Sesi 1:1 Wawancara Calon Santri:** Menggali motivasi, kemandirian, adab, dan kesiapan tinggal di asrama pesantren.
+- **Sesi 1:1 Wawancara Orang Tua/Wali:** Wawancara komitmen pengasuhan, keselarasan visi pendidikan Islam, dan dukungan wali santri.
+- Format workspace penilaian evaluator: Layar kerja dua kolom dengan formulir rubrik terbobot di kolom kiri dan dossier lengkap santri di kolom kanan.
 
 ---
 
-## Integrasi Payment Gateway Pakasir API v2 & Pembayaran Tahap 2
+## Integrasi Payment Gateway Pakasir API v2 & Penyelesaian Pendaftaran
 
-Sistem PPDB mengintegrasikan gerbang pembayaran resmi **Pakasir API v2** untuk pembayaran formulir dan biaya masuk santri baru:
+Sistem PPDB mengintegrasikan gerbang pembayaran resmi **Pakasir API v2** untuk pembayaran formulir pendaftaran santri baru:
 
 1. **Biaya Formulir:**
    - Setelah registrasi, sistem membuat tagihan formulir.
    - Pendaftar melakukan pembayaran via QRIS dinamis (`POST /payment/create-qris`).
    - Webhook Pakasir (`POST /payment/webhook` / `POST /payment/webhook/pak-kasir`) memvalidasi pembayaran secara atomik & idempoten menggunakan header `X-Secret`.
    - Setelah lunas, kuitansi resmi terbit (`GET /payment/receipt/{id}` dan link publik `/kuitansi/:id`).
-2. **Kelulusan & Penandatanganan LoA:**
+2. **Kelulusan & Penandatanganan LoA (Tahap Akhir):**
    - Pendaftar yang dinyatakan lulus oleh panitia dapat melihat hasil seleksi di `/applicant/pengumuman`.
-   - Pendaftar dan orang tua wajib membubuhkan tanda tangan digital pada Letter of Acceptance (LoA) sebelum melanjutkan ke pembayaran DP (`POST /ppdb/applicants/me/sign-loa`).
+   - Pendaftar dan orang tua membubuhkan tanda tangan digital pada Letter of Acceptance (LoA) (`POST /ppdb/applicants/me/sign-loa`).
+   - **Alur PPDB selesai pada penandatanganan LoA.** Begitu LoA ditandatangani, data formulir terkunci permanen (`is_locked = true`) dan status calon santri resmi diterima.
    - LoA resmi dapat diverifikasi publik di `/loa/:registrationNo`.
-3. **Pembayaran Tahap 2 (DP) & Pengaturan Cicilan:**
-   - Syarat utama pendaftar resmi diterima adalah pelunasan **DP (Down Payment)** di `/applicant/bayar-dp`.
-   - Pendaftar yang sudah membayar DP dapat mengatur skema cicilan untuk sisa tagihan pendidikan (`POST /payment/stage2/my-installment-plan`) di `/applicant/pembayaran-tahap2`.
-   - Scheduler backend (`apps/api/src/core/scheduler.py`) mengirimkan notifikasi pengingat via WhatsApp H-3 sebelum tanggal jatuh tempo cicilan pendaftar.
-4. **Penerbitan SKD & Komunitas Resmi:**
-   - Setelah DP Tahap 2 berstatus lunas, sistem secara otomatis menerbitkan **Surat Keterangan Diterima (SKD)** bernomor registrasi unik resmi (`REG-{YYYYMMDD}-{XXXX}`).
    - Sistem menampilkan tautan eksklusif untuk bergabung ke **Grup WhatsApp Resmi Santri Baru**.
-5. **Pemantauan Detail Tagihan & Cicilan di Backoffice (`/admin/pembayaran-tahap2/:applicantId`):**
-   - Panitia dapat meninjau buku besar keuangan pendaftar secara individu: status DP, tagihan cicilan yang sedang aktif, tanggal jatuh tempo per termin, log kuitansi resmi, serta status pelunasan menyeluruh.
+4. **Biaya Pendidikan (Biaya Masuk) & Penyetoran di Luar Aplikasi:**
+   - Biaya pendidikan tetap dihitung secara transparan di dalam sistem sebagai informasi resmi pada LoA santri.
+   - Penyetoran dana dilakukan **di luar aplikasi** (transfer rekening resmi PTDARRAHMAN / tunai di kantor bendahara pesantren). Di dalam portal PPDB pendaftar tidak ada tombol pembayaran QRIS untuk biaya masuk, dan alur pendaftaran tuntas pada penandatanganan LoA.
 
 ---
 
@@ -127,17 +171,15 @@ Sistem PPDB mengintegrasikan gerbang pembayaran resmi **Pakasir API v2** untuk p
 
 Untuk menjaga integritas arsip dan tampilan dokumen institusi, sistem menerapkan standardisasi layout cetak A4 baku (`apps/ppdb/src/utils/export*`):
 - **Formulir Pendaftaran (`exportApplicantForm`):** Rekapitulasi komprehensif data santri, keluarga, domisili, dan identifikasi kesehatan berstempel digital pesantren.
-- **Lembar Penilaian Seleksi (`exportAssessment` / `OfficialAssessmentSheet`):** Lembar penilaian evaluator berisi skor TIU terverifikasi, kriteria tartil/tahfidz, dan wawancara berbobot.
+- **Lembar Penilaian Seleksi (`exportAssessment` / `OfficialAssessmentSheet`):** Lembar penilaian evaluator berisi kriteria tartil/tahfidz dan wawancara berbobot.
 - **Kuitansi Resmi (`exportReceipt` / `OfficialReceiptCard`):** Bukti pembayaran berstempel digital dilengkapi kode QR bertoken HMAC yang dapat diverifikasi publik tanpa login (`/kuitansi/:id`).
 - **Surat Penerimaan / LoA (`exportLoa` / `LoaOfficialDocument`):** Surat resmi penerimaan calon santri dengan klausul *non-refundable*, tanda tangan digital/basah wali, dan tautan verifikasi keabsahan (`/loa/:registrationNo`).
-- **Surat Keterangan Diterima / SKD (`exportSkd` / `ApplicantSKDModal`):** Surat resmi dengan nomor registrasi unik `REG-{YYYYMMDD}-{XXXX}` yang diterbitkan pasca-pelunasan DP.
 
 ---
 
 ## Arsip dan Pencarian Dossier Pendaftar
 
 - Pencarian lintas periode dan gelombang berada di **halaman khusus Arsip/Cari Pendaftar (`/admin/arsip`)**. Tidak ditambahkan ke tabel operasional lain.
-- Dossier lengkap mencakup: biodata santri & orang tua, berkas asli beserta riwayat verifikasi, kuesioner kesehatan, skor TIU, nilai sesi 1:1 Tahfidz & Wawancara, keputusan kelulusan, LoA bertanda tangan, histori transaksi pembayaran formulir/DP/cicilan, serta SKD resmi.
 - Mendukung unduhan berkas perorangan dan paket bundle ZIP satu-klik (`GET /ppdb/archive/applicants/{id}/dossier/zip`).
 - Akses dossier dibatasi dengan izin khusus dan seluruh aktivitas unduhan dicatat dalam `audit_log` bersama alamat IP admin pemohon.
 
@@ -148,8 +190,7 @@ Untuk menjaga integritas arsip dan tampilan dokumen institusi, sistem menerapkan
 - **Konfigurasi/publikasi:** Cegah pembukaan pendaftaran jika tidak ada periode aktif, gelombang aktif, tanggal di luar rentang, atau kuota habis.
 - **Pendaftaran/pembayaran:** Validasi ulang status periode, gelombang, tanggal, dan kuota di server saat pendaftaran dan pembayaran. Reservasi slot dan kalkulasi kuota dijalankan atomik.
 - **Kuota tercapai:** Tutup gelombang dan pendaftaran satu kali, batalkan seluruh tagihan formulir pending, kirim notifikasi, dan hentikan pengingat Senin.
-- **Pengecualian Pembayaran Terlambat:** Jika webhook sukses datang setelah tagihan dibatalkan karena kuota penuh, tandai transaksi sebagai pengecualian (`late_payment_exception`) untuk pemeriksaan manual admin—jangan otomatis memindahkan pendaftar atau menghapus saldo.
-- **TIU/SEB:** Tolak pengunduhan file SEB jika pendaftar sudah memiliki nilai TIU atau durasi attempt telah habis. Validasi webhook secret `X-TIU-Secret`, kecocokan token attempt, dan batas durasi ujian.
+- **Pengecualian Pembayaran Terlambat:** Jika webhook sukses datang setelah tagihan dibatalkan karena kuota penuh, tandai transaksi sebagai pengecualian (`late_payment_exception`) untuk pemeriksaan manual adminâ€”jangan otomatis memindahkan pendaftar atau menghapus saldo.
 - **Formulir kesehatan:** Server memvalidasi kelengkapan jawaban (pertanyaan Ya/Tidak wajib ada keterangan jika "Ya", kontak darurat valid, pernyataan disetujui).
 - **Dossier/unduhan:** Periksa izin khusus di server untuk melihat dan mengunduh data sensitif; audit unduhan ZIP maupun berkas perorangan.
 
@@ -158,11 +199,10 @@ Untuk menjaga integritas arsip dan tampilan dokumen institusi, sistem menerapkan
 ## Status Keputusan Bisnis
 
 ### Keputusan yang Sudah Terselesaikan (*Resolved* di Kode):
-- ✅ **Artefak Dokumen:** LoA dan SKD dibekukan sebagai artefak tetap (*immutable*) dengan nomor registrasi unik resmi.
-- ✅ **Pembayaran Terlambat:** Ditandai sebagai pengecualian pemeriksaan admin (`late_payment_exception`), tidak dipindahkan otomatis.
-- ✅ **Izin Dossier & Audit:** Dibatasi untuk admin berizin (`require_ppdb_admin`), dengan pencatatan jejak audit alamat IP pada setiap ekspor ZIP.
-- ✅ **Kuesioner Kesehatan:** 10 pertanyaan baku wajib tervalidasi lengkap di server saat pendaftaran.
-- ✅ **Pembaruan Mandiri Profil & Kesehatan Santri:** Santri/wali dapat meninjau dan memperbarui data formulir pendaftaran serta identifikasi kesehatan secara mandiri di `/applicant/profile` (`PUT /ppdb/applicants/me`). Pembaruan dibatasi hanya selama proses seleksi berlangsung, dan otomatis dikunci permanen (`is_locked`) sesaat setelah santri dinyatakan lulus dan LoA resmi diterbitkan atau bila admin menguncinya secara manual.
+- âœ… **Pembayaran Terlambat:** Ditandai sebagai pengecualian pemeriksaan admin (`late_payment_exception`), tidak dipindahkan otomatis.
+- âœ… **Izin Dossier & Audit:** Dibatasi untuk admin berizin (`require_ppdb_admin`), dengan pencatatan jejak audit alamat IP pada setiap ekspor ZIP.
+- âœ… **Kuesioner Kesehatan:** 10 pertanyaan baku wajib tervalidasi lengkap di server saat pendaftaran.
+- âœ… **Pembaruan Mandiri Profil & Kesehatan Santri:** Santri/wali dapat meninjau dan memperbarui data formulir pendaftaran serta identifikasi kesehatan secara mandiri di `/applicant/profile` (`PUT /ppdb/applicants/me`). Pembaruan dibatasi hanya selama proses seleksi berlangsung, dan otomatis dikunci permanen (`is_locked`) sesaat setelah santri dinyatakan lulus dan LoA resmi ditandatangani.
 
 ### Keputusan yang Masih Terbuka (Menunggu Kebijakan Yayasan):
 - Berapa lama masa retensi berkas dan riwayat data kesehatan pendaftar yang tidak diterima?
@@ -174,31 +214,19 @@ Untuk menjaga integritas arsip dan tampilan dokumen institusi, sistem menerapkan
 
 Sistem PPDB terhubung ke beberapa layanan eksternal berikut:
 
-### Pakasir API v2 — Payment Gateway
-- Menyediakan QRIS dinamis per transaksi untuk pembayaran formulir dan DP tahap 2.
+### Pakasir API v2 â€” Payment Gateway
+- Menyediakan QRIS dinamis per transaksi untuk pembayaran formulir.
 - Webhook diterima di `POST /payment/webhook` dan `POST /payment/webhook/pak-kasir`, divalidasi menggunakan header `X-Secret`, pencocokan nominal, serta pengecekan idempoten untuk mencegah duplikasi saldo.
 - Kuitansi resmi bertanda tangan HMAC token dapat diverifikasi publik di `/kuitansi/:id` tanpa login.
 - Implementasi: `apps/api/src/core/pakasir.py` & `apps/api/src/services/payment_service.py`.
 
-### Google Apps Script — Sinkronisasi Nilai TIU
-- Trigger `onSubmit` yang dipasang admin pada Google Form TIU mengirimkan nilai ke backend secara real-time via `POST /ppdb/webhook/tiu` dengan header `X-TIU-Secret`.
-- Backend memvalidasi secret, keabsahan token attempt, dan batas durasi ujian sebelum menyimpan nilai.
-- Admin tidak menginput nilai TIU secara manual. Seluruh alur otomatis.
-- Referensi: `docs/INTEGRASI_TIU_APPS_SCRIPT.md`.
-
-### Safe Exam Browser (SEB) — Ujian TIU Terkunci
-- File konfigurasi `.seb` di-generate per pendaftar: `GET /selection/applicants/me/tiu-seb`.
-- Berisi `StartURL` menuju Google Form dengan token pendaftar terisi otomatis (Pre-filled URL dengan placeholder `{token}`).
-- Ujian wajib dikerjakan dari komputer desktop/laptop menggunakan Safe Exam Browser yang mengunci layar dan menyembunyikan bilah URL.
-- Referensi: `docs/PANDUAN_UJIAN_TIU_SEB.md`.
-
-### Cloudinary — Penyimpanan File & Gambar
+### Cloudinary â€” Penyimpanan File & Gambar
 - Digunakan untuk upload file dan gambar melalui `POST /companyprofile/upload`.
 - Mencakup foto avatar, gambar berita, konten Company Profile, dan aset institusi lainnya.
 
-### WhatsApp Web.js — Notifikasi WhatsApp
+### WhatsApp Web.js â€” Notifikasi WhatsApp
 - Microservice Node.js menggunakan `whatsapp-web.js` + Chromium, dikelola dengan antrian BullMQ via Redis.
-- Mengirimkan notifikasi untuk event: konfirmasi pembayaran, hasil TIU, pengingat cicilan (H-3), undangan grup WA, dan pemberitahuan kelulusan.
+- Mengirimkan notifikasi untuk event: konfirmasi pembayaran formulir, konfirmasi booking sesi, undangan grup WA, dan pemberitahuan kelulusan.
 - Referensi template: `docs/notifikasi-code-1790904241894.md`.
 
 ---
@@ -210,9 +238,8 @@ Konvensi tampilan dan pengalaman pengguna yang wajib diikuti di semua aplikasi f
 - **Dynamic Branding:** Logo, favicon, dan nama institusi diambil secara dinamis dari API melalui `settingsService.getLogo()`. Tidak diperbolehkan melakukan hardcode path atau URL logo statis di kode sumber.
 - **Tidak Ada Pilihan Jenjang:** Tidak ada field, dropdown, atau label jenjang pendidikan di formulir pendaftaran, dashboard pendaftar, konfigurasi gelombang, maupun halaman publik.
 - **Pagination:** Semua tabel operasional yang menampilkan daftar data menggunakan pagination server-side. Tidak diperbolehkan memuat seluruh data sekaligus tanpa pagination.
-- **Responsive Layout:** Semua halaman wajib responsif dan dapat digunakan dengan baik pada layar mobile maupun desktop. Tap target minimal 44×44px untuk elemen interaktif.
+- **Responsive Layout:** Semua halaman wajib responsif dan dapat digunakan dengan baik pada layar mobile maupun desktop. Tap target minimal 44Ã—44px untuk elemen interaktif.
 - **Tampilan Data Orang Tua/Wali:** Data ayah, ibu, dan wali wajib ditampilkan secara lengkap di seluruh dashboard operasional (Admin, Superadmin, dan profil Pendaftar). Tidak boleh direduksi menjadi satu baris `parent_name`.
-- **Opsi Jalur Bersih:** Nama jalur pendaftaran ditampilkan apa adanya tanpa embel-embel tambahan seperti `(Non-TIU)` atau `(Tes TIU)`.
 - **Print Engine A4:** Dokumen resmi dirender dalam format A4 baku di browser menggunakan iframe print. Tidak diperbolehkan mengubah ukuran atau margin cetak dokumen resmi tanpa keputusan tim teknis.
 
 ---
@@ -222,11 +249,9 @@ Konvensi tampilan dan pengalaman pengguna yang wajib diikuti di semua aplikasi f
 Seluruh fitur yang berkaitan dengan data sensitif, dokumen resmi, dan autentikasi wajib mematuhi ketentuan berikut:
 
 - **HMAC Token pada Kuitansi:** Setiap kuitansi resmi yang diterbitkan ditandatangani secara digital menggunakan HMAC token. Token ini dapat diverifikasi publik tanpa login di `/kuitansi/:id` dan `/receipt/:id` untuk membuktikan keaslian dokumen.
-- **Audit Log Akses Dossier:** Seluruh aktivitas melihat dan mengunduh dossier pendaftar—termasuk unduhan per berkas maupun paket ZIP—dicatat dalam tabel `audit_log` bersama alamat IP admin pemohon. Akses dossier dibatasi dengan izin khusus (`require_ppdb_admin`).
-- **Validasi X-Secret Webhook:** Seluruh webhook eksternal (Pakasir payment, TIU Apps Script) divalidasi menggunakan header secret yang ditetapkan di konfigurasi server. Request tanpa header yang valid atau dengan nominal tidak cocok langsung ditolak.
-- **X-TIU-Secret Webhook TIU:** Webhook nilai TIU dari Apps Script divalidasi dengan header `X-TIU-Secret`, keabsahan token attempt, dan batas durasi ujian. Duplikasi pengiriman nilai ditangani secara idempoten.
+- **Audit Log Akses Dossier:** Seluruh aktivitas melihat dan mengunduh dossier pendaftarâ€”termasuk unduhan per berkas maupun paket ZIPâ€”dicatat dalam tabel `audit_log` bersama alamat IP admin pemohon. Akses dossier dibatasi dengan izin khusus (`require_ppdb_admin`).
+- **Validasi X-Secret Webhook:** Webhook eksternal (Pakasir payment) divalidasi menggunakan header secret yang ditetapkan di konfigurasi server. Request tanpa header yang valid atau dengan nominal tidak cocok langsung ditolak.
 - **Data Kesehatan Sensitif:** Identifikasi kesehatan pendaftar hanya dapat dibuka oleh admin berizin pada halaman detail/dossier. Akses dicatat dalam audit log. Data tidak ditampilkan di tabel operasional umum.
 - **HTTP-only Cookie JWT:** Token autentikasi disimpan di HTTP-only Cookie untuk mencegah akses dari JavaScript sisi klien (mitigasi serangan XSS). Auto-refresh token dilakukan tanpa interaksi pengguna saat token kedaluwarsa (response 401).
 - **Manajemen Sesi Multi-Perangkat:** Seluruh sesi login aktif dipantau dan dapat dicabut dari jarak jauh oleh pemilik akun melalui `/applicant/profile` atau panel admin. Revoke sesi mencegah akses tidak sah dari perangkat yang hilang atau dicuri.
-- **Immutable Artifact:** Dokumen resmi (LoA, SKD, Kuitansi) bersifat tetap setelah diterbitkan. Sistem tidak menyediakan mekanisme edit atau penghapusan dokumen yang sudah terbit kecuali melalui proses administrasi khusus yang tercatat.
 - **Credentials di `.env`:** Semua kredensial, API key, dan secret disimpan di file `.env` lokal masing-masing aplikasi dan tidak boleh di-commit ke Git.

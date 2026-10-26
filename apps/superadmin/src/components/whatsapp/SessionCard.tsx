@@ -22,7 +22,7 @@ import {
   Copy,
   Check,
 } from 'lucide-react'
-import { waGetQrRaw, waRequestPairingCode, type WAProxyStatus } from '../../api/client'
+import { waGetQrRaw, waGetQrSseUrl, waRequestPairingCode, type WAProxyStatus } from '../../api/client'
 import type { LoginMethod } from './constants'
 
 interface Props {
@@ -103,24 +103,87 @@ export default function SessionCard(props: Props) {
 
   useEffect(() => {
     let alive = true
-    if (props.session?.status !== 'qr' || props.loginMethod !== 'qr') {
+    const currentStatus = props.session?.status || ''
+    const isTransitional = ['initializing', 'authenticated', 'qr'].includes(currentStatus)
+
+    if (props.isReady || !isTransitional) {
+      if (!isTransitional) setQr('')
       return
     }
-    const loadQr = async () => {
-      try {
-        const result = await waGetQrRaw()
-        if (alive && result.success) setQr(result.data?.raw || '')
-      } catch {
-        if (alive) setQr('')
-      }
+
+    // 1. One-shot fetch QR aktif langsung (mencegah delay menunggu SSE event pertama)
+    if (props.loginMethod === 'qr' && currentStatus === 'qr') {
+      waGetQrRaw()
+        .then((result) => {
+          if (alive && result.success && result.data?.raw) {
+            setQr(result.data.raw)
+          }
+        })
+        .catch(() => {})
     }
-    void loadQr()
-    const timer = window.setInterval(loadQr, 3000)
+
+    // 2. Hubungkan ke SSE stream untuk update QR & status realtime (tanpa hammering polling)
+    let es: EventSource | null = null
+    try {
+      es = new EventSource(waGetQrSseUrl(), { withCredentials: true })
+
+      es.addEventListener('qr', (e) => {
+        try {
+          const data = JSON.parse(e.data)
+          const raw = data?.raw || data?.qrCode
+          if (alive && raw) setQr(raw)
+        } catch {
+          /* ignore */
+        }
+      })
+
+      es.addEventListener('status', (e) => {
+        try {
+          const data = JSON.parse(e.data)
+          if (alive) {
+            if (data?.status === 'ready' || data?.status === 'authenticated') {
+              props.onRefreshStatus(true)
+            }
+            if (data?.qrCode) setQr(data.qrCode)
+          }
+        } catch {
+          /* ignore */
+        }
+      })
+
+      es.addEventListener('ready', () => {
+        if (alive) {
+          setQr('')
+          props.onRefreshStatus(true)
+        }
+      })
+
+      es.addEventListener('code', (e) => {
+        try {
+          const data = JSON.parse(e.data)
+          if (alive && data?.code) {
+            props.onRefreshStatus(true)
+          }
+        } catch {
+          /* ignore */
+        }
+      })
+
+      es.onerror = () => {
+        // EventSource browser secara otomatis akan mencoba reconnect
+      }
+    } catch {
+      /* ignore */
+    }
+
     return () => {
       alive = false
-      window.clearInterval(timer)
+      if (es) {
+        es.close()
+        es = null
+      }
     }
-  }, [props.session?.status, props.loginMethod])
+  }, [props.session?.status, props.loginMethod, props.isReady, props.onRefreshStatus])
 
   async function requestCode() {
     if (!phone.trim()) {

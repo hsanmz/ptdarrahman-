@@ -8,7 +8,7 @@ vi.mock('@/components/Toast', () => ({ useToast: () => ({ toast }) }))
 const APPLICANT = {
   id: 'aaaaaaaa-1111-2222-3333-444444444444',
   full_name: 'Ahmad Fauzi',
-  registration_path: 'reguler',
+  wave_name: 'Gelombang 1',
 }
 
 // Transaksi nyata: ID 36 karakter seperti di database.

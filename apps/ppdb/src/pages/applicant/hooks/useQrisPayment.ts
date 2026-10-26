@@ -56,7 +56,7 @@ export interface UseQrisPaymentOptions {
  */
 export function useQrisPayment(options: UseQrisPaymentOptions = {}) {
   const {
-    defaultType = 'dp',
+    defaultType = 'form',
     pollEnabled,
     autoOpenOnOpenTransaction = false,
     pollIntervalMs = DEFAULT_POLL_MS,

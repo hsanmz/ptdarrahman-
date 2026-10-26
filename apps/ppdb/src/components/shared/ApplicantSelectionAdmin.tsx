@@ -6,7 +6,7 @@ import { Button } from '@/components/ui'
 import { Input } from '@/components/ui'
 import { Badge } from '@/components/ui'
 import { Textarea } from '@/components/ui'
-import { Award, Brain, MessageSquare, Save, AlertCircle, CheckCircle2, XCircle, FileText } from 'lucide-react'
+import { Award, MessageSquare, Save, CheckCircle2, XCircle, FileText } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 import ApplicantTranscriptModal from './ApplicantTranscriptModal'
 import ApplicantLoAModal from './ApplicantLoAModal'
@@ -29,8 +29,6 @@ interface SelectionResultResponse {
   session_id: string | null
   notes: string | null
   scores: Array<{ criteria_id: string; score: number }>
-  tiu_score: number | null
-  tiu_completed_at: string | null
 }
 
 interface ApplicantSelectionAdminProps {
@@ -42,7 +40,6 @@ interface ApplicantSelectionAdminProps {
 
 export default function ApplicantSelectionAdmin({
   applicantId,
-  registrationPath = '',
   applicantStatus = '',
   onSaved,
 }: ApplicantSelectionAdminProps) {
@@ -162,67 +159,10 @@ export default function ApplicantSelectionAdmin({
   }
 
   const categories = categoriesData || []
-  const tiuScore = resultData?.tiu_score
-  const tiuCompletedAt = resultData?.tiu_completed_at
 
   return (
     <div className="space-y-6">
-      {/* 1. SEKSI HASIL UJIAN TIU (OTOMATIS) */}
-      <Card className="border-primary/20 bg-primary/5">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Brain className="h-5 w-5 text-primary" />
-              <CardTitle className="text-base font-semibold">
-                Hasil Ujian TIU (Tes Inteligensi Umum)
-              </CardTitle>
-            </div>
-            <Badge variant="outline" className="text-xs bg-background">
-              Otomatis Webhook
-            </Badge>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {tiuScore != null ? (
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-3 bg-background rounded-lg border">
-              <div>
-                <p className="text-xs text-muted-foreground">Nilai TIU Terverifikasi</p>
-                <div className="flex items-baseline gap-2 mt-0.5">
-                  <span className="text-3xl font-bold text-primary">{tiuScore}</span>
-                  <span className="text-xs text-muted-foreground">/ 100</span>
-                </div>
-              </div>
-              {tiuCompletedAt && (
-                <div className="text-xs text-muted-foreground sm:text-right">
-                  <p>Diselesaikan pada:</p>
-                  <p className="font-medium text-foreground">
-                    {new Date(tiuCompletedAt).toLocaleString('id-ID')}
-                  </p>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="p-3 bg-background rounded-lg border flex items-start gap-3">
-              <AlertCircle className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p className="font-medium text-foreground">
-                  Belum ada nilai TIU tersimpan
-                </p>
-                <p>
-                  Soal disinkronkan dari Google Form dan nilai masuk secara *real-time* via webhook Apps Script setelah pendaftar mengerjakan ujian di SEB.
-                </p>
-                {registrationPath && (
-                  <Badge variant="secondary" className="mt-1 text-[10px]">
-                    Jalur: {registrationPath.toUpperCase()}
-                  </Badge>
-                )}
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* 2. SEKSI PENILAIAN PENGUJI (TAHFIDZ & WAWANCARA) */}
+      {/* SEKSI PENILAIAN PENGUJI (TAHFIDZ & WAWANCARA) */}
       <div className="space-y-4">
         <div className="flex items-center gap-2">
           <Award className="h-5 w-5 text-amber-600" />
@@ -341,7 +281,7 @@ export default function ApplicantSelectionAdmin({
         <CardContent className="p-4 space-y-3">
           <p className="text-xs text-muted-foreground">
             {applicantStatus === 'passed'
-              ? 'Pendaftar telah dinyatakan LULUS. Dokumen LoA dan tagihan DP tahap 2 aktif untuk pendaftar ini.'
+              ? 'Pendaftar telah dinyatakan LULUS. Dokumen LoA aktif dan siap ditandatangani oleh pendaftar.'
               : applicantStatus === 'failed'
               ? 'Pendaftar telah dinyatakan TIDAK LULUS seleksi.'
               : 'Setelah nilai Tahfidz dan Wawancara lengkap tersimpan, tetapkan keputusan akhir seleksi santri.'}

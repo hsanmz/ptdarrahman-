@@ -19,8 +19,10 @@ from src.models.ppdb import (
     PPDBApplicant,
     PPDBPaymentTransaction,
     PPDBPeriod,
-    PPDBStage2Bill,
+
+    PPDBPeriodFeeItem,
     PPDBWave,
+    PPDBWaveFeeDiscount,
     PPDBWaveFeeItem,
 )
 from src.modules.ppdb.schemas import (
@@ -29,6 +31,9 @@ from src.modules.ppdb.schemas import (
     ApplicantProfileUpdate,
     ApplicantRegister,
     PeriodCreate,
+    PeriodFeeItemCreate,
+    PeriodFeeItemUpdate,
+    WaveFeeDiscountUpdate,
     PeriodUpdate,
     WaveCreate,
     WaveFeeItemCreate,
@@ -42,6 +47,10 @@ WIB = ZoneInfo("Asia/Jakarta")
 
 logger = logging.getLogger("ptdarrahman.ppdb")
 
+# ── Dokumen persyaratan seragam ─────────────────────────────────────────────
+# Seluruh pendaftar mengunggah daftar berkas wajib yang sama:
+# Berkas wajib dasar (NISN, KK, Akta Kelahiran, Pas Foto)
+# ditambah KTP Orang Tua/Wali dan 4 Rapor Terakhir.
 BASE_DOCUMENTS = [
     {
         "name": "NISN",
@@ -67,190 +76,52 @@ BASE_DOCUMENTS = [
         "required": True,
         "category": "wajib",
     },
+    {
+        "name": "KTP Orang Tua/Wali",
+        "description": "KTP orang tua atau wali calon santri.",
+        "required": True,
+        "category": "wajib",
+    },
+    {
+        "name": "Rapor Semester 1",
+        "description": "Scan/foto rapor semester ke-1 dari 4 semester terakhir.",
+        "required": True,
+        "category": "wajib",
+    },
+    {
+        "name": "Rapor Semester 2",
+        "description": "Scan/foto rapor semester ke-2 dari 4 semester terakhir.",
+        "required": True,
+        "category": "wajib",
+    },
+    {
+        "name": "Rapor Semester 3",
+        "description": "Scan/foto rapor semester ke-3 dari 4 semester terakhir.",
+        "required": True,
+        "category": "wajib",
+    },
+    {
+        "name": "Rapor Semester 4",
+        "description": "Scan/foto rapor semester ke-4 dari 4 semester terakhir.",
+        "required": True,
+        "category": "wajib",
+    },
 ]
 
-TIU_DOCUMENTS = [d["name"] for d in BASE_DOCUMENTS]
 
-NON_TIU_DOCUMENTS = TIU_DOCUMENTS + ["Dokumen Pendukung Jalur"]
-
-
-def is_tiu_path(path: str | None) -> bool:
-    p = (path or "").strip().lower()
-    return "tiu" in p or p in ("reguler", "tes")
+def get_document_specs() -> list[dict[str, Any]]:
+    """Daftar dokumen persyaratan yang berlaku untuk semua pendaftar."""
+    return [dict(d) for d in BASE_DOCUMENTS]
 
 
-def get_path_document_specs(path: str | None) -> list[dict[str, Any]]:
-    p = (path or "").strip().lower()
-    docs = [dict(d) for d in BASE_DOCUMENTS]
-    if is_tiu_path(p):
-        return docs
-    elif "prestasi" in p:
-        # Minimal 3 sertifikat prestasi, maksimal 10
-        docs.extend(
-            [
-                {
-                    "name": "Sertifikat Prestasi 1",
-                    "description": (
-                        "Sertifikat / Piagam Kejuaraan / Prestasi (Wajib ke-1)."
-                    ),
-                    "required": True,
-                    "category": "tambahan",
-                },
-                {
-                    "name": "Sertifikat Prestasi 2",
-                    "description": (
-                        "Sertifikat / Piagam Kejuaraan / Prestasi (Wajib ke-2)."
-                    ),
-                    "required": True,
-                    "category": "tambahan",
-                },
-                {
-                    "name": "Sertifikat Prestasi 3",
-                    "description": (
-                        "Sertifikat / Piagam Kejuaraan / Prestasi "
-                        "(Wajib ke-3, syarat minimal 3 sertifikat)."
-                    ),
-                    "required": True,
-                    "category": "tambahan",
-                },
-                {
-                    "name": "Sertifikat Prestasi 4",
-                    "description": "Sertifikat / Piagam Kejuaraan tambahan (Opsional).",
-                    "required": False,
-                    "category": "tambahan",
-                },
-                {
-                    "name": "Sertifikat Prestasi 5",
-                    "description": "Sertifikat / Piagam Kejuaraan tambahan (Opsional).",
-                    "required": False,
-                    "category": "tambahan",
-                },
-                {
-                    "name": "Sertifikat Prestasi 6",
-                    "description": "Sertifikat / Piagam Kejuaraan tambahan (Opsional).",
-                    "required": False,
-                    "category": "tambahan",
-                },
-                {
-                    "name": "Sertifikat Prestasi 7",
-                    "description": "Sertifikat / Piagam Kejuaraan tambahan (Opsional).",
-                    "required": False,
-                    "category": "tambahan",
-                },
-                {
-                    "name": "Sertifikat Prestasi 8",
-                    "description": "Sertifikat / Piagam Kejuaraan tambahan (Opsional).",
-                    "required": False,
-                    "category": "tambahan",
-                },
-                {
-                    "name": "Sertifikat Prestasi 9",
-                    "description": "Sertifikat / Piagam Kejuaraan tambahan (Opsional).",
-                    "required": False,
-                    "category": "tambahan",
-                },
-                {
-                    "name": "Sertifikat Prestasi 10",
-                    "description": "Sertifikat / Piagam Kejuaraan tambahan (Opsional).",
-                    "required": False,
-                    "category": "tambahan",
-                },
-            ]
-        )
-    elif "rapot" in p or "rapor" in p or "pindahan" in p:
-        # 4 rapor semester terakhir
-        docs.extend(
-            [
-                {
-                    "name": "Rapor Semester 1",
-                    "description": (
-                        "Scan/foto rapor semester ke-1 dari 4 semester terakhir."
-                    ),
-                    "required": True,
-                    "category": "tambahan",
-                },
-                {
-                    "name": "Rapor Semester 2",
-                    "description": (
-                        "Scan/foto rapor semester ke-2 dari 4 semester terakhir."
-                    ),
-                    "required": True,
-                    "category": "tambahan",
-                },
-                {
-                    "name": "Rapor Semester 3",
-                    "description": (
-                        "Scan/foto rapor semester ke-3 dari 4 semester terakhir."
-                    ),
-                    "required": True,
-                    "category": "tambahan",
-                },
-                {
-                    "name": "Rapor Semester 4",
-                    "description": (
-                        "Scan/foto rapor semester ke-4 dari 4 semester terakhir."
-                    ),
-                    "required": True,
-                    "category": "tambahan",
-                },
-            ]
-        )
-    elif "tahfidz" in p:
-        # Maksimal 3 bukti hafalan, utamakan surat pengakuan hafalan
-        # bukan dokumentasi/video
-        docs.extend(
-            [
-                {
-                    "name": "Surat Pengakuan Hafalan 1",
-                    "description": (
-                        "Surat Keterangan / Piagam Pengakuan Hafalan resmi dari "
-                        "lembaga/orang tua (Wajib minimal 1). Utamakan surat "
-                        "pengakuan hafalan, bukan file video."
-                    ),
-                    "required": True,
-                    "category": "tambahan",
-                },
-                {
-                    "name": "Surat Pengakuan Hafalan 2",
-                    "description": (
-                        "Surat Keterangan / Piagam Pengakuan Hafalan tambahan "
-                        "(Opsional, max 3)."
-                    ),
-                    "required": False,
-                    "category": "tambahan",
-                },
-                {
-                    "name": "Surat Pengakuan Hafalan 3",
-                    "description": (
-                        "Surat Keterangan / Piagam Pengakuan Hafalan tambahan "
-                        "(Opsional, max 3)."
-                    ),
-                    "required": False,
-                    "category": "tambahan",
-                },
-            ]
-        )
-    else:
-        docs.append(
-            {
-                "name": "Dokumen Pendukung Jalur",
-                "description": "Dokumen pendukung sesuai jalur yang dipilih.",
-                "required": True,
-                "category": "tambahan",
-            }
-        )
-    return docs
+def get_required_documents() -> list[str]:
+    """Daftar nama dokumen yang wajib diunggah sebelum submit."""
+    return [d["name"] for d in BASE_DOCUMENTS]
 
 
-def get_required_documents(path: str) -> list[str]:
-    """Mengembalikan daftar nama dokumen yang WAJIB untuk jalur tersebut."""
-    return [d["name"] for d in get_path_document_specs(path) if d.get("required", True)]
-
-
-def get_all_allowed_documents(path: str) -> list[str]:
-    """Mengembalikan semua dokumen (wajib + opsional) yang diizinkan
-    untuk jalur tersebut."""
-    return [d["name"] for d in get_path_document_specs(path)]
+def get_all_allowed_documents() -> list[str]:
+    """Daftar semua jenis dokumen yang diizinkan untuk diunggah."""
+    return [d["name"] for d in BASE_DOCUMENTS]
 
 
 # Status tempat pendaftar boleh mengunggah/kirim dokumen.
@@ -360,6 +231,68 @@ class PPDBService:
     # -------------------------------------------------------------------------
     # Waves
     # -------------------------------------------------------------------------
+    # -------------------------------------------------------------------------
+    # Period fee items (Komponen Biaya Master per Periode)
+    # -------------------------------------------------------------------------
+    def get_period_fee_items(self, period_id: str) -> dict[str, Any]:
+        period = self.repository.get_period_by_id(period_id)
+        if not period:
+            raise HTTPException(status_code=404, detail="Periode tidak ditemukan")
+        items = self.repository.get_period_fee_items(period_id)
+        return {
+            "items": [
+                {c.name: getattr(item, c.name) for c in item.__table__.columns}
+                for item in items
+            ]
+        }
+
+    def create_period_fee_item(self, period_id: str, body: PeriodFeeItemCreate):
+        period = self.repository.get_period_by_id(period_id)
+        if not period:
+            raise HTTPException(status_code=404, detail="Periode tidak ditemukan")
+        item = PPDBPeriodFeeItem(
+            id=str(uuid.uuid4()),
+            period_id=period_id,
+            name=body.name,
+            nominal=body.nominal,
+            description=body.description,
+            order_index=body.order_index,
+            created_at=datetime.now(WIB),
+            updated_at=datetime.now(WIB),
+        )
+        self.repository.create_period_fee_item(item)
+        return {c.name: getattr(item, c.name) for c in item.__table__.columns}
+
+    def update_period_fee_item(
+        self, period_id: str, item_id: str, body: PeriodFeeItemUpdate
+    ):
+        period = self.repository.get_period_by_id(period_id)
+        if not period:
+            raise HTTPException(status_code=404, detail="Periode tidak ditemukan")
+        item = self.repository.get_period_fee_item(item_id)
+        if not item or item.period_id != period_id:
+            raise HTTPException(status_code=404, detail="Item biaya tidak ditemukan")
+
+        provided = body.model_dump(exclude_unset=True)
+        if not provided:
+            raise HTTPException(status_code=400, detail="Tidak ada field untuk diubah")
+        for field in ("name", "nominal", "description", "order_index"):
+            if field in provided and provided[field] is not None:
+                setattr(item, field, provided[field])
+        item.updated_at = datetime.now(WIB)
+        self.repository.update_period_fee_item(item)
+        return {c.name: getattr(item, c.name) for c in item.__table__.columns}
+
+    def delete_period_fee_item(self, period_id: str, item_id: str):
+        period = self.repository.get_period_by_id(period_id)
+        if not period:
+            raise HTTPException(status_code=404, detail="Periode tidak ditemukan")
+        item = self.repository.get_period_fee_item(item_id)
+        if not item or item.period_id != period_id:
+            raise HTTPException(status_code=404, detail="Item biaya tidak ditemukan")
+        self.repository.delete_period_fee_item(item)
+        return {"success": True}
+
     def get_waves(self, period_id: str | None = None):
         waves = self.repository.get_waves(period_id)
         result = []
@@ -422,9 +355,6 @@ class PPDBService:
             "paid_count": paid_count,
             "registration_start_date": wave.registration_start_date,
             "registration_end_date": wave.registration_end_date,
-            "allowed_paths": [
-                p.strip() for p in (wave.allowed_paths or "").split(",") if p.strip()
-            ],
         }
 
     def get_wave_by_id(self, wave_id: str) -> dict[str, Any]:
@@ -446,7 +376,6 @@ class PPDBService:
             period_id=body.period_id,
             wave_number=wave_number,
             name=body.name,
-            allowed_paths=body.allowed_paths,
             registration_start_date=body.registration_start_date,
             registration_end_date=body.registration_end_date,
             quota=body.quota,
@@ -517,7 +446,6 @@ class PPDBService:
 
         for field in (
             "name",
-            "allowed_paths",
             "registration_start_date",
             "registration_end_date",
             "quota",
@@ -570,6 +498,38 @@ class PPDBService:
         wave = self.repository.get_wave_by_id(wave_id)
         if not wave:
             raise HTTPException(status_code=404, detail="Gelombang tidak ditemukan")
+        period_items = self.repository.get_period_fee_items(wave.period_id)
+        if period_items:
+            discounts = {
+                d.fee_item_id: d
+                for d in self.repository.get_wave_fee_discounts(wave_id)
+            }
+            item_data = []
+            for item in period_items:
+                d = discounts.get(item.id)
+                item_data.append(
+                    {
+                        "id": item.id,
+                        "wave_id": wave_id,
+                        "period_id": wave.period_id,
+                        "name": item.name,
+                        "nominal": int(item.nominal),
+                        "description": item.description,
+                        "order_index": item.order_index,
+                        "discount_type": d.discount_type if d else None,
+                        "discount_value": int(d.discount_value) if d and d.discount_value else 0,
+                        "early_discount_type": d.early_discount_type if d else None,
+                        "early_discount_value": int(d.early_discount_value) if d and d.early_discount_value else 0,
+                        "is_period_item": True,
+                        "has_bills": False,
+                    }
+                )
+            return {
+                "items": item_data,
+                "is_period_based": True,
+                "period_id": wave.period_id,
+                "early_discount_quota": wave.early_discount_quota or 0,
+            }
         items = self.repository.get_fee_items_by_wave(wave_id)
         item_data = []
         for item in items:
@@ -642,6 +602,28 @@ class PPDBService:
         item.updated_at = datetime.now(WIB)
         self.repository.update_fee_item(item)
         return {c.name: getattr(item, c.name) for c in item.__table__.columns}
+
+    def update_wave_fee_discount(
+        self, wave_id: str, fee_item_id: str, body: WaveFeeDiscountUpdate
+    ) -> dict[str, Any]:
+        wave = self.repository.get_wave_by_id(wave_id)
+        if not wave:
+            raise HTTPException(status_code=404, detail="Gelombang tidak ditemukan")
+        if body.early_discount_type and not wave.early_discount_quota:
+            raise HTTPException(
+                status_code=400,
+                detail="Kuota diskon pendaftar awal belum diatur pada gelombang ini",
+            )
+        period_item = self.repository.get_period_fee_item(fee_item_id)
+        if not period_item or period_item.period_id != wave.period_id:
+            raise HTTPException(
+                status_code=404,
+                detail="Komponen biaya periode tidak ditemukan",
+            )
+        discount = self.repository.save_wave_fee_discount(
+            wave_id, fee_item_id, body.model_dump()
+        )
+        return {c.name: getattr(discount, c.name) for c in discount.__table__.columns}
 
     def delete_wave_fee_item(self, wave_id: str, item_id: str):
         wave = self.repository.get_wave_by_id(wave_id)
@@ -767,17 +749,6 @@ class PPDBService:
                 detail="Kuota pendaftaran gelombang ini sudah penuh.",
             )
 
-        allowed_paths = [
-            p.strip() for p in (wave.allowed_paths or "").split(",") if p.strip()
-        ]
-
-        if body.registration_path not in allowed_paths:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Jalur pendaftaran '{body.registration_path}' "
-                "tidak dibuka pada gelombang ini.",
-            )
-
         if self.repository.get_applicant_by_email_active(body.email):
             raise HTTPException(
                 status_code=400,
@@ -841,7 +812,6 @@ class PPDBService:
             full_name=body.full_name,
             email=body.email,
             phone=body.phone,
-            registration_path=body.registration_path,
             address=body.address,
             province=body.province,
             city=body.city,
@@ -871,6 +841,7 @@ class PPDBService:
             parent_income=body.parent_income,
             parent_email=body.parent_email,
             previous_school=body.previous_school,
+            graduation_year=body.graduation_year,
             disease_history=self._serialize_health_history(body),
             status="pending_payment",
             payment_status="pending",
@@ -905,8 +876,7 @@ class PPDBService:
         from src.core.config import settings
 
         try:
-            # Kirim dua event: spec baru (registration_account_created) dan
-            # legacy (registration_welcome) Ã¢â‚¬â€ keduanya aktif selama transisi.
+            # Kirim satu event registrasi dari template kanonikal PPDB.
             wave_end = wave.end_date
             tanggal_tutup = (
                 wave_end.strftime("%d %B %Y") if wave_end else "sesuai jadwal"
@@ -919,7 +889,7 @@ class PPDBService:
                             "username": user.username,
                             "nama_peserta": user.full_name,
                             "password": raw_password,
-                            "nama_sekolah": "Pesantren Ar-Rahman",
+                            "nama_sekolah": "Pesantren Tahfidz Qur'an dan Digital Ar-Rahman",
                             "link_login": f"{settings.ppdb_frontend_url}/auth/login",
                             "tanggal_tutup_gelombang": tanggal_tutup,
                         },
@@ -932,7 +902,11 @@ class PPDBService:
                     "username": user.username,
                     "full_name": user.full_name,
                 },
-                applicant_row={"id": applicant.id, "full_name": applicant.full_name},
+                applicant_row={
+                    "id": applicant.id,
+                    "full_name": applicant.full_name,
+                    "phone": applicant.phone,
+                },
             )
         except Exception:
             logger.exception("send_notifications failed after registration; continuing")
@@ -956,6 +930,7 @@ class PPDBService:
         status: str | None,
         period_id: str | None = None,
         payment_status: str | None = None,
+        sort: str | None = None,
     ):
         """Daftar pendaftar.
 
@@ -987,6 +962,7 @@ class PPDBService:
             per_page,
             period_id=resolved_period_id,
             payment_status=payment_status,
+            sort=sort,
         )
 
         active_wave = self.repository.get_active_wave()
@@ -1085,7 +1061,6 @@ class PPDBService:
             full_name=body.full_name,
             email=body.email,
             phone=body.phone,
-            registration_path=body.registration_path,
             address=body.address,
             province=body.province,
             city=body.city,
@@ -1115,6 +1090,7 @@ class PPDBService:
             parent_income=body.parent_income,
             parent_email=body.parent_email,
             previous_school=body.previous_school,
+            graduation_year=body.graduation_year,
             disease_history=self._serialize_health_history_admin(body),
             status="pending_payment",
             payment_status="pending",
@@ -1276,7 +1252,7 @@ class PPDBService:
                             "username": user.username,
                             "nama_peserta": user.full_name,
                             "password": raw_password,
-                            "nama_sekolah": "Pesantren Ar-Rahman",
+                            "nama_sekolah": "Pesantren Tahfidz Qur'an dan Digital Ar-Rahman",
                             "link_login": f"{settings.ppdb_frontend_url}/auth/login",
                             "tanggal_tutup_gelombang": tanggal_tutup,
                         },
@@ -1375,50 +1351,13 @@ class PPDBService:
             )
         return applicant
 
-    def change_my_path(self, user_id: str, new_path: str) -> dict[str, Any]:
-        applicant = self.repository.get_applicant_by_user_id(user_id)
-        if not applicant:
-            raise HTTPException(
-                status_code=404, detail="Data pendaftaran tidak ditemukan"
-            )
-
-        forbidden_statuses = {
-            "document_approved",
-            "selection",
-            "passed",
-            "failed",
-        }
-        if applicant.status in forbidden_statuses:
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "Tidak dapat mengganti jalur setelah diverifikasi ke tahap "
-                    "selanjutnya"
-                ),
-            )
-
-        new_path_clean = (new_path or "").strip().lower()
-        if new_path_clean == "pindahan":
-            new_path_clean = "rapot"
-        if new_path_clean not in ("reguler", "prestasi", "tahfidz", "rapot"):
-            raise HTTPException(status_code=400, detail="Jalur pendaftaran tidak valid")
-
-        applicant.registration_path = new_path_clean
-        applicant.updated_at = datetime.now(WIB)
-        self.repository.update_applicant(applicant)
-
-        return {
-            "message": "Jalur pendaftaran berhasil diubah",
-            "registration_path": new_path_clean,
-        }
-
     def get_my_documents(self, user_id: str) -> dict[str, Any]:
         applicant = self.repository.get_applicant_by_user_id(user_id)
         if not applicant:
             raise HTTPException(
                 status_code=404, detail="Data pendaftaran tidak ditemukan"
             )
-        specs = get_path_document_specs(applicant.registration_path)
+        specs = get_document_specs()
         return {
             "data": self.repository.get_applicant_documents(applicant.id),
             "required_documents": specs,
@@ -1439,13 +1378,14 @@ class PPDBService:
             )
 
         doc_type = (doc_type or "").strip()
-        allowed = get_all_allowed_documents(applicant.registration_path)
+        allowed = get_all_allowed_documents()
         if doc_type not in allowed:
-            reg_path = applicant.registration_path
+            valid_list = ", ".join(allowed)
             raise HTTPException(
                 status_code=400,
                 detail=(
-                    f"Jenis dokumen '{doc_type}' tidak sesuai untuk jalur {reg_path}"
+                    f"Jenis dokumen '{doc_type}' tidak valid. "
+                    f"Jenis yang diizinkan: {valid_list}"
                 ),
             )
 
@@ -1469,7 +1409,9 @@ class PPDBService:
         document = next((d for d in docs if d["doc_type"] == doc_type), None)
         return {"message": "Dokumen berhasil diunggah", "document": document}
 
-    def submit_documents(self, user: dict[str, Any]) -> dict[str, Any]:
+    def submit_documents(
+        self, user: dict[str, Any], payload: Any = None
+    ) -> dict[str, Any]:
         applicant = self._get_current_applicant(user)
         if applicant.status not in _DOCUMENT_UPLOAD_STATUSES:
             raise HTTPException(
@@ -1479,22 +1421,78 @@ class PPDBService:
 
         docs = self.repository.get_applicant_documents(applicant.id)
         uploaded_types = {d["doc_type"] for d in docs}
-        mandatory = get_required_documents(applicant.registration_path)
+        mandatory = get_required_documents()
         missing = [name for name in mandatory if name not in uploaded_types]
+
+        deferred = (
+            bool(getattr(payload, "deferred_commitment", False)) if payload else False
+        )
+        deferred_note = getattr(payload, "deferred_note", None) if payload else None
+
+        CORE_REQUIRED = {
+            "NISN",
+            "Kartu Keluarga (KK)",
+            "Akta Kelahiran",
+            "Pas Foto",
+            "KTP Orang Tua/Wali",
+        }
+        missing_core = [name for name in missing if name in CORE_REQUIRED]
+
         if missing:
-            reg_path = applicant.registration_path
-            missing_list = ", ".join(missing)
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    f"Lengkapi seluruh dokumen wajib untuk jalur {reg_path}. "
-                    f"Dokumen belum diunggah: {missing_list}"
-                ),
-            )
+            if deferred:
+                if missing_core:
+                    missing_core_list = ", ".join(missing_core)
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "Berkas pokok identitas wajib diunggah sebelum submit: "
+                            f"{missing_core_list}"
+                        ),
+                    )
+                missing_reports = [
+                    name for name in missing if name not in CORE_REQUIRED
+                ]
+                missing_reports_str = ", ".join(missing_reports)
+                note = (
+                    deferred_note
+                    or f"Komitmen berkas menyusul saat daftar ulang: {missing_reports_str}"
+                )
+                applicant.rejection_reason = f"[BERKAS MENYUSUL]: {note}"
+            else:
+                missing_list = ", ".join(missing)
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        "Lengkapi seluruh berkas persyaratan "
+                        f"sebelum submit. Berkas belum diunggah: {missing_list}"
+                    ),
+                )
+        else:
+            if applicant.rejection_reason and applicant.rejection_reason.startswith(
+                "[BERKAS MENYUSUL]"
+            ):
+                applicant.rejection_reason = None
 
         applicant.status = "document_uploaded"
         applicant.updated_at = datetime.now(WIB)
         self.repository.update_applicant(applicant)
+
+        if applicant.user_id:
+            try:
+                from src.core.config import settings
+
+                send_notification(
+                    "documents_submitted",
+                    applicant.user_id,
+                    {
+                        "link_aplikasi": f"{settings.ppdb_frontend_url}/applicant/dokumen",
+                    },
+                )
+            except Exception:
+                logger.exception(
+                    "Could not queue document submission confirmation for applicant %s",
+                    applicant.id,
+                )
 
         return {
             "status": "document_uploaded",
@@ -1540,25 +1538,25 @@ class PPDBService:
                     },
                 )
             elif status == "document_approved":
-                is_tiu = is_tiu_path(getattr(applicant, "registration_path", ""))
-                if is_tiu:
-                    send_notification(
-                        "tiu_exam_instructions",
+                from src.services.selection_stage_service import SelectionStageService
+
+                stage_svc = SelectionStageService(self.repository.db)
+                stage_sent = stage_svc.dispatch_stage_1_to_applicant(
+                    applicant.id, applicant.wave_id
+                )
+                if not stage_sent:
+                    # Jadwal belum dibuat atau batch sudah melewati batas cutoff H-1
+                    # Pendaftar berstatus 'Menunggu Jadwal Seleksi'
+                    send_notifications(
+                        [
+                            (
+                                "document_approved",
+                                {
+                                    "link_aplikasi": f"{settings.ppdb_frontend_url}/dashboard",
+                                },
+                            )
+                        ],
                         applicant.user_id,
-                        {
-                            "link_aplikasi": f"{settings.ppdb_frontend_url}/dashboard",
-                            "link_panduan_seb": (
-                                f"{settings.ppdb_frontend_url}/panduan-seb"
-                            ),
-                        },
-                    )
-                else:
-                    send_notification(
-                        "document_approved_non_tiu",
-                        applicant.user_id,
-                        {
-                            "link_aplikasi": f"{settings.ppdb_frontend_url}/dashboard",
-                        },
                     )
         except Exception:
             logger.exception("send document notification failed; continuing")
@@ -1732,16 +1730,6 @@ class PPDBService:
             .first()
         )
 
-        tiu_completed = applicant.get("tiu_completed_at")
-        tiu_isoformat = getattr(tiu_completed, "isoformat", None)
-        tiu_completed_str = (
-            str(tiu_isoformat())
-            if callable(tiu_isoformat)
-            else str(tiu_completed)
-            if tiu_completed
-            else None
-        )
-
         # Kelengkapan nilai — menentukan apakah keputusan kelulusan boleh ditetapkan.
         from src.services.selection_service import selection_score_gaps
 
@@ -1752,8 +1740,6 @@ class PPDBService:
 
         return {
             "applicant": applicant,
-            "tiu_score": applicant.get("tiu_score"),
-            "tiu_completed_at": tiu_completed_str,
             "categories": list(categories_map.values()),
             "evaluator_notes": sel_res.notes if sel_res else None,
             "graduation_status": sel_res.graduation_status
@@ -1763,6 +1749,79 @@ class PPDBService:
             "scores_complete": not missing_scores,
             "issued_at": datetime.now(WIB).isoformat(),
         }
+
+    def _calculate_loa_fee_items(self, wave: Any, applicant: dict[str, Any]) -> list[dict[str, Any]]:
+        wave_id = wave.id if wave else None
+        period_id = wave.period_id if wave else applicant.get("period_id")
+        period_items = self.repository.get_period_fee_items(period_id) if period_id else []
+        if period_items:
+            discounts = {
+                d.fee_item_id: d
+                for d in (self.repository.get_wave_fee_discounts(wave_id) if wave_id else [])
+            }
+            fee_items = []
+            for item in period_items:
+                d = discounts.get(item.id)
+                discount_amount = 0
+                discount_desc = ""
+                if (
+                    d
+                    and d.early_discount_type
+                    and d.early_discount_value
+                    and wave
+                    and wave.early_discount_quota
+                ):
+                    if d.early_discount_type == "percent":
+                        discount_amount = int(item.nominal * (d.early_discount_value / 100))
+                        discount_desc = f"Diskon Early Bird {d.early_discount_value}%"
+                    else:
+                        discount_amount = int(d.early_discount_value)
+                        discount_desc = f"Diskon Early Bird Rp {d.early_discount_value:,}"
+                elif d and d.discount_type and d.discount_value:
+                    if d.discount_type == "percent":
+                        discount_amount = int(item.nominal * (d.discount_value / 100))
+                        discount_desc = f"Diskon Gelombang {d.discount_value}%"
+                    else:
+                        discount_amount = int(d.discount_value)
+                        discount_desc = f"Diskon Gelombang Rp {d.discount_value:,}"
+
+                net_nominal = max(0, int(item.nominal - discount_amount))
+                fee_items.append(
+                    {
+                        "id": item.id,
+                        "name": item.name,
+                        "nominal": net_nominal,
+                        "standard_nominal": int(item.nominal),
+                        "discount_nominal": discount_amount,
+                        "discount_description": discount_desc,
+                        "description": item.description or "Biaya komponen pendidikan resmi PPDB.",
+                    }
+                )
+            return fee_items
+
+        wave_name = wave.name if wave else "Gelombang 1"
+        return [
+            {
+                "name": f"Biaya Pembangunan (Early Bird {wave_name})",
+                "nominal": 10000000,
+                "description": "Potongan diskon pendaftar awal, dibayarkan 1 kali.",
+            },
+            {
+                "name": "SPP / Biaya Pendidikan Bulan Pertama",
+                "nominal": 1500000,
+                "description": "Biaya bulanan asrama, konsumsi, dan tahfidz.",
+            },
+            {
+                "name": "Biaya Matrikulasi (Pre-Pesantren)",
+                "nominal": 1000000,
+                "description": "Orientasi dan pembekalan adab santri baru.",
+            },
+            {
+                "name": "Biaya Seragam, Kitab & Modul Digital",
+                "nominal": 2500000,
+                "description": "4 setel seragam santri, paket kitab, dan modul digital.",
+            },
+        ]
 
     def get_applicant_loa(self, applicant_id: str) -> dict[str, Any]:
         applicant = self.repository.get_applicant_detail(applicant_id)
@@ -1814,8 +1873,10 @@ class PPDBService:
             else []
         )
 
-        fee_items = []
-        if fee_items_query:
+        fee_items = self._calculate_loa_fee_items(wave, applicant)
+        if True:
+            pass
+        elif fee_items_query:
             for item in fee_items_query:
                 fee_items.append(
                     {
@@ -1931,18 +1992,17 @@ class PPDBService:
             or "Orang Tua / Wali",
             "loa_signature_data": applicant.get("loa_signature_data"),
             "loa_signature_token": applicant.get("loa_signature_token"),
-            "payment_method": "QRIS Terintegrasi (Aplikasi PPDB)",
-            "payment_channel": "Dashboard Portal Calon Santri",
-            "va_bank": "QRIS Digital Terintegrasi",
-            "va_number": "Pembayaran Langsung di Dashboard PPDB",
+            "payment_method": "Transfer Bank / Rekening Resmi PTDARRAHMAN (Di Luar Aplikasi)",
+            "payment_channel": "Kantor Bendahara Pesantren & Rekening Resmi PTDARRAHMAN",
+            "va_bank": "Bank Syariah Indonesia (BSI)",
+            "va_number": "Nomor Rekening Resmi PTDARRAHMAN (Hubungi Panitia)",
             "whatsapp_group_link": wa_group_link,
             "content": (
                 "SURAT PENERIMAAN SANTRI BARU (LETTER OF ACCEPTANCE)\n\n"
                 "Selamat! Anda telah dinyatakan LULUS seleksi dan dinyatakan "
                 "DITERIMA sebagai santri / peserta didik baru Pesantren "
-                "Tahfidz Qur'an dan Digital Ar-Rahman dalam Academic Year "
-                f"{academic_year} melalui jalur pendaftaran "
-                f"\"{applicant.get('registration_path', 'Reguler')}\"."
+                f"Tahfidz Qur'an dan Digital Ar-Rahman dalam Academic Year "
+                f"{academic_year}."
             ),
             "issued_at": now.isoformat(),
         }
@@ -1960,6 +2020,7 @@ class PPDBService:
                 ),
             )
 
+        already_signed = bool(app.is_loa_signed)
         now = datetime.now(WIB)
         if not app.registration_number:
             c_date = (app.created_at or now).strftime("%d%m%y")
@@ -1977,6 +2038,21 @@ class PPDBService:
 
         self.repository.db.commit()
         self.repository.db.refresh(app)
+
+        if not already_signed:
+            try:
+                send_notification(
+                    "loa_signed",
+                    app.user_id,
+                    {
+                        "link_aplikasi": f"{settings.ppdb_frontend_url}/applicant/pengumuman",
+                    },
+                )
+            except Exception:
+                logger.exception(
+                    "Failed to enqueue loa_signed for applicant %s; continuing",
+                    app.id,
+                )
 
         return {
             "status": "success",
@@ -2068,7 +2144,6 @@ class PPDBService:
                     "full_name": app.full_name,
                     "registration_number": app.registration_number,
                     "nisn": app.nisn or app.nik or "-",
-                    "registration_path": app.registration_path,
                     "previous_school": app.previous_school,
                     "wave_name": wave_name,
                     "period_name": period_name,
@@ -2111,43 +2186,6 @@ class PPDBService:
             raise HTTPException(status_code=404, detail="Dokumen LoA tidak ditemukan")
         return self.get_applicant_loa(app.id)
 
-    def get_applicant_skd(self, applicant_id: str) -> dict[str, Any]:
-        applicant = self.repository.get_applicant_detail(applicant_id)
-        if not applicant:
-            raise HTTPException(status_code=404, detail="Pendaftar tidak ditemukan")
-        if applicant.get("status") != "passed":
-            raise HTTPException(
-                status_code=400, detail="Pendaftar belum dinyatakan lulus"
-            )
-        from src.models.ppdb import PPDBPeriod
-
-        period_id = applicant.get("period_id")
-        period = self.repository.db.get(PPDBPeriod, period_id) if period_id else None
-        wa_link = period.wa_group_link if period and period.wa_group_link else ""
-        academic_year = (
-            period.academic_year if period and period.academic_year else "2026 / 2027"
-        )
-        admission_officer = (
-            period.head_of_committee if period and period.head_of_committee else None
-        ) or "Ust. Wijaya Kurnia, M.Pd."
-
-        reg_no = (
-            applicant.get("registration_number")
-            or str(applicant.get("id", ""))[:8].upper()
-        )
-        now = datetime.now(WIB)
-        return {
-            "letter_number": f"No. {reg_no}/SKD-PPDB/{now.year}",
-            "registration_number": reg_no,
-            "academic_year": academic_year,
-            "admission_officer": admission_officer,
-            "director_name": "Ust. Dr. H. Abdurrahman, M.A.",
-            "applicant": applicant,
-            "background_url": "",
-            "whatsapp_group_link": wa_link or "",
-            "issued_at": now.isoformat(),
-        }
-
     def get_archive_applicants(
         self,
         period_id: str | None,
@@ -2187,21 +2225,17 @@ class PPDBService:
         docs = self.repository.get_applicant_documents(applicant_id)
         transcript = self.get_applicant_transcript(applicant_id)
         loa = self.get_applicant_loa(applicant_id)
-        try:
-            skd = self.get_applicant_skd(applicant_id)
-        except Exception:
-            skd = None
-
         form_payments = (
             self.repository.db.query(PPDBPaymentTransaction)
             .filter(PPDBPaymentTransaction.applicant_id == applicant_id)
             .order_by(PPDBPaymentTransaction.created_at.desc())
             .all()
         )
-        stage2_bills = (
-            self.repository.db.query(PPDBStage2Bill)
-            .filter(PPDBStage2Bill.applicant_id == applicant_id)
-            .order_by(PPDBStage2Bill.installment_number.asc())
+        stage2_bills: list[dict] = [] #
+        _dummy = ( type('X', (), {'all': staticmethod(list)})()
+#
+        #
+        #
             .all()
         )
 
@@ -2236,7 +2270,6 @@ class PPDBService:
             "documents": docs,
             "transcript": transcript,
             "loa": loa,
-            "skd": skd,
             "payments": {
                 "form_payments": [
                     {
@@ -2389,11 +2422,9 @@ class PPDBService:
                 f"----------------------------------------\n"
                 f"Nama: {applicant.get('full_name')}\n"
                 f"NISN: {applicant.get('nisn') or '-'}\n"
-                f"Jalur: {applicant.get('registration_path')}\n"
                 f"Gelombang: {applicant.get('wave_name')}\n"
                 f"Periode: {applicant.get('period_name')}\n"
                 f"Status: {applicant.get('status')}\n\n"
-                f"Skor TIU: {dossier['transcript'].get('tiu_score', '-')}\n"
                 f"Catatan Evaluator: {evaluator_notes}\n"
             )
             zf.writestr("transkrip_nilai.txt", transcript_txt)
@@ -2403,17 +2434,6 @@ class PPDBService:
                 f"Ketentuan: {dossier['loa'].get('fixed_clause', '')}\n"
             )
             zf.writestr("surat_penerimaan_loa.txt", loa_txt)
-
-            if dossier.get("skd"):
-                skd_bg = dossier["skd"].get("background_url") or "-"
-                skd_link = dossier["skd"].get("whatsapp_group_link") or "-"
-                skd_txt = (
-                    f"SURAT KETERANGAN DITERIMA (SKD)\n"
-                    f"Nomor: {dossier['skd'].get('letter_number')}\n\n"
-                    f"Background Latar SKD: {skd_bg}\n"
-                    f"Link Grup WhatsApp: {skd_link}\n"
-                )
-                zf.writestr("surat_keterangan_diterima_skd.txt", skd_txt)
 
             docs = self.repository.get_documents_by_applicant(applicant_id)
             for d in docs:
@@ -2516,6 +2536,7 @@ class PPDBService:
                 "applicant": self.get_my_applicant_profile(user_id)["applicant"],
             }
 
+        original_phone = applicant.phone or ""
         for key, value in data.items():
             if hasattr(applicant, key):
                 setattr(applicant, key, value)
@@ -2535,6 +2556,14 @@ class PPDBService:
             from src.core.cache import invalidate_user_cache
 
             invalidate_user_cache(user_id)
+
+            if applicant.phone and applicant.phone != original_phone:
+                try:
+                    send_notifications([("account_updated", {})], user_id)
+                except Exception:
+                    logger.exception(
+                        "Could not queue applicant phone change notification"
+                    )
 
         return {
             "success": True,

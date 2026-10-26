@@ -1,55 +1,52 @@
-[MONITORING LIST PENDAFTAR MASUK]
-       │
-       ├────────────────────────────────────────────────────────────────────────┐
-       ▼                                                                        ▼
+﻿[MONITORING LIST PENDAFTAR MASUK]
+       â”‚
+       â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+       â–¼                                                                        â–¼
 [1. VERIFIKASI DOKUMEN GRANULAR]                                       [MONITORING PEMBAYARAN]
 (Cek per-dokumen: KK, NISN, Foto, Medcheck, dll)                        (Status Pak Kasir: Formulir
-       │                                                                 & Pembayaran Tahap 2)
-       ├──────────────────────────┐                                             │
-       ▼ (Semua Dokumen Valid)    ▼ (Ada Dokumen Salah/Blur)                    │
-[APPROVE SELURUHNYA]       [REJECT DOKUMEN SPESIFIK]                            │
-       │                   (Centang file yang salah + Isi Catatan)              │
-       │                          │                                             │
-       │                          ▼                                             │
-       │                   [AUTO NOTIF WA: SURUH RE-UPLOAD FILE SPESIFIK]       │
-       │                          │                                             │
-       │                          └─────────► (User Re-upload)                  ┤
-       │                                                                        │
-       ▼                                                                        │
-[2. INPUT / REKAP NILAI TES TIU]                                                │
-(Admin input / rekap hasil nilai ujian tulis dari GForm/Sistem)                 │
-       │                                                                        │
-       ▼                                                                        │
-[3. EXECUTE UJIAN TAHFIDZ (TAKE SESSION)]                                       │
-(Khusus pendaftar Tahfidz -> Penguji Buka Slot -> Input Nilai Tahfidz)          │
-       │                                                                        │
-       ▼                                                                        │
-[4. EXECUTE WAWANCARA (TAKE SESSION)]                                           │
-(Semua pendaftar -> Interviewer Buka Slot -> Cek Online/Offline -> Input Nilai) │
-       │                                                                        │
-       ▼                                                                        │
-[5. SISTEM AUTO-GENERATE DOKUMEN TRANSKRIP HASIL SELEKSI (PDF)]                 │
-(Kumpulan Nilai Berkas + Nilai Ujian TIU/Tahfidz + Nilai Wawancara)             │
-       │                                                                        │
-       ▼                                                                        │
-[6. KEPUTUSAN FINAL (LULUS / TIDAK LULUS)]                                      │
-       │                                                                        │
-       ├──────────────────────────┐                                             │
-       ▼ (TIDAK LULUS)            ▼ (LULUS)                                     │
-[SET TIDAK LULUS]          [SET LULUS]                                          │
-(Auto WA Notif +           (Auto WA Notif + Link Transkrip                      │
- Link Transkrip PDF)        + Form TTD MOU In-App)                              │
-                                  │                                             │
-                                  ▼                                             │
-                           [7. MONITORING TTD MOU IN-APP & BAYAR TAHAP 2] ◄─────┘
+       â”‚                                                                 & Pembayaran Tahap 2)
+       â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”                                             â”‚
+       â–¼ (Semua Dokumen Valid)    â–¼ (Ada Dokumen Salah/Blur)                    â”‚
+[APPROVE SELURUHNYA]       [REJECT DOKUMEN SPESIFIK]                            â”‚
+       â”‚                   (Centang file yang salah + Isi Catatan)              â”‚
+       â”‚                          â”‚                                             â”‚
+       â”‚                          â–¼                                             â”‚
+       â”‚                   [AUTO NOTIF WA: SURUH RE-UPLOAD FILE SPESIFIK]       â”‚
+       â”‚                          â”‚                                             â”‚
+       â”‚                          â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â–º (User Re-upload)                  â”¤
+       â”‚                                                                        â”‚
+       â–¼                                                                        â”‚
+[2. INPUT / REKAP NILAI TES TIU]                                                â”‚
+(Admin input / rekap hasil nilai ujian tulis dari GForm/Sistem)                 â”‚
+       â”‚                                                                        â”‚
+       â–¼                                                                        â”‚
+[3. EXECUTE UJIAN TAHFIDZ (TAKE SESSION)]                                       â”‚
+(Khusus pendaftar Tahfidz -> Penguji Buka Slot -> Input Nilai Tahfidz)          â”‚
+       â”‚                                                                        â”‚
+       â–¼                                                                        â”‚
+[4. EXECUTE WAWANCARA (TAKE SESSION)]                                           â”‚
+(Semua pendaftar -> Interviewer Buka Slot -> Cek Online/Offline -> Input Nilai) â”‚
+       â”‚                                                                        â”‚
+       â–¼                                                                        â”‚
+[5. SISTEM AUTO-GENERATE DOKUMEN TRANSKRIP HASIL SELEKSI (PDF)]                 â”‚
+(Kumpulan Nilai Berkas + Nilai Ujian TIU/Tahfidz + Nilai Wawancara)             â”‚
+       â”‚                                                                        â”‚
+       â–¼                                                                        â”‚
+[6. KEPUTUSAN FINAL (LULUS / TIDAK LULUS)]                                      â”‚
+       â”‚                                                                        â”‚
+       â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”                                             â”‚
+       â–¼ (TIDAK LULUS)            â–¼ (LULUS)                                     â”‚
+[SET TIDAK LULUS]          [SET LULUS]                                          â”‚
+(Auto WA Notif +           (Auto WA Notif + Link Transkrip                      â”‚
+ Link Transkrip PDF)        + Form TTD MOU In-App)                              â”‚
+                                  â”‚                                             â”‚
+                                  â–¼                                             â”‚
+                           [7. MONITORING TTD MOU IN-APP & BAYAR TAHAP 2] â—„â”€â”€â”€â”€â”€â”˜
                            (Pendaftar TTD di Canvas Dashboard & Bayar Pak Kasir)
-                                  │
-                                  ▼ (LUNAS / MINIMUM DP TAHAP 2 MASUK)
-                           [8. GENERATE NO. REGISTRASI & SURAT KETERANGAN DITERIMA (SKD)]
-                           (Sistem Auto-Generate SKD / Sertifikat Kelulusan)
-                                  │
-                                  ▼
-                           [KIRIM WA NOTIFIKASI REVIEW & DOWNLOAD SKD]
-                                  │
-                                  ▼
+                                  â”‚
+                                  â–¼ (LUNAS / MINIMUM DP TAHAP 2 MASUK)
+                                  â”‚
+                                  â–¼
+                                  â”‚
+                                  â–¼
                               (SELESAI)

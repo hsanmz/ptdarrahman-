@@ -416,6 +416,7 @@ class AuthService:
         user = self.repository.get_user_by_id(user_dict["id"])
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
+
         # Tandai sesi perangkat ini masih aktif (throttled 60 detik).
         self.touch_session(user_dict.get("session_id"))
         return self._serialize_user(user)
@@ -536,6 +537,11 @@ class AuthService:
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
+        original_username = user.username
+        original_email = user.email or ""
+        original_phone = user.phone or ""
+        password_will_change = bool(data.get("new_password") or data.get("password"))
+
         username = data.get("username")
         if username is not None and username != user.username:
             existing = self.repository.get_user_by_username_or_email(username)
@@ -586,6 +592,24 @@ class AuthService:
         self.repository.update_user(user)
         # Invalidate Redis cache after profile update
         invalidate_user_cache(user.id)
+
+        notifications: list[tuple[str, dict[str, Any]]] = []
+        if (
+            user.username != original_username
+            or (user.email or "") != original_email
+            or (user.phone or "") != original_phone
+        ):
+            notifications.append(("account_updated", {}))
+        if password_will_change:
+            notifications.append(("password_changed", {}))
+        if notifications:
+            try:
+                from src.core.notif_service import send_notifications
+
+                send_notifications(notifications, user.id)
+            except Exception:
+                logger.exception("Could not queue account profile change notice")
+
         return self._serialize_user(user)
 
     def register_applicant(

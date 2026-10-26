@@ -79,14 +79,20 @@ export function usePermission() {
     canCrudPage: (pageKey: string) => {
       if (!user) return false
       if (user.is_superadmin || user.user_type === 'superadmin') return true
-      return (user.crud_permissions || []).includes(pageKey)
+      const perms = user.crud_permissions || []
+      if (perms.includes(pageKey)) return true
+      if ((pageKey === 'sessions' || pageKey === 'jadwal-seleksi') && (perms.includes('sessions') || perms.includes('jadwal-seleksi'))) return true
+      return false
     },
     canAccessPage: (pageKey: string) => {
       if (!user) return false
       if (user.is_superadmin || user.user_type === 'superadmin') return true
       if (pageKey === 'dashboard') return true
       const pagePerms = user.page_permissions || []
-      return pagePerms.length === 0 || pagePerms.includes(pageKey)
+      if (pagePerms.length === 0) return true
+      if (pagePerms.includes(pageKey)) return true
+      if ((pageKey === 'sessions' || pageKey === 'jadwal-seleksi') && (pagePerms.includes('sessions') || pagePerms.includes('jadwal-seleksi'))) return true
+      return false
     },
     isAdmin: () => {
       if (!user) return false
@@ -111,8 +117,10 @@ export function usePermission() {
 
 export function normalizeNavKey(href: string): string {
   let key = href.replace(/^\/admin/, '').replace(/^\//, '') || ''
-  if (key.startsWith('sessions')) return 'sessions'
-  if (key.startsWith('pembayaran-tahap2')) return 'pembayaran-tahap2'
+  if (key.startsWith('sessions') || key.startsWith('jadwal-wawancara')) return 'sessions'
+  if (key.startsWith('bank-soal')) return 'bank-soal'
+  if (key.startsWith('jadwal-seleksi') || key.startsWith('jadwal-ujian') || key.startsWith('monitoring')) return 'jadwal-seleksi'
+
   if (key.startsWith('pembayaran-formulir')) return 'pembayaran-formulir'
   if (key.startsWith('kuitansi')) return 'pembayaran-formulir'
   const seg = key.split('/')[0] || ''

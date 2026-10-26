@@ -1,7 +1,7 @@
 import { Link, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { useAuth, useFilteredNav, usePermission, normalizeNavKey } from '../contexts/AuthContext'
 import {
-  LayoutDashboard, CalendarDays, CreditCard, Bell, Users, Archive, Settings, ClipboardCheck, Award, CalendarCheck, FileCheck2
+  LayoutDashboard, CalendarDays, CreditCard, Bell, Users, Archive, Settings, ClipboardCheck, Award, FileCheck2, Clock
 } from 'lucide-react'
 import { API_BASE } from '@/api/client'
 import {
@@ -15,24 +15,17 @@ const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/admin/dashboard', module: 'ppdb' },
   { label: 'Data Pendaftar', icon: Users, href: '/admin/data-pendaftar', module: 'ppdb', minLevel: 'read' },
   { label: 'Verifikasi Dokumen', icon: ClipboardCheck, href: '/admin/verifikasi-dokumen', module: 'ppdb', minLevel: 'read' },
+  { label: 'Pembayaran Formulir', icon: CreditCard, href: '/admin/pembayaran-formulir', module: 'ppdb', minLevel: 'read' },
   {
-    label: 'Pembayaran',
-    icon: CreditCard,
+    label: 'Jadwal Seleksi',
+    icon: Clock,
     module: 'ppdb',
     minLevel: 'read',
     children: [
-      { label: 'Pembayaran Formulir', href: '/admin/pembayaran-formulir' },
-      { label: 'Pembayaran Tahap 2', href: '/admin/pembayaran-tahap2' },
-    ]
-  },
-  {
-    label: 'Session 1:1',
-    icon: CalendarCheck,
-    module: 'ppdb',
-    minLevel: 'read',
-    children: [
-      { label: 'Session Tahfidz', href: '/admin/sessions/tahfidz' },
-      { label: 'Session Wawancara', href: '/admin/sessions/wawancara' },
+      { label: 'Seleksi Akademik (CBT)', href: '/admin/jadwal-seleksi/akademik' },
+      { label: 'Seleksi Psikologi (CBT)', href: '/admin/jadwal-seleksi/psikologi' },
+      { label: 'Seleksi Tahfidz', href: '/admin/jadwal-seleksi/tahfidz' },
+      { label: 'Jadwal Wawancara', href: '/admin/jadwal-seleksi/wawancara' },
     ]
   },
   { label: 'Hasil Pendaftaran', icon: Award, href: '/admin/penilaian', module: 'ppdb', minLevel: 'read' },
@@ -44,9 +37,10 @@ const navItems = [
     module: 'ppdb',
     minLevel: 'read',
     children: [
-      { label: 'Preview LoA & SKD', href: '/admin/pengumuman' },
+      { label: 'Bank Soal Akademik', href: '/admin/bank-soal/akademik' },
+      { label: 'Bank Soal Psikologi', href: '/admin/bank-soal/psikologi' },
+      { label: 'Preview LoA', href: '/admin/pengumuman' },
       { label: 'Rubrik', href: '/admin/rubrik' },
-      { label: 'Pengaturan TIU', href: '/admin/tiu-settings' },
     ]
   },
   { label: 'Arsip Pendaftar', icon: Archive, href: '/admin/arsip', module: 'ppdb', minLevel: 'read' },

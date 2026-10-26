@@ -1,8 +1,7 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ppdbService } from '@/services'
 import { useToast } from '@/components/Toast'
-import { useActiveWave } from '@/hooks/useActiveWave'
 import { cn } from '@/lib/utils'
 import {
   Card, CardContent, CardHeader, CardTitle, CardDescription,
@@ -14,7 +13,7 @@ import {
 } from '@/components/ui'
 import { CredentialsCard } from '@/components/CredentialsCard'
 import {
-  ArrowLeft, ArrowRight, LogIn, BookOpen, GraduationCap, Check, Trophy, Award,
+  ArrowLeft, ArrowRight, LogIn, Check,
   Phone, User, Users, Mail, MapPin, HeartPulse, ShieldCheck, Edit3,
   CheckCircle2, AlertTriangle, ShieldAlert
 } from 'lucide-react'
@@ -64,13 +63,12 @@ const INCOME_OPTIONS = [
 ]
 
 const STEPS = [
-  { id: 1, title: 'Jalur', desc: 'Pilih Jalur' },
-  { id: 2, title: 'Calon Murid', desc: 'Identitas Siswa' },
-  { id: 3, title: 'Orang Tua/Wali', desc: 'Data Orang Tua' },
-  { id: 4, title: 'Kontak', desc: 'Email & WhatsApp' },
-  { id: 5, title: 'Domisili', desc: 'Alamat Tinggal' },
-  { id: 6, title: 'Kesehatan', desc: 'Identifikasi Kesehatan' },
-  { id: 7, title: 'Persetujuan', desc: 'Review & Submit' },
+  { id: 1, title: 'Calon Murid', desc: 'Identitas Siswa' },
+  { id: 2, title: 'Orang Tua/Wali', desc: 'Data Orang Tua' },
+  { id: 3, title: 'Kontak', desc: 'Email & WhatsApp' },
+  { id: 4, title: 'Domisili', desc: 'Alamat Tinggal' },
+  { id: 5, title: 'Kesehatan', desc: 'Identifikasi Kesehatan' },
+  { id: 6, title: 'Persetujuan', desc: 'Review & Submit' },
 ]
 
 const WILAYAH_SOURCES = [
@@ -99,11 +97,9 @@ export default function RegisterPage() {
 
   // 1. Data Pendaftaran Lengkap
   const [formData, setFormData] = useState({
-    // Step 1: Jalur
-    registration_path: '',
-
-    // Step 2: Calon Murid
+    // Step 1: Calon Murid
     full_name: '',
+    graduation_year: '',
     gender: '',
     nisn: '',
     nik: '',
@@ -196,14 +192,6 @@ export default function RegisterPage() {
   const [selectedCityId, setSelectedCityId] = useState('')
   const [selectedDistrictId, setSelectedDistrictId] = useState('')
 
-  // Scope gelombang aktif
-  const { isActive: waveIsActive, allowedPaths, isFetching: scopeLoading, isError } = useActiveWave()
-
-  const waveScope = useMemo(() => ({
-    paths: scopeLoading || isError ? null : (waveIsActive ? allowedPaths : []),
-  }), [scopeLoading, isError, waveIsActive, allowedPaths])
-  const scopeLoaded = !scopeLoading
-
   useEffect(() => {
     fetchWilayah('provinces.json').then(setProvinces)
   }, [])
@@ -249,13 +237,17 @@ export default function RegisterPage() {
     setFormData(prev => ({ ...prev, village: name }))
   }
 
-  const isPathOpen = (path: string) => !waveScope.paths || waveScope.paths.includes(path)
-  const noActiveWave = scopeLoaded && waveScope.paths !== null && waveScope.paths.length === 0
-
-  // Validasi Step 2: Calon Murid
+  // Validasi Step 1: Calon Murid
   const validateStep2 = (): string | null => {
     if (!formData.full_name.trim()) return 'Nama lengkap calon siswa wajib diisi.'
-    if (!formData.gender) return 'Jenis kelamin calon siswa wajib dipilih.'
+    const cleanGradYear = formData.graduation_year.trim()
+    if (!cleanGradYear) return 'Tahun kelulusan calon siswa wajib diisi.'
+    if (!/^\d{4}$/.test(cleanGradYear)) return 'Tahun kelulusan harus 4 digit angka (contoh: 2024).'
+    const gradYearNum = parseInt(cleanGradYear, 10)
+    const currentYear = new Date().getFullYear()
+    if (gradYearNum < 1990 || gradYearNum > currentYear + 1) {
+      return `Tahun kelulusan harus antara tahun 1990 dan ${currentYear + 1}.`
+    }
     const cleanNisn = formData.nisn.trim()
     if (!cleanNisn || !/^\d{10}$/.test(cleanNisn)) return 'NISN harus tepat 10 digit angka.'
     const cleanNik = formData.nik.trim()
@@ -363,8 +355,9 @@ export default function RegisterPage() {
     setSubmitError(null)
 
     if (step === 1) {
-      if (!formData.registration_path) {
-        toast('error', 'Pilih jalur pendaftaran terlebih dahulu.')
+      const err = validateStep2()
+      if (err) {
+        toast('error', err)
         return
       }
       setStep(2)
@@ -373,7 +366,7 @@ export default function RegisterPage() {
     }
 
     if (step === 2) {
-      const err = validateStep2()
+      const err = validateStep3()
       if (err) {
         toast('error', err)
         return
@@ -384,17 +377,6 @@ export default function RegisterPage() {
     }
 
     if (step === 3) {
-      const err = validateStep3()
-      if (err) {
-        toast('error', err)
-        return
-      }
-      setStep(4)
-      window.scrollTo({ top: 0, behavior: 'smooth' })
-      return
-    }
-
-    if (step === 4) {
       const err = validateStep4()
       if (err) {
         toast('error', err)
@@ -405,24 +387,24 @@ export default function RegisterPage() {
       return
     }
 
-    if (step === 5) {
+    if (step === 4) {
       const err = validateStep5()
       if (err) {
         toast('error', err)
         return
       }
-      setStep(6)
+      setStep(5)
       window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
 
-    if (step === 6) {
+    if (step === 5) {
       const err = validateHealthForm()
       if (err) {
         toast('error', err)
         return
       }
-      setStep(7)
+      setStep(6)
       window.scrollTo({ top: 0, behavior: 'smooth' })
       return
     }
@@ -511,6 +493,7 @@ export default function RegisterPage() {
 
       const res = await ppdbService.registerApplicant({
         ...formData,
+        graduation_year: formData.graduation_year.trim(),
         parent_name: parentName,
         phone: formData.phone.trim().replace(/\D/g, ''),
         parent_phone: formData.parent_phone.trim().replace(/\D/g, ''),
@@ -551,29 +534,24 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-slate-50/60 font-sans flex flex-col items-center pt-8 pb-24 px-4 sm:px-6 lg:px-8">
-      {/* Decorative Background */}
-      <div className="fixed inset-0 bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.06),transparent_60%)] pointer-events-none" />
-      <div
-        className="fixed inset-0 opacity-[0.3] pointer-events-none"
-        style={{ backgroundImage: 'radial-gradient(circle, rgba(16,185,129,0.12) 1px, transparent 1px)', backgroundSize: '24px 24px' }}
-      />
-      {/* Arabic watermark */}
-      <div className="pointer-events-none fixed -left-16 top-20 select-none font-heading text-[16rem] font-bold leading-none text-emerald-primary/[0.03] md:text-[24rem]">
-        ار
+    <div className="relative min-h-screen bg-slate-50/70 font-sans flex flex-col items-center pt-8 pb-24 px-4 sm:px-6 lg:px-8 selection:bg-emerald-500/20 selection:text-emerald-900">
+      {/* Clean Anti-Slop Background */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 inset-x-0 h-96 bg-[radial-gradient(ellipse_at_top,rgba(16,185,129,0.06),transparent_70%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(#cbd5e1_1px,transparent_1px)] [background-size:24px_24px] opacity-40" />
       </div>
 
       <div className="relative z-10 w-full max-w-4xl">
         {/* Title Header */}
         <div className="mb-6 text-center">
-          <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-800 mb-1.5 flex items-center justify-center gap-1.5">
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-bold uppercase tracking-wider mb-2.5 shadow-2xs">
             <ShieldCheck className="h-4 w-4 text-emerald-600" />
-            Penerimaan Peserta Didik Baru
-          </p>
+            Pesantren Ar-Rahman
+          </div>
           <h1 className="font-heading text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">
-            Formulir Pendaftaran <span className="bg-gradient-to-r from-emerald-700 to-emerald-500 bg-clip-text text-transparent">Online</span>
+            Formulir Pendaftaran <span className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-emerald-500 bg-clip-text text-transparent">Online</span>
           </h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1 max-w-xl mx-auto">
+          <p className="text-xs sm:text-sm text-slate-500 mt-1.5 max-w-xl mx-auto leading-relaxed">
             Lengkapi tahapan pendaftaran di bawah ini secara bertahap dan teliti sesuai dokumen resmi calon peserta didik.
           </p>
         </div>
@@ -672,135 +650,9 @@ export default function RegisterPage() {
         </div>
 
         {/* ========================================================================= */}
-        {/* STEP 1: PILIH JALUR                                                      */}
+        {/* STEP 1: IDENTITAS CALON MURID                                            */}
         {/* ========================================================================= */}
         {step === 1 && (
-          <Card className="shadow-xl border-slate-200/80 bg-white/95 backdrop-blur-xl animate-in fade-in slide-in-from-right-4 duration-300 overflow-hidden">
-            <div className="h-1.5 w-full bg-gradient-to-r from-emerald-600 to-emerald-400" />
-            <CardHeader className="text-center pt-8 pb-4">
-              <span className="mx-auto mb-2 flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200">
-                <BookOpen className="h-5 w-5" />
-              </span>
-              <CardTitle className="text-2xl font-bold font-heading text-slate-900">
-                Pilih Jalur Pendaftaran
-              </CardTitle>
-              <CardDescription className="text-sm max-w-md mx-auto">
-                Tentukan jalur pendaftaran yang sesuai dengan kompetensi dan persyaratan calon santri.
-              </CardDescription>
-            </CardHeader>
-
-            <CardContent className="space-y-4 px-6 md:px-10 pb-8">
-              {noActiveWave && (
-                <Alert type="warning" title="Pendaftaran Sedang Ditutup">
-                  Saat ini tidak ada gelombang pendaftaran yang aktif. Silakan hubungi panitia atau cek jadwal pembukaan gelombang berikutnya.
-                </Alert>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  {
-                    value: 'reguler',
-                    icon: BookOpen,
-                    title: 'Reguler',
-                    subtitle: 'Seleksi Skolastik & Akademik',
-                    desc: 'Jalur tes kemampuan akademik dan tes skolastik online untuk seluruh calon santri baru.',
-                    accent: 'from-emerald-500 to-emerald-700',
-                  },
-                  {
-                    value: 'prestasi',
-                    icon: Trophy,
-                    title: 'Prestasi',
-                    subtitle: 'Jalur Bakat & Sertifikat',
-                    desc: 'Jalur seleksi khusus bagi calon siswa dengan portofolio kejuaraan, olimpiade, sains, atau olahraga.',
-                    accent: 'from-blue-500 to-indigo-600',
-                  },
-                  {
-                    value: 'tahfidz',
-                    icon: Award,
-                    title: 'Tahfidz',
-                    subtitle: 'Program Hafalan Al-Qur\'an',
-                    desc: 'Program khusus bagi calon santri dengan hafalan Al-Qur\'an melalui uji komprehensif tartil dan tajwid.',
-                    accent: 'from-teal-500 to-emerald-700',
-                  },
-                  {
-                    value: 'rapot',
-                    icon: GraduationCap,
-                    title: 'Rapor',
-                    subtitle: 'Penelusuran Nilai Rapor',
-                    desc: 'Jalur seleksi berbasis rekam jejak nilai rapor sekolah jenjang sebelumnya.',
-                    accent: 'from-amber-500 to-orange-600',
-                  },
-                ].map((opt) => {
-                  const open = isPathOpen(opt.value)
-                  const isSelected = formData.registration_path === opt.value
-
-                  return (
-                    <div
-                      key={opt.value}
-                      onClick={() => {
-                        if (!open) return
-                        setFormData(prev => ({ ...prev, registration_path: opt.value }))
-                      }}
-                      className={cn(
-                        "group relative p-5 rounded-2xl border-2 transition-all duration-200 text-left",
-                        open
-                          ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/50"
-                          : "opacity-50 cursor-not-allowed bg-slate-50",
-                        isSelected && open
-                          ? "border-emerald-600 bg-emerald-50/50 ring-4 ring-emerald-600/10 shadow-md"
-                          : "border-slate-200 bg-white hover:border-emerald-300"
-                      )}
-                    >
-                      {isSelected && (
-                        <div className="absolute right-4 top-4 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm">
-                          <Check className="h-3.5 w-3.5 stroke-[3]" />
-                        </div>
-                      )}
-
-                      <div className="flex items-start gap-4">
-                        <div className={cn(
-                          "flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br text-white shadow-md transition-transform duration-200 group-hover:scale-105",
-                          opt.accent
-                        )}>
-                          <opt.icon className="h-6 w-6" />
-                        </div>
-
-                        <div className="pr-6">
-                          <div className="flex items-center gap-2">
-                            <h3 className="font-bold text-lg text-slate-900">{opt.title}</h3>
-                            {!open && (
-                              <span className="text-[10px] font-bold uppercase tracking-wider text-rose-600 border border-rose-200 bg-rose-50 rounded-full px-2 py-0.5">
-                                Ditutup
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs font-semibold text-emerald-700 mt-0.5">{opt.subtitle}</p>
-                          <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">{opt.desc}</p>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-
-              <div className="flex justify-end pt-6 border-t border-slate-100">
-                <Button
-                  type="button"
-                  onClick={handleNextStep}
-                  disabled={!formData.registration_path}
-                  className="rounded-full bg-emerald-600 hover:bg-emerald-700 px-8 h-11 text-sm font-bold shadow-md shadow-emerald-600/20"
-                >
-                  Lanjut ke Identitas Calon Murid <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* ========================================================================= */}
-        {/* STEP 2: IDENTITAS CALON MURID                                            */}
-        {/* ========================================================================= */}
-        {step === 2 && (
           <Card className="shadow-xl border-slate-200/80 bg-white/95 backdrop-blur-xl animate-in fade-in slide-in-from-right-4 duration-300 overflow-hidden">
             <div className="h-1.5 w-full bg-gradient-to-r from-emerald-600 to-emerald-400" />
             <CardHeader className="text-center pt-8 pb-4">
@@ -833,33 +685,6 @@ export default function RegisterPage() {
                   <p className="text-[11px] text-slate-400">Gunakan huruf kapital sesuai yang tertera pada ijazah atau akta.</p>
                 </div>
 
-                {/* Jenis Kelamin */}
-                <div className="space-y-1.5">
-                  <Label className="text-sm font-bold text-slate-800">
-                    Jenis Kelamin <span className="text-rose-500">*</span>
-                  </Label>
-                  <div className="grid grid-cols-2 gap-3 pt-0.5">
-                    {[
-                      { val: 'L', label: 'Laki-laki' },
-                      { val: 'P', label: 'Perempuan' },
-                    ].map((g) => (
-                      <button
-                        key={g.val}
-                        type="button"
-                        onClick={() => setFormData(prev => ({ ...prev, gender: g.val }))}
-                        className={cn(
-                          "flex items-center justify-center py-2.5 px-4 rounded-xl border text-sm font-medium transition-all",
-                          formData.gender === g.val
-                            ? "border-emerald-600 bg-emerald-50 text-emerald-900 font-bold ring-2 ring-emerald-600/20"
-                            : "border-slate-200 bg-white hover:bg-slate-50 text-slate-700"
-                        )}
-                      >
-                        {g.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Asal Sekolah */}
                 <div className="space-y-1.5">
                   <Label htmlFor="previous_school" className="text-sm font-bold text-slate-800">
@@ -874,6 +699,23 @@ export default function RegisterPage() {
                     onChange={(e) => setFormData(prev => ({ ...prev, previous_school: e.target.value }))}
                   />
                   <p className="text-[11px] text-slate-400">Nama sekolah asal jenjang sebelumnya.</p>
+                </div>
+
+                {/* Tahun Kelulusan */}
+                <div className="space-y-1.5">
+                  <Label htmlFor="graduation_year" className="text-sm font-bold text-slate-800">
+                    Tahun Kelulusan <span className="text-rose-500">*</span>
+                  </Label>
+                  <Input
+                    id="graduation_year"
+                    required
+                    inputMode="numeric"
+                    maxLength={4}
+                    placeholder="Contoh: 2024"
+                    value={formData.graduation_year}
+                    onChange={(e) => setFormData(prev => ({ ...prev, graduation_year: e.target.value.replace(/\D/g, '').slice(0, 4) }))}
+                  />
+                  <p className="text-[11px] text-slate-400">Tahun kelulusan dari sekolah sebelumnya (4 digit angka).</p>
                 </div>
 
                 {/* NISN */}
@@ -957,9 +799,9 @@ export default function RegisterPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* STEP 3: DATA ORANG TUA / WALI                                            */}
+        {/* STEP 2: DATA ORANG TUA / WALI                                            */}
         {/* ========================================================================= */}
-        {step === 3 && (
+        {step === 2 && (
           <Card className="shadow-xl border-slate-200/80 bg-white/95 backdrop-blur-xl animate-in fade-in slide-in-from-right-4 duration-300 overflow-hidden">
             <div className="h-1.5 w-full bg-gradient-to-r from-emerald-600 to-emerald-400" />
             <CardHeader className="text-center pt-8 pb-4">
@@ -1139,9 +981,9 @@ export default function RegisterPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* STEP 4: KONTAK                                                           */}
+        {/* STEP 3: KONTAK                                                           */}
         {/* ========================================================================= */}
-        {step === 4 && (
+        {step === 3 && (
           <Card className="shadow-xl border-slate-200/80 bg-white/95 backdrop-blur-xl animate-in fade-in slide-in-from-right-4 duration-300 overflow-hidden">
             <div className="h-1.5 w-full bg-gradient-to-r from-emerald-600 to-emerald-400" />
             <CardHeader className="text-center pt-8 pb-4">
@@ -1263,9 +1105,9 @@ export default function RegisterPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* STEP 5: DOMISILI                                                         */}
+        {/* STEP 4: DOMISILI                                                         */}
         {/* ========================================================================= */}
-        {step === 5 && (
+        {step === 4 && (
           <Card className="shadow-xl border-slate-200/80 bg-white/95 backdrop-blur-xl animate-in fade-in slide-in-from-right-4 duration-300 overflow-hidden">
             <div className="h-1.5 w-full bg-gradient-to-r from-emerald-600 to-emerald-400" />
             <CardHeader className="text-center pt-8 pb-4">
@@ -1412,9 +1254,9 @@ export default function RegisterPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* STEP 6: IDENTIFIKASI KESEHATAN                                           */}
+        {/* STEP 5: IDENTIFIKASI KESEHATAN                                           */}
         {/* ========================================================================= */}
-        {step === 6 && (
+        {step === 5 && (
           <Card className="shadow-xl border-slate-200/80 bg-white/95 backdrop-blur-xl animate-in fade-in slide-in-from-right-4 duration-300 overflow-hidden">
             <div className="h-1.5 w-full bg-gradient-to-r from-emerald-600 to-emerald-400" />
             <CardHeader className="text-center pt-8 pb-4">
@@ -1961,9 +1803,9 @@ export default function RegisterPage() {
         )}
 
         {/* ========================================================================= */}
-        {/* STEP 7: PERNYATAAN & PERSETUJUAN (REVIEW SEBELUM SUBMIT)                 */}
+        {/* STEP 6: PERNYATAAN & PERSETUJUAN (REVIEW SEBELUM SUBMIT)                 */}
         {/* ========================================================================= */}
-        {step === 7 && (
+        {step === 6 && (
           <form onSubmit={handleSubmit} className="space-y-6">
             <Card className="shadow-xl border-slate-200/80 bg-white/95 backdrop-blur-xl animate-in fade-in slide-in-from-right-4 duration-300 overflow-hidden">
               <div className="h-1.5 w-full bg-gradient-to-r from-emerald-600 to-emerald-400" />
@@ -1992,25 +1834,21 @@ export default function RegisterPage() {
 
                   {/* Summary Grid */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                    {/* Ringkasan Jalur & Calon Siswa */}
+                    {/* Ringkasan Calon Siswa */}
                     <div className="rounded-2xl border border-slate-200 bg-slate-50/50 p-4 space-y-3">
                       <div className="flex items-center justify-between border-b border-slate-200/60 pb-2">
                         <span className="font-bold text-slate-800 flex items-center gap-1.5 text-xs">
-                          <User className="h-3.5 w-3.5 text-emerald-600" /> Calon Siswa & Jalur
+                          <User className="h-3.5 w-3.5 text-emerald-600" /> Calon Siswa
                         </span>
                         <button
                           type="button"
-                          onClick={() => setStep(2)}
+                          onClick={() => setStep(1)}
                           className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1 text-[11px]"
                         >
                           <Edit3 className="h-3 w-3" /> Ubah
                         </button>
                       </div>
                       <div className="space-y-1.5 text-slate-600">
-                        <div className="flex justify-between">
-                          <span className="text-slate-400">Jalur Pendaftaran:</span>
-                          <span className="font-bold text-slate-800 capitalize">{formData.registration_path}</span>
-                        </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Nama Lengkap:</span>
                           <span className="font-bold text-slate-800">{formData.full_name}</span>
@@ -2020,8 +1858,8 @@ export default function RegisterPage() {
                           <span className="font-mono text-slate-700">{formData.nisn} / {formData.nik}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-slate-400">Jenis Kelamin:</span>
-                          <span>{formData.gender === 'L' ? 'Laki-laki' : 'Perempuan'}</span>
+                          <span className="text-slate-400">Tahun Kelulusan:</span>
+                          <span className="font-semibold text-slate-800">{formData.graduation_year || '-'}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-slate-400">Tempat, Tgl Lahir:</span>
@@ -2042,7 +1880,7 @@ export default function RegisterPage() {
                         </span>
                         <button
                           type="button"
-                          onClick={() => setStep(3)}
+                          onClick={() => setStep(2)}
                           className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1 text-[11px]"
                         >
                           <Edit3 className="h-3 w-3" /> Ubah
@@ -2078,7 +1916,7 @@ export default function RegisterPage() {
                         </span>
                         <button
                           type="button"
-                          onClick={() => setStep(4)}
+                          onClick={() => setStep(3)}
                           className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1 text-[11px]"
                         >
                           <Edit3 className="h-3 w-3" /> Ubah
@@ -2114,7 +1952,7 @@ export default function RegisterPage() {
                         </span>
                         <button
                           type="button"
-                          onClick={() => setStep(5)}
+                          onClick={() => setStep(4)}
                           className="text-emerald-700 hover:text-emerald-800 font-semibold flex items-center gap-1 text-[11px]"
                         >
                           <Edit3 className="h-3 w-3" /> Ubah
@@ -2337,7 +2175,7 @@ export default function RegisterPage() {
                 type="button"
                 onClick={() => {
                   setContactConfirmModalOpen(false)
-                  setStep(5)
+                  setStep(4)
                   window.scrollTo({ top: 0, behavior: 'smooth' })
                 }}
                 className="w-full sm:w-auto rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20"

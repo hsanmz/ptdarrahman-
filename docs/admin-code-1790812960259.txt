@@ -1,58 +1,57 @@
-[ADMIN KEUANGAN]                                   [ADMIN VERIFIKATOR / PENGUJI]
-          │                                                  │
+﻿[ADMIN KEUANGAN]                                   [ADMIN VERIFIKATOR / PENGUJI]
+          â”‚                                                  â”‚
 [MONITORING PEMBAYARAN FORMULIR]                   [1. VERIFIKASI DOKUMEN 1 MODUL]
 (Status Pak Kasir via Webhook)                     (Cek Dokumen Wajib & Tambahan sekaligus dlm 1 layar)
 Pendaftar belum bayar menerima pengingat setiap Senin sampai gelombang ditutup.
 Saat kuota tercapai, tagihan formulir pending dibatalkan dan pendaftar diberi info gelombang berikutnya.
-          │                                                  │
-          │                                                  ├─────────────┐
-          │                                                  ▼             ▼
-          │                                        [APPROVE SEMUA]   [REJECT DOKUMEN SPESIFIK] -> [AUTO NOTIF WA]
-          │                                                  │
-          │                                                  ▼
-          │                                        [1b. BACA FORMULIR KESEHATAN PENDAFTAR]
-          │                                        (Data kesehatan pendaftar: riwayat penyakit,
-          │                                         diagnosis, alergi, pengobatan rutin, keterbatasan fisik,
-          │                                         rawat inap, kebutuhan khusus, kontak darurat, pernyataan.
-          │                                         Data sensitif — akses dibatasi dan dapat diaudit.
-          │                                         Rincian: REQUIREMENTS.md.)
-          │                                                  │
-          │                                                  ▼
-          │                                        [2. MONITOR HASIL TIU OTOMATIS]
-          │                                        (Soal disinkronkan dari Google Form melalui
-          │                                         Apps Script tanpa publish manual; hasil nilai masuk
-          │                                         real-time ke sistem lewat webhook Apps Script.
-          │                                         Sistem menyimpan hasil dan kirim notifikasi WA;
-          │                                         admin tidak input nilai TIU manual.)
-          │                                                  │
-          │                                                  ▼
-          │                                        [3. EXECUTE UJIAN TAHFIDZ]
-          │                                        (Penguji input nilai Tahfidz agar Pendaftar
-          │                                         bisa membuka jadwal Take Session Wawancara)
-          │                                                  │
-          │                                                  ▼
-          │                                        [4. EXECUTE WAWANCARA]
-          │                                        (Interviewer input Nilai Wawancara)
-          │                                                  │
-          │                                                  ▼
-          │                                        [5. SISTEM AUTO-GENERATE DOKUMEN TRANSKRIP]
-          │                                                  │
-          │                                                  ▼
-          │                                        [6. KEPUTUSAN FINAL (LULUS / TIDAK LULUS)]
-          │                                                  │
-          │                                                  ├──────────────────────────┐
-          │                                                  ▼ (TIDAK LULUS)            ▼ (LULUS)
-          │                                            [SET TIDAK LULUS]         [GENERATE LoA]
-          │                                                                             │
-          ▼                                                                             ▼
-[7. MONITORING PEMBAYARAN TAHAP 2 & CICILAN] ◄──────────────────────────────────────────┘
+          â”‚                                                  â”‚
+          â”‚                                                  â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+          â”‚                                                  â–¼             â–¼
+          â”‚                                        [APPROVE SEMUA]   [REJECT DOKUMEN SPESIFIK] -> [AUTO NOTIF WA]
+          â”‚                                                  â”‚
+          â”‚                                                  â–¼
+          â”‚                                        [1b. BACA FORMULIR KESEHATAN PENDAFTAR]
+          â”‚                                        (Data kesehatan pendaftar: riwayat penyakit,
+          â”‚                                         diagnosis, alergi, pengobatan rutin, keterbatasan fisik,
+          â”‚                                         rawat inap, kebutuhan khusus, kontak darurat, pernyataan.
+          â”‚                                         Data sensitif â€” akses dibatasi dan dapat diaudit.
+          â”‚                                         Rincian: REQUIREMENTS.md.)
+          â”‚                                                  â”‚
+          â”‚                                                  â–¼
+          â”‚                                        [2. MONITOR HASIL TIU OTOMATIS]
+          â”‚                                        (Soal disinkronkan dari Google Form melalui
+          â”‚                                         Apps Script tanpa publish manual; hasil nilai masuk
+          â”‚                                         real-time ke sistem lewat webhook Apps Script.
+          â”‚                                         Sistem menyimpan hasil dan kirim notifikasi WA;
+          â”‚                                         admin tidak input nilai TIU manual.)
+          â”‚                                                  â”‚
+          â”‚                                                  â–¼
+          â”‚                                        [3. EXECUTE UJIAN TAHFIDZ]
+          â”‚                                        (Penguji input nilai Tahfidz agar Pendaftar
+          â”‚                                         bisa membuka jadwal Take Session Wawancara)
+          â”‚                                                  â”‚
+          â”‚                                                  â–¼
+          â”‚                                        [4. EXECUTE WAWANCARA]
+          â”‚                                        (Interviewer input Nilai Wawancara)
+          â”‚                                                  â”‚
+          â”‚                                                  â–¼
+          â”‚                                        [5. SISTEM AUTO-GENERATE DOKUMEN TRANSKRIP]
+          â”‚                                                  â”‚
+          â”‚                                                  â–¼
+          â”‚                                        [6. KEPUTUSAN FINAL (LULUS / TIDAK LULUS)]
+          â”‚                                                  â”‚
+          â”‚                                                  â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+          â”‚                                                  â–¼ (TIDAK LULUS)            â–¼ (LULUS)
+          â”‚                                            [SET TIDAK LULUS]         [GENERATE LoA]
+          â”‚                                                                             â”‚
+          â–¼                                                                             â–¼
+[7. MONITORING PEMBAYARAN TAHAP 2 & CICILAN] â—„â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 (Cek masuknya DP via Pak Kasir)
 (Pantau alur tagihan cicilan yang dipilih Pendaftar)
-          │
-          ▼ (JIKA DP MASUK & PEMBAYARAN TAHAP 2 CLEAR)
-[8. SISTEM TAMPILKAN LINK GROUP WA & SKD KE PENDAFTAR]
-          │
-          ▼
+          â”‚
+          â–¼ (JIKA DP MASUK & PEMBAYARAN TAHAP 2 CLEAR)
+          â”‚
+          â–¼
 [KIRIM WA NOTIFIKASI INFO BERHASIL, TAGIHAN AKTIF, & LINK WA GROUP]
 
 PENANGANAN ADMIN UNTUK PENGECUALIAN

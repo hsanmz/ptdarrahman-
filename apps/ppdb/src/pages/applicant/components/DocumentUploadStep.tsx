@@ -1,16 +1,24 @@
 import { useState, useMemo } from 'react'
-import { CheckCircle, FileText, Upload, AlertCircle, Info, Award, BookOpen, GraduationCap, ShieldCheck, ExternalLink } from 'lucide-react'
+import { CheckCircle, FileText, Upload, AlertCircle, ShieldCheck, ExternalLink, Clock } from 'lucide-react'
 import { Badge, Button, Card, CardContent } from '@/components/ui'
-import { getDocumentsForPath, type DocumentSpec } from '@/constants/documents'
+import { BASE_DOCUMENTS, type DocumentSpec } from '@/constants/documents'
 import * as api from '@/api/client'
 import { useToast } from '@/components/Toast'
+
+const CORE_DOCS = [
+  'NISN',
+  'Kartu Keluarga (KK)',
+  'Akta Kelahiran',
+  'Pas Foto',
+  'KTP Orang Tua/Wali',
+]
 
 interface DocumentUploadStepProps {
   applicant: any
   documents: any[]
   requiredDocuments?: any[]
   onDocumentsChange: (docs: any[]) => void
-  onSubmitRequest: () => void
+  onSubmitRequest: (commitmentDeferred?: boolean) => void
 }
 
 export default function DocumentUploadStep({
@@ -22,12 +30,11 @@ export default function DocumentUploadStep({
 }: DocumentUploadStepProps) {
   const { toast } = useToast()
   const [uploading, setUploading] = useState<string | null>(null)
+  const [hasCommitment, setHasCommitment] = useState(false)
 
-  const regPath = (applicant?.registration_path || '').toLowerCase()
-  const fallbackDocs = useMemo(() => getDocumentsForPath(regPath), [regPath])
   const activeDocuments: (DocumentSpec | any)[] = (requiredDocuments && requiredDocuments.length > 0)
     ? requiredDocuments
-    : fallbackDocs
+    : BASE_DOCUMENTS
 
   const handleUpload = async (docType: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -69,57 +76,35 @@ export default function DocumentUploadStep({
     return map
   }, [documents])
 
-  // Dokumen yang wajib untuk jalur ini
+  // Dokumen yang wajib diunggah
   const mandatoryDocs = useMemo(() => {
     return activeDocuments.filter((d: any) => d.required !== false)
   }, [activeDocuments])
 
-  // Dokumen wajib yang masih kurang
+  // Dokumen yang masih kurang
   const missingMandatory = useMemo(() => {
     return mandatoryDocs.filter((d: any) => !uploadedDocMap.has(d.name))
   }, [mandatoryDocs, uploadedDocMap])
 
+  // Berkas pokok identitas yang belum diunggah
+  const missingCore = useMemo(() => {
+    return mandatoryDocs.filter((d: any) => CORE_DOCS.includes(d.name) && !uploadedDocMap.has(d.name))
+  }, [mandatoryDocs, uploadedDocMap])
+
+  // Berkas rapor yang belum diunggah
+  const missingReports = useMemo(() => {
+    return mandatoryDocs.filter((d: any) => !CORE_DOCS.includes(d.name) && !uploadedDocMap.has(d.name))
+  }, [mandatoryDocs, uploadedDocMap])
+
+  const canCommitmentApply = missingCore.length === 0 && missingReports.length > 0
+  const canSubmitWithCommitment = canCommitmentApply && hasCommitment
+
   const isApproved = ['document_approved', 'selection', 'passed'].includes(applicant?.status)
   const isPendingOrRejected = ['document_uploaded_pending', 'document_rejected'].includes(applicant?.status)
-  const canSubmit = missingMandatory.length === 0 && isPendingOrRejected && !isApproved
+  const canSubmit = (missingMandatory.length === 0 || canSubmitWithCommitment) && isPendingOrRejected && !isApproved
 
-  // Header banner info khusus jalur
-  const pathBanner = useMemo(() => {
-    if (regPath.includes('prestasi')) {
-      return {
-        icon: Award,
-        title: 'Jalur Prestasi',
-        desc: 'Wajib mengunggah 4 dokumen utama + minimal 3 sertifikat prestasi kejuaraan/akademik (maksimal 10). Sertifikat ke-4 dan seterusnya bersifat opsional sebagai nilai tambah.',
-        bg: 'bg-blue-50 border-blue-200 text-blue-900',
-        iconColor: 'text-blue-600'
-      }
-    }
-    if (regPath.includes('rapot') || regPath.includes('rapor') || regPath.includes('pindahan')) {
-      return {
-        icon: GraduationCap,
-        title: 'Jalur Rapot',
-        desc: 'Wajib mengunggah 4 dokumen utama + 4 rapor semester terakhir calon siswa.',
-        bg: 'bg-amber-50 border-amber-200 text-amber-900',
-        iconColor: 'text-amber-600'
-      }
-    }
-    if (regPath.includes('tahfidz')) {
-      return {
-        icon: BookOpen,
-        title: 'Jalur Tahfidz',
-        desc: 'Wajib mengunggah 4 dokumen utama + minimal 1 surat keterangan/pengakuan hafalan (maksimal 3). Utamakan surat pernyataan/keterangan pengakuan hafalan resmi, bukan file rekaman video.',
-        bg: 'bg-teal-50 border-teal-200 text-teal-900',
-        iconColor: 'text-teal-600'
-      }
-    }
-    return {
-      icon: Info,
-      title: 'Jalur Reguler',
-      desc: 'Hanya perlu mengunggah 4 dokumen wajib utama. Seleksi kemampuan akademik akan dilakukan melalui Ujian TIU (Safe Exam Browser).',
-      bg: 'bg-emerald-50 border-emerald-200 text-emerald-900',
-      iconColor: 'text-emerald-600'
-    }
-  }, [regPath])
+  const isCommitmentNote = applicant?.rejection_reason?.startsWith('[BERKAS MENYUSUL]')
+  const isRealRejection = applicant?.status === 'document_rejected' && !isCommitmentNote
 
   return (
     <div className="space-y-4">
@@ -143,8 +128,23 @@ export default function DocumentUploadStep({
         </Card>
       )}
 
-      {/* Kartu Alasan Ditolak jika Status document_rejected */}
-      {applicant?.status === 'document_rejected' && (
+      {/* Banner Komitmen Berkas Menyusul */}
+      {isCommitmentNote && (
+        <Card className="border-amber-200 bg-amber-50/70 shadow-sm">
+          <CardContent className="p-4 flex items-start gap-2.5">
+            <Clock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div className="text-xs text-amber-900 leading-relaxed">
+              <strong className="block text-amber-950 font-semibold mb-0.5">
+                Pengajuan Komitmen Berkas Menyusul
+              </strong>
+              {applicant.rejection_reason.replace('[BERKAS MENYUSUL]: ', '')}. Berkas Anda sedang dalam proses verifikasi panitia.
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Kartu Alasan Ditolak jika Status document_rejected (Rejection murni) */}
+      {isRealRejection && (
         <Card className="border-red-200 bg-red-50/50 shadow-sm">
           <CardContent className="p-4">
             <p className="text-sm font-semibold text-red-800 flex items-center gap-2">
@@ -161,25 +161,11 @@ export default function DocumentUploadStep({
         </Card>
       )}
 
-      {/* Path Requirement Banner */}
-      <div className={`p-4 rounded-xl border flex items-start gap-3 ${pathBanner.bg}`}>
-        <pathBanner.icon className={`w-5 h-5 shrink-0 mt-0.5 ${pathBanner.iconColor}`} />
-        <div className="text-sm">
-          <div className="flex items-center gap-2 flex-wrap">
-            <p className="font-semibold">{pathBanner.title}</p>
-            <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-white/80 border text-slate-700 shadow-2xs">
-              Jalur Terpilih
-            </span>
-          </div>
-          <p className="text-xs opacity-90 mt-1 leading-relaxed">{pathBanner.desc}</p>
-        </div>
-      </div>
-
       <p className="text-xs text-muted-foreground">
         Format yang didukung: <strong>PDF, JPG, JPEG, PNG</strong> (Maksimal 2MB per file).
       </p>
 
-      {/* Grid Dokumen Sesuai Jalur */}
+      {/* Grid Dokumen Persyaratan */}
       <div className="grid gap-3">
         {activeDocuments.map((doc: any, idx: number) => {
           const uploaded = uploadedDocMap.get(doc.name)
@@ -195,16 +181,22 @@ export default function DocumentUploadStep({
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-medium text-sm text-slate-900 break-words">{doc.name}</p>
-                      {isMandatory && (
-                        <Badge variant="destructive" className="text-[10px] font-medium px-2 py-0 h-5">Wajib</Badge>
-                      )}
+                      <p className="font-medium text-sm text-slate-900 break-words">
+                        {doc.name}
+                        {isMandatory && <span className="text-rose-500 font-bold ml-1 text-sm" title="Diperlukan">*</span>}
+                      </p>
                       {uploaded ? (
                         <Badge variant="success" className="text-[10px] font-medium px-2 py-0 h-5">
                           {isApproved ? 'Terverifikasi' : 'Terunggah'}
                         </Badge>
+                      ) : hasCommitment && !CORE_DOCS.includes(doc.name) ? (
+                        <Badge variant="outline" className="text-[10px] font-medium px-2 py-0 h-5 border-amber-300 bg-amber-50 text-amber-800">
+                          Menyusul
+                        </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-[10px] font-normal px-2 py-0 h-5 text-slate-500">Belum diunggah</Badge>
+                        <Badge variant="outline" className="text-[10px] font-normal px-2 py-0 h-5 text-slate-500">
+                          Belum diunggah
+                        </Badge>
                       )}
                     </div>
                     {doc.description && (
@@ -229,7 +221,7 @@ export default function DocumentUploadStep({
                         <ExternalLink className="h-3.5 w-3.5" /> Buka Berkas
                       </Button>
                     ) : (
-                      <Badge variant="secondary" className="text-xs py-1 px-2.5">Tidak Diperlukan</Badge>
+                      <Badge variant="secondary" className="text-xs py-1 px-2.5">Menyusul</Badge>
                     )
                   ) : (
                     <>
@@ -254,7 +246,28 @@ export default function DocumentUploadStep({
         })}
       </div>
 
-      {/* Info Validasi Kelengkapan Dokumen */}
+      {/* Opsi Komitmen Berkas Menyusul jika 5 berkas pokok sudah terisi tapi ada rapor belum terbit */}
+      {canCommitmentApply && isPendingOrRejected && !isApproved && (
+        <div className="p-4 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50/90 to-amber-50/40 shadow-xs">
+          <label className="flex items-start gap-3 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              id="commitment-deferred-checkbox"
+              checked={hasCommitment}
+              onChange={(e) => setHasCommitment(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-amber-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
+            />
+            <div className="text-xs text-amber-950 leading-relaxed">
+              <strong className="block text-amber-900 font-semibold text-sm mb-0.5">
+                Pernyataan Berkas Rapor Belum Terbit dari Sekolah Asal (Menyusul)
+              </strong>
+              Sebagian rapor (<strong>{missingReports.map((d: any) => d.name).join(', ')}</strong>) belum diterbitkan atau belum dibagikan oleh sekolah asal. Saya bersedia melanjutkan tahapan pendaftaran dan berkomitmen menyerahkan berkas susulan tersebut saat daftar ulang / kedatangan santri ke pesantren.
+            </div>
+          </label>
+        </div>
+      )}
+
+      {/* Info Validasi Kelengkapan Dokumen & Tombol Submit */}
       <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t">
         <div className="text-xs min-w-0 flex-1">
           {isApproved ? (
@@ -262,15 +275,29 @@ export default function DocumentUploadStep({
               <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
               Status: Seluruh berkas persyaratan telah divalidasi dan disetujui panitia.
             </span>
-          ) : missingMandatory.length > 0 ? (
+          ) : missingCore.length > 0 ? (
+            <span className="text-rose-700 font-medium flex items-start sm:items-center gap-1.5">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 mt-0.5 sm:mt-0" />
+              <span className="break-words">
+                Berkas pokok identitas belum lengkap: <strong>{missingCore.map((d: any) => d.name).join(', ')}</strong>
+              </span>
+            </span>
+          ) : missingReports.length > 0 && !hasCommitment ? (
             <span className="text-amber-700 font-medium flex items-start sm:items-center gap-1.5">
               <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 mt-0.5 sm:mt-0" />
-              <span className="break-words">Masih ada {missingMandatory.length} dokumen wajib yang belum diunggah: <strong>{missingMandatory.map(d => d.name).join(', ')}</strong></span>
+              <span className="break-words">
+                Terdapat {missingReports.length} rapor yang belum diunggah. Centang pernyataan komitmen menyusul di atas jika rapor belum diterbitkan sekolah asal.
+              </span>
+            </span>
+          ) : missingReports.length > 0 && hasCommitment ? (
+            <span className="text-amber-800 font-medium flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 shrink-0 text-amber-600" />
+              Komitmen berkas menyusul aktif. Anda dapat langsung mengirim berkas untuk diverifikasi panitia.
             </span>
           ) : (
             <span className="text-emerald-700 font-medium flex items-center gap-1.5">
               <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600" />
-              Seluruh dokumen wajib telah lengkap diunggah!
+              Seluruh berkas persyaratan telah lengkap diunggah!
             </span>
           )}
         </div>
@@ -282,7 +309,7 @@ export default function DocumentUploadStep({
         ) : (
           <Button
             disabled={!canSubmit}
-            onClick={onSubmitRequest}
+            onClick={() => onSubmitRequest(canSubmitWithCommitment)}
             className="w-full sm:w-auto h-11 sm:h-10 font-bold"
           >
             {applicant?.status === 'document_uploaded_pending' ? 'Kirim' :

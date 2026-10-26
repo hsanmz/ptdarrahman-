@@ -24,11 +24,7 @@ Endpoint coverage:
     GET  /selection/applicants/me/results     - nilai dinamis milik applicant yang login
 """
 
-import uuid
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
-from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
 from src.core.config import settings
@@ -38,16 +34,16 @@ from src.core.dependencies import (
     require_ppdb_admin,
     require_ppdb_read,
 )
-from src.models.ppdb import PPDBApplicant, PPDBTIUAttempt
-from src.modules.ppdb.router import get_tiu_settings
 from src.modules.selection.schemas import (
     ApplicantScoreSave,
     ApplicantStatusUpdate,
     BookSession,
     BroadcastSession,
+    BulkApplicantScoreSave,
     CategoryCreate,
     CriteriaCreate,
     CriteriaUpdate,
+    RescheduleApplicantSession,
     SessionCreate,
     SessionUpdate,
 )
@@ -95,10 +91,11 @@ def get_sessions(
 @router.get("/sessions/{session_id}/evaluation")
 def get_session_evaluation_detail(
     session_id: str,
+    applicant_id: str | None = Query(None),
     user: dict = Depends(require_ppdb_read),
     svc: SelectionService = Depends(get_selection_service),
 ):
-    return svc.get_session_evaluation_detail(session_id)
+    return svc.get_session_evaluation_detail(session_id, applicant_id=applicant_id)
 
 
 @router.post("/sessions", status_code=201)
@@ -221,6 +218,15 @@ def save_result(
     return svc.save_result(body)
 
 
+@router.post("/results/bulk")
+def save_results_bulk(
+    body: BulkApplicantScoreSave,
+    user: dict = Depends(require_ppdb_admin),
+    svc: SelectionService = Depends(get_selection_service),
+):
+    return svc.save_results_bulk(body.items)
+
+
 @router.get("/results/{applicant_id}")
 def get_result_by_applicant(
     applicant_id: str,
@@ -238,6 +244,16 @@ def update_applicant_selection_status(
     svc: SelectionService = Depends(get_selection_service),
 ):
     return svc.update_applicant_status(applicant_id, body)
+
+
+@router.post("/applicants/{applicant_id}/move-session")
+def move_applicant_session(
+    applicant_id: str,
+    body: RescheduleApplicantSession,
+    user: dict = Depends(require_ppdb_admin),
+    svc: SelectionService = Depends(get_selection_service),
+):
+    return svc.move_applicant_session(applicant_id, body.target_session_id, body.reason)
 
 
 # ---------------------------------------------------------------------------
@@ -288,95 +304,3 @@ def send_h1_reminders(
     if x_cron_secret != settings.cron_secret:
         raise HTTPException(status_code=401, detail="Unauthorized cron request")
     return svc.send_h1_reminders()
-
-
-@router.get("/applicants/me/tiu-seb")
-def generate_tiu_seb(
-    user: dict = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    applicant = (
-        db.query(PPDBApplicant).filter(PPDBApplicant.user_id == user["id"]).first()
-    )
-    if not applicant:
-        raise HTTPException(status_code=404, detail="Bukan pendaftar")
-
-    tiu_settings = get_tiu_settings(user, db)
-    google_form_url = tiu_settings.get("google_form_url", "")
-    if not google_form_url:
-        raise HTTPException(
-            status_code=400, detail="URL Google Form TIU belum dikonfigurasi"
-        )
-
-    from src.models.content import SiteSetting
-    from src.models.selection import (
-        SelectionCategory,
-        SelectionCriteria,
-        SelectionScore,
-    )
-
-    existing_attempt = (
-        db.query(PPDBTIUAttempt)
-        .filter(PPDBTIUAttempt.applicant_id == applicant.id)
-        .order_by(PPDBTIUAttempt.created_at.desc())
-        .first()
-    )
-    duration_setting = db.get(SiteSetting, "ppdb_tiu_duration_minutes")
-    duration_minutes = (
-        int(duration_setting.value)
-        if duration_setting and duration_setting.value
-        else 120
-    )
-
-    # Cek apakah nilai TIU sudah masuk
-    has_score = (
-        db.query(SelectionScore)
-        .join(SelectionCriteria, SelectionCriteria.id == SelectionScore.criteria_id)
-        .join(SelectionCategory, SelectionCategory.id == SelectionCriteria.category_id)
-        .filter(
-            SelectionScore.applicant_id == applicant.id,
-            SelectionCategory.name.ilike("%TIU%"),
-        )
-        .first()
-    )
-    if has_score:
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Ujian TIU sudah selesai dan nilai Anda telah tersimpan. "
-                "Tidak ada ujian ulang (retake)."
-            ),
-        )
-
-    now = datetime.now()
-    if existing_attempt:
-        if (now - existing_attempt.created_at).total_seconds() > duration_minutes * 60:
-            raise HTTPException(
-                status_code=400,
-                detail="Waktu ujian TIU Anda telah habis. Ujian tidak dapat diulang.",
-            )
-        token = existing_attempt.token
-    else:
-        token = str(uuid.uuid4())
-        attempt = PPDBTIUAttempt(
-            id=str(uuid.uuid4()), applicant_id=applicant.id, token=token, created_at=now
-        )
-        db.add(attempt)
-        db.commit()
-
-    start_url = google_form_url.replace("{token}", token)
-
-    seb_xml = f"""<?xml version="1.0" encoding="utf-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-  <dict>
-    <key>startURL</key>
-    <string>{start_url}</string>
-  </dict>
-</plist>"""
-
-    return Response(
-        content=seb_xml,
-        media_type="application/seb",
-        headers={"Content-Disposition": "attachment; filename=ujian-tiu.seb"},
-    )

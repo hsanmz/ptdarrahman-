@@ -4,7 +4,7 @@ import { apiFetch } from '@/api/client'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Badge } from '@/components/ui'
-import { Printer, FileText, Brain, Award } from 'lucide-react'
+import { Printer, FileText, Award } from 'lucide-react'
 
 interface ApplicantTranscriptModalProps {
   open: boolean
@@ -33,8 +33,6 @@ export default function ApplicantTranscriptModal({
 
   const applicant = data?.applicant
   const categories = data?.categories || []
-  const tiuScore = data?.tiu_score
-  const tiuCompletedAt = data?.tiu_completed_at
   const notes = data?.evaluator_notes
   const graduationStatus = data?.graduation_status
 
@@ -98,49 +96,17 @@ export default function ApplicantTranscriptModal({
                 <span className="font-semibold text-sm text-slate-900">{applicant.nisn || applicant.nik || '-'}</span>
               </div>
               <div>
-                <span className="text-slate-500 block">Jalur Pendaftaran</span>
-                <span className="font-medium text-slate-800 capitalize">
-                  {applicant.registration_path || '-'}
-                </span>
-              </div>
-              <div>
                 <span className="text-slate-500 block">Gelombang PPDB</span>
                 <span className="font-medium text-slate-800">{applicant.wave_name || '-'}</span>
               </div>
             </div>
 
-            {/* Bagian 1: Hasil Ujian TIU Otomatis */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between border-b pb-1">
-                <h3 className="font-bold text-xs uppercase tracking-wide flex items-center gap-1.5 text-slate-800">
-                  <Brain className="h-4 w-4 text-primary" />
-                  1. Tes Inteligensi Umum (TIU)
-                </h3>
-                <span className="text-[10px] text-slate-500 italic">Sistem Terintegrasi SEB Webhook</span>
-              </div>
-
-              <div className="flex items-center justify-between p-3 border rounded bg-slate-50 text-xs">
-                <div>
-                  <p className="font-medium">Skor Pilihan Ganda TIU</p>
-                  <p className="text-[11px] text-slate-500">
-                    {tiuCompletedAt ? `Diselesaikan pada ${new Date(tiuCompletedAt).toLocaleString('id-ID')}` : 'Nilai otomatis tersimpan'}
-                  </p>
-                </div>
-                <div className="text-right">
-                  <span className="text-xl font-bold text-primary">
-                    {tiuScore != null ? tiuScore : '—'}
-                  </span>
-                  <span className="text-xs text-slate-500"> / 100</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Bagian 2: Hasil Ujian Rubrik (Tahfidz & Wawancara) */}
+            {/* Hasil Ujian Rubrik (Tahfidz & Wawancara) */}
             <div className="space-y-3">
               <div className="flex items-center justify-between border-b pb-1">
                 <h3 className="font-bold text-xs uppercase tracking-wide flex items-center gap-1.5 text-slate-800">
                   <Award className="h-4 w-4 text-amber-700" />
-                  2. Evaluasi Rubrik Penguji (Tahfidz & Wawancara)
+                  Evaluasi Rubrik Penguji (Tahfidz & Wawancara)
                 </h3>
                 <span className="text-[10px] text-slate-500">Rata-rata: {averageRubricScore} / 100</span>
               </div>

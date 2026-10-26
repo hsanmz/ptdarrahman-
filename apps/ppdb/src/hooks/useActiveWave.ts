@@ -4,8 +4,6 @@ import { apiFetch } from '@/api/client'
 export interface ActiveWave {
   id: string
   name: string
-  allowed_paths: string[] | null
-  allowed_levels: string[] | null
   active: boolean
 }
 
@@ -19,7 +17,5 @@ export function useActiveWave() {
   return {
     ...query,
     isActive: !!query.data?.active,
-    allowedPaths: query.data?.allowed_paths || null,
-    allowedLevels: query.data?.allowed_levels || null,
   }
 }

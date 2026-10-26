@@ -38,6 +38,7 @@ const SendDirectSchema = z.object({
   eventKey: z.string().default("custom"),
   recipientUserId: z.string().optional(),
   templateId: z.string().optional(),
+  logId: z.string().optional(),
   priority: z.enum(["high", "normal", "low"]).default("normal"),
 });
 
@@ -184,11 +185,12 @@ router.post("/send", sendRateLimiter, async (req: Request, res: Response) => {
     eventKey: body.eventKey,
     recipientUserId: body.recipientUserId ?? "unknown",
     templateId: body.templateId,
+    ...(body.logId ? { logId: body.logId } : {}),
     priority: body.priority,
     enqueuedAt: new Date().toISOString(),
   };
 
-  const logId = await auditLogService.createLog(jobData);
+  const logId = jobData.logId ?? (await auditLogService.createLog(jobData));
   jobData.logId = logId;
 
   const result = await enqueueWithDirectFallback(jobData);

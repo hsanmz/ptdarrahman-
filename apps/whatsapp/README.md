@@ -16,8 +16,8 @@ Service ini adalah aplikasi _standalone_ Node.js yang bertugas secara eksklusif 
 Aplikasi ini mendengarkan instruksi *queue* dari backend (`apps/api`) via **BullMQ** (Redis) dan melakukan *broadcast* pesan massal tanpa terkena _rate-limit_:
 - ⏰ **Pengingat Berkala:** Mem-blasting peringatan tagihan tertunda setiap hari Senin.
 - 🛑 **Alert Kuota:** Mengirim notifikasi pembatalan invoice jika kuota gelombang tiba-tiba habis.
-- 🎓 **Hasil Realtime:** Mengirim status kelulusan TIU sesaat setelah skor masuk ke backend.
-- 🎫 **Distribusi Tiket:** Menyampaikan panduan dan tiket instalasi Safe Exam Browser (SEB).
+- 🎓 **Hasil Kelulusan & LoA:** Mengirim status kelulusan dan dokumen penerimaan resmi santri.
+- 📅 **Konfirmasi Sesi:** Menyampaikan jadwal sesi 1:1 Tahfidz dan Wawancara.
 
 ## 📦 Menjalankan secara Lokal
 

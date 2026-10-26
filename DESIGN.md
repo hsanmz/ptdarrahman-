@@ -64,7 +64,7 @@ Sistem menggunakan token warna semantik yang didefinisikan pada konfigurasi Tail
 | `emerald.dark` | `#135235` | Status hover/active tombol primary, header tabel |
 | `emerald.light` | `#E8F5EE` | Latar belakang badge sukses, highlight baris aktif |
 | `emerald.glow` | `rgba(34, 197, 94, 0.25)` | Cahaya aksen (glow) pada kartu aktif dan tombol fokus |
-| `gold.accent` | `#D4A853` | Aksen kemuliaan tahfidz — ornamen prestasi, bintang, highlight jalur tahfidz |
+| `gold.accent` | `#D4A853` | Aksen kemuliaan tahfidz — ornamen prestasi, bintang, highlight program tahfidz |
 | `gold.light` | `#F0C878` | Hover aksen emas, piala/medali penghargaan |
 | `gold.dark` | `#B88F3D` | Teks aksen emas di atas permukaan terang |
 | `gold.bg` | `#FEFAEE` | Latar belakang kartu informasi istimewa / kupon diskon formulir |
@@ -133,7 +133,7 @@ Tipografi disusun berjenjang dengan pemisahan peran yang tegas antara branding, 
 | **Heading 3 (H3)** | `1.125rem (18px)` | `1rem (16px)` | `1.4` | Medium (500) | Sub-seksi kartu, modal title |
 | **Body (P)** | `0.9375rem (15px)` | `0.875rem (14px)` | `1.6` | Regular (400) | Teks penjelasan, petunjuk form |
 | **Caption / Help** | `0.8125rem (13px)` | `0.75rem (12px)` | `1.4` | Regular (400) | Bantuan input, status footer |
-| **Badge / Label** | `0.75rem (12px)` | `0.6875rem (11px)` | `1` | Semibold (600) | Status pill, tag kuota, jalur |
+| **Badge / Label** | `0.75rem (12px)` | `0.6875rem (11px)` | `1` | Semibold (600) | Status pill, tag kuota, gelombang |
 
 ---
 
@@ -154,7 +154,7 @@ boxShadow: {
   /* Aura hijau zamrud untuk elemen sukses / tombol primer */
   'glow-emerald': '0 0 20px rgba(34, 197, 94, 0.35)',
 
-  /* Aura emas untuk penghargaan, nomor registrasi SKD, badge lolos */
+  /* Aura emas untuk penghargaan, nomor LoA, dan badge hasil pendaftaran */
   'glow-gold': '0 0 20px rgba(212, 168, 83, 0.35)',
 }
 ```
@@ -258,17 +258,16 @@ packages/ui/src/
 
 ## 8. Pola Form & Interaksi Pengguna (UX Patterns)
 
-### 8.1. Wizard Registrasi 7 Bagian
+### 8.1. Wizard Registrasi 6 Bagian
 
 Formulir pendaftaran dirancang dengan pendekatan *progressive disclosure*:
 
 ```
-[1. Pilih Jalur] ─► [2. Data Santri] ─► [3. Orang Tua/Wali] ─► [4. Kontak]
-                                                                     │
-[7. Pernyataan] ◄─ [6. Kuesioner Kesehatan] ◄─ [5. Domisili] ◄───────┘
+[1. Data Santri] ─► [2. Orang Tua/Wali] ─► [3. Kontak] ─► [4. Domisili]
+                                                                  │
+[6. Pernyataan] ◄─ [5. Kuesioner Kesehatan] ◄─────────────────────┘
 ```
 
-- **Pilihan Jalur Bersih:** Nama jalur pendaftaran ditampilkan apa adanya tanpa embel-embel teknis seperti `(Non-TIU)` atau `(Tes TIU)`.
 - **Kelengkapan Orang Tua/Wali:** Formulir mewajibkan data Ayah dan Ibu secara terpisah (Nama, Pekerjaan, Nomor WhatsApp) serta opsional Wali. Data ini **tidak boleh disingkat** menjadi satu baris `parent_name` di antarmuka mana pun.
 - **Kuesioner Kesehatan Kondisional (10 Soal Baku):**
   - Pertanyaan Ya/Tidak hanya membuka kolom isian keterangan lanjutan jika pengguna memilih "Ya".
@@ -292,7 +291,6 @@ Semua dokumen resmi lembaga (`apps/ppdb/src/utils/export*`) dicetak dengan rasio
 | **Nomor Registrasi Resmi** | Format `REG-{YYYYMMDD}-{XXXX}` dengan font monospace tebal dan kontras tinggi |
 | **Kuitansi Pembayaran** | Memuat segel digital, stempel cap panitia, rincian nominal terbilang, dan **Kode QR bertoken HMAC** |
 | **Letter of Acceptance (LoA)** | Memuat klausul pembatalan non-refundable, tabel rincian biaya, serta **dua kotak tanda tangan berdampingan** (Wali Santri & Panitia PPDB) |
-| **Surat Keterangan Diterima (SKD)** | Diterbitkan eksklusif pasca-pelunasan DP dengan latar belakang watermark stempel orisinal pesantren |
 
 ---
 

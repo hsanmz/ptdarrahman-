@@ -349,62 +349,6 @@ class TestWebhookIdempotencyAndReplayProtection:
                     in exc_info.value.detail
                 )
 
-    def test_tiu_webhook_rejects_conflicting_score_with_409(self):
-        from datetime import datetime
-        from unittest.mock import MagicMock
-
-        from fastapi import HTTPException
-
-        from src.models.ppdb import PPDBApplicant, PPDBTIUAttempt
-        from src.models.selection import (
-            SelectionCategory,
-            SelectionCriteria,
-            SelectionScore,
-        )
-        from src.modules.ppdb.router import TIUWebhookPayload, tiu_webhook
-
-        mock_db = MagicMock()
-        mock_db.get.return_value = None  # site settings fallback
-
-        attempt = PPDBTIUAttempt(
-            id="att-1",
-            applicant_id="app-1",
-            token="valid-token-123",
-            created_at=datetime.now(),
-        )
-        applicant = PPDBApplicant(
-            id="app-1", user_id="user-1", wave_id="wave-1", status="document_verified"
-        )
-        category = SelectionCategory(id="cat-1", wave_id="wave-1", name="TIU")
-        criteria = SelectionCriteria(
-            id="crit-1", category_id="cat-1", name="Google Form", weight=100.0
-        )
-        # Existing score is 80.0
-        score_entry = SelectionScore(
-            id="sc-1",
-            applicant_id="app-1",
-            criteria_id="crit-1",
-            score=80.0,
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
-        )
-
-        # Mocking query returns
-        mock_db.query.return_value.filter.return_value.first.side_effect = [
-            attempt,
-            applicant,
-            category,
-            criteria,
-            score_entry,  # Existing score entry with 80.0
-        ]
-
-        with patch.object(settings, "tiu_webhook_secret", "tiu_secret_123"):
-            payload = TIUWebhookPayload(token="valid-token-123", score=95.0)
-            with pytest.raises(HTTPException) as exc_info:
-                tiu_webhook(payload, x_tiu_secret="tiu_secret_123", db=mock_db)
-            assert exc_info.value.status_code == 409
-            assert "sudah tercatat final" in exc_info.value.detail
-
     @pytest.mark.asyncio
     async def test_wa_webhook_preserves_idempotency_key_if_db_already_committed(self):
         from unittest.mock import AsyncMock, MagicMock
@@ -543,72 +487,6 @@ class TestWebhookIdempotencyAndReplayProtection:
                     x_secret="secret123",
                 )
                 assert result_b["status"] == "already_paid"
-
-    def test_tiu_webhook_concurrent_callback_catches_integrity_error_idempotently(self):
-        from datetime import datetime
-        from unittest.mock import MagicMock
-
-        from sqlalchemy.exc import IntegrityError
-
-        from src.models.ppdb import PPDBApplicant, PPDBTIUAttempt
-        from src.models.selection import (
-            SelectionCategory,
-            SelectionCriteria,
-            SelectionScore,
-        )
-        from src.modules.ppdb.router import TIUWebhookPayload, tiu_webhook
-
-        mock_db = MagicMock()
-        mock_db.get.return_value = None
-
-        attempt = PPDBTIUAttempt(
-            id="att-2",
-            applicant_id="app-2",
-            token="race-token-123",
-            created_at=datetime.now(),
-        )
-        applicant = PPDBApplicant(
-            id="app-2", user_id="user-2", wave_id="wave-2", status="document_verified"
-        )
-        category = SelectionCategory(id="cat-2", wave_id="wave-2", name="TIU")
-        criteria = SelectionCriteria(
-            id="crit-2", category_id="cat-2", name="Google Form", weight=100.0
-        )
-
-        # Existing record that the winner of the race inserted
-        winner_score = SelectionScore(
-            id="sc-winner",
-            applicant_id="app-2",
-            criteria_id="crit-2",
-            score=90.0,
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
-        )
-
-        # Query returns attempt, applicant, category, criteria, then None for
-        # initial score check
-        mock_db.query.return_value.filter.return_value.first.side_effect = [
-            attempt,
-            applicant,
-            category,
-            criteria,
-            None,  # Initial query: score not found yet
-            winner_score,  # Post-IntegrityError query: winner score is found!
-        ]
-
-        # db.commit() raises IntegrityError (race condition on unique constraint)
-        mock_db.commit.side_effect = IntegrityError(
-            "statement", "params", "Duplicate entry for key"
-        )
-
-        with patch.object(settings, "tiu_webhook_secret", "tiu_secret_123"):
-            payload = TIUWebhookPayload(token="race-token-123", score=90.0)
-            res = tiu_webhook(payload, x_tiu_secret="tiu_secret_123", db=mock_db)
-
-            # Assert rollback was called and idempotent success response returned
-            assert mock_db.rollback.called
-            assert res["status"] == "success"
-            assert res["already_recorded"] is True
 
     @pytest.mark.asyncio
     async def test_wa_webhook_updates_correct_log_by_job_id_when_multiple_queued(self):

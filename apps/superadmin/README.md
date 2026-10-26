@@ -1,5 +1,5 @@
-<div align="center">
-  <h1>🛡️ Superadmin</h1>
+﻿<div align="center">
+  <h1>ðŸ›¡ï¸ Superadmin</h1>
   <p><strong>Panel Manajemen Pengguna, Hak Akses & Operasional Platform</strong></p>
 
   [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
@@ -13,28 +13,27 @@ Aplikasi frontend berbasis **Vite + React + TypeScript** yang berfungsi sebagai 
 
 Di panel ini, **Superadmin** mengelola akun pengguna, matriks hak akses/role (RBAC), memantau log aktivitas, serta mengelola koneksi WhatsApp gateway.
 
-## ✨ Fitur Utama
+## âœ¨ Fitur Utama
 
-- 📊 **Dashboard:** Statistik total pengguna aktif, distribusi role, dan aktivitas sistem.
-- 👥 **Users:** CRUD akun staf/admin, penetapan role, dan izin halaman per user.
-- 🛡️ **Roles & Permissions:** Konfigurasi role sistem dan penugasan izin modul (`companyprofile` dan `ppdb`) dengan level akses (`none` < `dashboard` < `read` < `crud`).
-- 🎓 **Pendaftar:** Tinjauan daftar seluruh pendaftar PPDB dan kemampuan reset kata sandi akun pendaftar.
-- 🕘 **Aktivitas:** Jejak audit (*audit trail*) aktivitas pengguna dan admin.
-- 🔔 **Notifikasi:** Melihat riwayat pengiriman notifikasi dan mengirim notifikasi kustom ke nomor tujuan.
-- 📱 **WhatsApp Bridge:** Memantau status koneksi bot WhatsApp, scan QR code otorisasi, dan tes koneksi.
-- 🧠 **Semantic Search & Quick Action (`Ctrl+K`):** Pencarian semantik cerdas bertenaga pemrosesan bahasa alami di header dashboard untuk mencari menu, data pendaftar, pintasan, dan eksekusi aksi navigasi cepat.
-- 👤 **Profil & Manajemen Sesi:** Memperbarui profil personal superadmin (avatar editor, nama, dan kata sandi), serta memantau dan mencabut sesi perangkat aktif dari jarak jauh.
+- ðŸ“Š **Dashboard:** Statistik total pengguna aktif, distribusi role, dan aktivitas sistem.
+- ðŸ‘¥ **Users:** CRUD akun staf/admin, penetapan role, dan izin halaman per user.
+- ðŸ›¡ï¸ **Roles & Permissions:** Konfigurasi role sistem dan penugasan izin modul (`companyprofile` dan `ppdb`) dengan level akses (`none` < `dashboard` < `read` < `crud`).
+- ðŸŽ“ **Pendaftar:** Tinjauan daftar seluruh pendaftar PPDB dan kemampuan reset kata sandi akun pendaftar.
+- ðŸ•˜ **Aktivitas:** Jejak audit (*audit trail*) aktivitas pengguna dan admin.
+- ðŸ”” **Notifikasi:** Melihat riwayat pengiriman notifikasi dan mengirim notifikasi kustom ke nomor tujuan.
+- ðŸ“± **WhatsApp Bridge:** Memantau status koneksi bot WhatsApp, scan QR code otorisasi, dan tes koneksi.
+- ðŸ§  **Semantic Search & Quick Action (`Ctrl+K`):** Pencarian semantik cerdas bertenaga pemrosesan bahasa alami di header dashboard untuk mencari menu, data pendaftar, pintasan, dan eksekusi aksi navigasi cepat.
+- ðŸ‘¤ **Profil & Manajemen Sesi:** Memperbarui profil personal superadmin (avatar editor, nama, dan kata sandi), serta memantau dan mencabut sesi perangkat aktif dari jarak jauh.
 
-> **Catatan:** Operasional PPDB harian (gelombang, verifikasi dokumen, pembayaran formulir/cicilan, penjadwalan sesi 1:1, penilaian evaluator, penerbitan LoA/SKD, dan pencarian arsip dossier) berada di aplikasi [`apps/ppdb`](../ppdb/README.md), bukan di panel Superadmin ini.
 
-## 🛠️ Stack Teknologi
+## ðŸ› ï¸ Stack Teknologi
 
 - **Framework:** React 19, Vite 8, React Router v7
 - **Bahasa:** TypeScript
 - **Styling:** Tailwind CSS v3, Radix UI primitives, Lucide React
 - **Koneksi API:** Berkomunikasi dengan [`apps/api`](../api/README.md) via HTTP-only Cookies (`credentials: 'include'`)
 
-## 📦 Menjalankan secara Lokal
+## ðŸ“¦ Menjalankan secara Lokal
 
 Aplikasi ini masuk ke dalam ekosistem `pnpm workspace`. Buka terminal di root repository:
 
@@ -44,12 +43,11 @@ pnpm --filter superadmin dev
 ```
 
 > **Informasi Port:**
-> - Saat dijalankan secara lokal (`pnpm --filter superadmin dev`), Vite dev server default berjalan pada `http://localhost:5173`.
-> - Saat dijalankan melalui Docker Compose (preview), container memetakan Superadmin ke port `http://localhost:5174`.
+> - Baik dijalankan secara lokal (`pnpm --filter superadmin dev`) maupun melalui Docker Compose (preview), Superadmin berjalan pada port `http://localhost:5173`.
 
-## 📚 Bacaan Lebih Lanjut
-- 🤖 [**Panduan Panel Superadmin (AGENTS.md)**](AGENTS.md) — Arsitektur teknis, guarded routes, dan otorisasi cookie.
-- 📖 [**Dokumen Requirements Global**](../../docs/REQUIREMENTS.md) — Aturan bisnis menyeluruh ekosistem PPDB.
+## ðŸ“š Bacaan Lebih Lanjut
+- ðŸ¤– [**Panduan Panel Superadmin (AGENTS.md)**](AGENTS.md) â€” Arsitektur teknis, guarded routes, dan otorisasi cookie.
+- ðŸ“– [**Dokumen Requirements Global**](../../docs/REQUIREMENTS.md) â€” Aturan bisnis menyeluruh ekosistem PPDB.
 
 ---
-⬅️ [Kembali ke Halaman Utama](../../README.md)
+â¬…ï¸ [Kembali ke Halaman Utama](../../README.md)

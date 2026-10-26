@@ -72,8 +72,7 @@ const AVAILABLE_VARS = [
   { key: '{link_login}',            desc: 'URL halaman login PPDB',              group: 'Link' },
   { key: '{link_aplikasi}',         desc: 'URL dashboard PPDB',                  group: 'Link' },
   { key: '{link_pembayaran}',       desc: 'URL halaman pembayaran formulir',     group: 'Link' },
-  { key: '{link_panduan_seb}',      desc: 'URL panduan instalasi SEB',           group: 'Link' },
-  { key: '{link_grup_whatsapp}',    desc: 'Link grup WA resmi (setelah DP)',     group: 'Link' },
+  { key: '{link_grup_whatsapp}',    desc: 'Link grup WA resmi calon santri (Kelulusan / LoA)', group: 'Link' },
   // Gelombang
   { key: '{nama_gelombang}',        desc: 'Nama gelombang pendaftaran',          group: 'Gelombang' },
   { key: '{tanggal_tutup}',         desc: 'Tanggal tutup gelombang',             group: 'Gelombang' },
@@ -84,8 +83,6 @@ const AVAILABLE_VARS = [
   { key: '{alasan_gagal}',          desc: 'Alasan pembayaran gagal',             group: 'Pembayaran' },
   // Dokumen
   { key: '{alasan_penolakan}',      desc: 'Alasan dokumen ditolak oleh admin',   group: 'Dokumen' },
-  // TIU
-  { key: '{nilai_tiu}',             desc: 'Nilai tes TIU (0–100)',               group: 'TIU' },
   // Ujian
   { key: '{nama_ujian}',            desc: 'Nama ujian (Tahfidz / Wawancara)',    group: 'Ujian' },
   { key: '{tanggal}',               desc: 'Tanggal pelaksanaan ujian',           group: 'Ujian' },
@@ -99,8 +96,8 @@ const AVAILABLE_VARS = [
   { key: '{sisa_waktu}',            desc: 'Sisa waktu bayar DP',                 group: 'DP' },
   { key: '{tanggal_jatuh_tempo}',   desc: 'Tanggal jatuh tempo pembayaran',      group: 'DP' },
   // Cicilan
-  { key: '{bulan_cicilan}',         desc: 'Bulan tagihan cicilan',               group: 'Cicilan' },
-  { key: '{nominal_cicilan}',       desc: 'Nominal tagihan cicilan',             group: 'Cicilan' },
+
+
 ]
 
 const VAR_GROUPS = [...new Set(AVAILABLE_VARS.map(v => v.group))]
@@ -117,7 +114,6 @@ const PREVIEW_CONTEXT: Record<string, string> = {
   '{link_login}': `${activeOrigin}/login`,
   '{link_aplikasi}': `${activeOrigin}/dashboard`,
   '{link_pembayaran}': `${activeOrigin}/payment`,
-  '{link_panduan_seb}': `${activeOrigin}/panduan-seb`,
   '{link_grup_whatsapp}': 'https://chat.whatsapp.com/contoh',
   '{nama_gelombang}': 'Gelombang 1 TA 2026/2027',
   '{tanggal_tutup}': '31 Oktober 2026',
@@ -126,7 +122,6 @@ const PREVIEW_CONTEXT: Record<string, string> = {
   '{nominal_bayar}': 'Rp 350.000',
   '{alasan_gagal}': 'Saldo tidak mencukupi',
   '{alasan_penolakan}': 'Foto tidak jelas / buram',
-  '{nilai_tiu}': '82',
   '{nama_ujian}': 'Ujian Tahfidz',
   '{tanggal}': 'Sabtu, 10 Oktober 2026',
   '{jam_mulai}': '08.00',
@@ -136,36 +131,39 @@ const PREVIEW_CONTEXT: Record<string, string> = {
   '{deadline_daftar_ulang}': '20 Oktober 2026 23:59',
   '{sisa_waktu}': '2 pekan lagi',
   '{tanggal_jatuh_tempo}': '10 Januari 2027',
-  '{bulan_cicilan}': 'Oktober 2026',
-  '{nominal_cicilan}': 'Rp 1.500.000',
+
+
 }
 
 // Event key kanonikal berdasarkan spec notifikasi (urutan per fase)
 const SPEC_EVENT_KEYS: Array<{ key: string; label: string; phase: string }> = [
+  { key: 'user_created',               label: 'Akun Dibuat — Kredensial ke Pengguna',     phase: '1 – Akun' },
+  { key: 'account_updated',            label: 'Username/Email/Telepon Diubah',           phase: '1 – Akun' },
+  { key: 'password_reset',             label: 'Password Direset Admin',                  phase: '1 – Akun' },
+  { key: 'password_changed',           label: 'Password Diubah Pengguna',                phase: '1 – Akun' },
   // Fase 1
   { key: 'registration_account_created', label: 'Pendaftaran Akun Berhasil',              phase: '1 – Pendaftaran' },
   { key: 'payment_success_formulir',     label: 'Pembayaran Formulir Berhasil',           phase: '1 – Pendaftaran' },
   { key: 'wave_closed_pending_payment',  label: 'Gelombang Ditutup – Tagihan Dibatalkan', phase: '1 – Pendaftaran' },
   { key: 'payment_reminder_monday',      label: 'Pengingat Bayar Formulir (Senin)',       phase: '1 – Pendaftaran' },
+  { key: 'payment_expired',              label: 'Pendaftaran Kedaluwarsa',                phase: '1 – Pendaftaran' },
   // Fase 2
   { key: 'document_rejected_revision',   label: 'Dokumen Ditolak – Perlu Revisi',         phase: '2 – Dokumen' },
-  { key: 'document_approved_non_tiu',    label: 'Dokumen Disetujui (Bukan TIU)',          phase: '2 – Dokumen' },
-  { key: 'tiu_exam_instructions',        label: 'Instruksi Ujian TIU',                    phase: '2 – Dokumen/TIU' },
-  { key: 'tiu_result_ready',             label: 'Hasil TIU Tersedia',                     phase: '2 – Dokumen/TIU' },
+  { key: 'documents_submitted',          label: 'Dokumen Dikirim untuk Verifikasi',       phase: '2 – Dokumen' },
+  { key: 'document_approved',            label: 'Dokumen Disetujui',                      phase: '2 – Dokumen' },
   // Fase 3
-  { key: 'session_confirmed',            label: 'Jadwal Ujian Terkonfirmasi',              phase: '3 – Ujian' },
-  { key: 'tahfidz_score_recorded',       label: 'Nilai Tahfidz Direkam',                  phase: '3 – Ujian' },
-  { key: 'interview_completed',          label: 'Wawancara Selesai',                       phase: '3 – Ujian' },
+  { key: 'session_confirmed',            label: 'Jadwal Seleksi Ditetapkan atau Diubah',   phase: '3 – Penilaian' },
+  { key: 'assessment_stage_completed',   label: 'Tahap Penilaian Selesai',                phase: '3 – Penilaian' },
   // Fase 4
-  { key: 'selection_result_passed',      label: 'Lulus Seleksi + Instruksi DP',           phase: '4 – Kelulusan' },
-  { key: 'selection_result_failed',      label: 'Tidak Lulus Seleksi',                    phase: '4 – Kelulusan' },
-  { key: 'dp_payment_reminder',          label: 'Pengingat Bayar DP Mingguan',            phase: '4 – Kelulusan' },
-  { key: 'dp_payment_success',           label: 'Pembayaran DP Berhasil + SKD',           phase: '4 – Kelulusan' },
+  { key: 'registration_result_passed',   label: 'Hasil Pendaftaran: Lulus',               phase: '4 – Hasil Pendaftaran' },
+  { key: 'registration_result_failed',   label: 'Hasil Pendaftaran: Tidak Lulus',         phase: '4 – Hasil Pendaftaran' },
+  { key: 'loa_signed',                   label: 'LoA Ditandatangani — PPDB Selesai',    phase: '4 – Hasil Pendaftaran' },
   // Fase 5
-  { key: 'reminder_upload_docs_h3',      label: 'Pengingat Upload Dokumen H+3',           phase: '5 – Pengingat' },
-  { key: 'reminder_take_session_h2',     label: 'Pengingat Pilih Jadwal Ujian H+2',       phase: '5 – Pengingat' },
-  { key: 'reminder_exam_1hour',          label: 'Pengingat Ujian 1 Jam Sebelum',          phase: '5 – Pengingat' },
-  { key: 'reminder_installment',         label: 'Pengingat Cicilan Bulanan',               phase: '5 – Pengingat' },
+  { key: 'reminder_upload_docs_h3',      label: 'Pengingat Submit Dokumen H+3',           phase: '5 – Pengingat' },
+  { key: 'reminder_exam_h2',             label: 'Pengingat Jadwal Seleksi H-2',            phase: '5 – Pengingat' },
+  { key: 'reminder_exam_h1',             label: 'Pengingat Jadwal Seleksi H-1',            phase: '5 – Pengingat' },
+  { key: 'reminder_exam_1hour',          label: 'Pengingat Sesi Seleksi 1 Jam Sebelum',  phase: '5 – Pengingat' },
+
 ]
 
 const SPEC_PHASES = [...new Set(SPEC_EVENT_KEYS.map(s => s.phase))]
@@ -498,7 +496,7 @@ function SendTab({ templates, canCrud = true }: { templates: Template[]; canCrud
 // ── Tab: Template Manager ──────────────────────────────────────────────────────
 
 interface TemplateTabProps {
-  /** Templates dari parent — sudah terfilter untuk PPDB (tanpa user_created/password_reset). */
+  /** Templates notifikasi yang dibaca dari database. */
   templates: Template[]
   loading: boolean
   /** Dipanggil setelah simpan agar parent refresh state-nya. */
@@ -1221,11 +1219,7 @@ export default function NotificationsPage() {
 
   useEffect(() => { fetchTemplates() }, [fetchTemplates])
 
-  // Sembunyikan template yang tidak relevan untuk admin PPDB (user_created, password_reset
-  // adalah domain superadmin)
-  const ppdbTemplates = templates.filter(
-    t => t.event_key !== 'user_created' && t.event_key !== 'password_reset',
-  )
+  const ppdbTemplates = templates.filter(t => t.event_key !== 'account_created')
   const activeCount = ppdbTemplates.filter(t => t.is_active).length
   const specCoveredCount = SPEC_EVENT_KEYS.filter(s =>
     templates.some(t => t.event_key === s.key),

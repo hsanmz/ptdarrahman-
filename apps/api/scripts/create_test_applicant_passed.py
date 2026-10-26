@@ -10,7 +10,6 @@ Run from the ``apps/api`` directory:
 Idempotent. Membuat/memperbarui:
   * user ``Pendaftar`` bernama ``testpendaftar2`` dengan password tetap;
   * applicant dengan ``payment_status="paid"`` dan ``status="passed"``;
-  * nilai TIU tersimpan (seolah sudah ujian);
   * rubrik global "Tahfidz" & "Wawancara" (kategori + kriteria) bila belum ada,
     beserta nilai Session 1:1 Tahfidz & Wawancara milik pendaftar ini;
   * hasil seleksi ``graduation_status="passed"`` dengan sesi Tahfidz/Wawancara
@@ -49,7 +48,6 @@ from src.models.ppdb import (  # noqa: E402
     PPDBApplicant,
     PPDBPeriod,
     PPDBWave,
-    TIUResult,
 )
 from src.models.selection import (  # noqa: E402
     SelectionCategory,
@@ -65,7 +63,6 @@ TEST_PASSWORD = "TestPPDB123!."
 TEST_EMAIL = "testpendaftar2@ppdb.local"
 TEST_FULL_NAME = "Pendaftar Test Lulus"
 TEST_PHONE = "081200000001"
-TEST_PATH = "reguler"
 TEST_STATUS = "passed"
 
 # Kategori rubrik bersifat global (wave_id="global") mengikuti SelectionService.
@@ -342,7 +339,6 @@ def main() -> None:
                 full_name=TEST_FULL_NAME,
                 email=user.email,
                 phone=TEST_PHONE,
-                registration_path=TEST_PATH,
                 status=TEST_STATUS,
                 payment_status="paid",
                 dp_status="pending",
@@ -419,25 +415,6 @@ def main() -> None:
         )
         result.updated_at = now
         db.flush()
-
-        # ── Nilai TIU (seolah sudah ujian & terkirim lewat webhook) ───────────
-        tiu = db.scalars(
-            select(TIUResult).where(TIUResult.applicant_id == applicant.id)
-        ).first()
-        if tiu:
-            tiu.score = 85.0
-        else:
-            db.add(
-                TIUResult(
-                    id=str(uuid4()),
-                    applicant_id=applicant.id,
-                    attempt_id=None,
-                    idempotency_key=f"fixture-tiu-{applicant.id}",
-                    score=85.0,
-                    completed_at=now,
-                    created_at=now,
-                )
-            )
 
         db.commit()
 

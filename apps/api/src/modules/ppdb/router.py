@@ -1,4 +1,3 @@
-import hmac
 import logging
 from datetime import datetime
 from typing import Any
@@ -16,8 +15,6 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from src.core.config import settings
@@ -28,21 +25,21 @@ from src.core.dependencies import (
     require_ppdb_read,
 )
 from src.core.rate_limit import rate_limit_dependency
-from src.models.content import SiteSetting
+
 from src.modules.ppdb.schemas import (
     ApplicantAdminCreate,
     ApplicantAdminUpdate,
-    ApplicantChangePath,
     ApplicantPasswordReset,
     ApplicantProfileUpdate,
     ApplicantRegister,
+    DocumentSubmitRequest,
     DocumentVerify,
     LoASignatureRequest,
     PeriodCreate,
+    PeriodFeeItemCreate,
+    PeriodFeeItemUpdate,
     PeriodUpdate,
-    TIUSettingsUpdate,
-    TIUVerificationRequest,
-    TIUVerificationResponse,
+    WaveFeeDiscountUpdate,
     WaveCreate,
     WaveFeeItemCreate,
     WaveFeeItemUpdate,
@@ -54,290 +51,6 @@ from src.services.ppdb_service import PPDBService
 logger = logging.getLogger("ptdarrahman.ppdb")
 router = APIRouter()
 WIB = ZoneInfo("Asia/Jakarta")
-
-
-def _upsert_site_setting(db: Session, key: str, value: str, now: datetime) -> None:
-    setting = db.get(SiteSetting, key)
-    if setting:
-        setting.value = value
-        setting.updated_at = now
-    else:
-        db.add(SiteSetting(key=key, value=value, created_at=now, updated_at=now))
-
-
-def _record_tiu_sync_status(
-    db: Session, status: str, synced_at: str, error: str = ""
-) -> None:
-    now = datetime.now(WIB).replace(tzinfo=None)
-    _upsert_site_setting(db, "ppdb_tiu_sync_status", status, now)
-    _upsert_site_setting(db, "ppdb_tiu_sync_at", synced_at, now)
-    _upsert_site_setting(db, "ppdb_tiu_sync_error", error[:1000], now)
-    db.commit()
-
-
-@router.get("/tiu-settings")
-def get_tiu_settings(
-    user: dict = Depends(require_ppdb_read), db: Session = Depends(get_db)
-):
-    keys = (
-        "ppdb_tiu_google_form_url",
-        "ppdb_tiu_duration_minutes",
-        "ppdb_tiu_webhook_secret",
-        "ppdb_tiu_sync_status",
-        "ppdb_tiu_sync_at",
-        "ppdb_tiu_sync_error",
-        "ppdb_tiu_sync_question_count",
-    )
-    rows = db.query(SiteSetting).filter(SiteSetting.key.in_(keys)).all()
-    values = {row.key: row.value or "" for row in rows}
-    return {
-        "google_form_url": values.get("ppdb_tiu_google_form_url", ""),
-        "duration_minutes": values.get("ppdb_tiu_duration_minutes", ""),
-        "webhook_secret_configured": bool(
-            values.get("ppdb_tiu_webhook_secret") or settings.tiu_webhook_secret
-        ),
-        "sync_status": values.get("ppdb_tiu_sync_status", "not_synced"),
-        "sync_at": values.get("ppdb_tiu_sync_at", ""),
-        "sync_error": values.get("ppdb_tiu_sync_error", ""),
-        "sync_question_count": values.get("ppdb_tiu_sync_question_count", "0"),
-    }
-
-
-@router.put("/tiu-settings")
-def update_tiu_settings(
-    body: TIUSettingsUpdate,
-    user: dict = Depends(require_ppdb_admin),
-    db: Session = Depends(get_db),
-):
-    now = datetime.now(WIB).replace(tzinfo=None)
-    values = {
-        "ppdb_tiu_google_form_url": body.google_form_url,
-        "ppdb_tiu_duration_minutes": str(body.duration_minutes),
-    }
-    if body.webhook_secret:
-        values["ppdb_tiu_webhook_secret"] = body.webhook_secret
-    for key, value in values.items():
-        setting = db.get(SiteSetting, key)
-        if setting:
-            setting.value = value
-            setting.updated_at = now
-        else:
-            db.add(SiteSetting(key=key, value=value, created_at=now, updated_at=now))
-    db.commit()
-    return {
-        "google_form_url": body.google_form_url,
-        "duration_minutes": body.duration_minutes,
-        "webhook_secret_configured": bool(
-            body.webhook_secret or settings.tiu_webhook_secret
-        ),
-    }
-
-
-@router.post("/tiu-settings/verify", response_model=TIUVerificationResponse)
-def verify_tiu_settings(
-    body: TIUVerificationRequest | None = None,
-    user: dict = Depends(require_ppdb_admin),
-    db: Session = Depends(get_db),
-):
-    from src.services.tiu_verification_service import TIUVerificationService
-
-    svc = TIUVerificationService(db)
-    return svc.verify(
-        google_form_url=body.google_form_url if body else None,
-        duration_minutes=body.duration_minutes if body else None,
-        webhook_secret=body.webhook_secret if body else None,
-    )
-
-
-class TIUWebhookPayload(BaseModel):
-    token: str
-    score: float
-
-
-@router.post("/webhook/tiu")
-def tiu_webhook(
-    payload: TIUWebhookPayload,
-    x_tiu_secret: str | None = Header(default=None),
-    db: Session = Depends(get_db),
-):
-    from src.core.config import settings
-    from src.models.ppdb import PPDBTIUAttempt
-    from src.models.selection import (
-        SelectionCategory,
-        SelectionCriteria,
-        SelectionScore,
-    )
-
-    configured = db.get(SiteSetting, "ppdb_tiu_webhook_secret")
-    expected = (configured.value if configured else None) or settings.tiu_webhook_secret
-    if (
-        not expected
-        or not x_tiu_secret
-        or not hmac.compare_digest(expected.strip(), x_tiu_secret.strip())
-    ):
-        raise HTTPException(status_code=401, detail="Secret tidak valid")
-
-    attempt = (
-        db.query(PPDBTIUAttempt).filter(PPDBTIUAttempt.token == payload.token).first()
-    )
-    if not attempt:
-        raise HTTPException(status_code=404, detail="Attempt tidak ditemukan")
-
-    duration_setting = db.get(SiteSetting, "ppdb_tiu_duration_minutes")
-    duration_minutes = (
-        int(duration_setting.value)
-        if duration_setting and duration_setting.value
-        else 120
-    )
-
-    now = datetime.now()
-    if (now - attempt.created_at).total_seconds() > (duration_minutes + 5) * 60:
-        raise HTTPException(status_code=400, detail="Ujian melewati batas waktu")
-
-    # Save score to applicant's selection result
-    # We need category "TIU", criteria "Google Form"
-    # Or create it if it doesn't exist? Since this is a webhook, let's assume
-    # active wave
-    from src.models.ppdb import PPDBApplicant
-
-    applicant = (
-        db.query(PPDBApplicant).filter(PPDBApplicant.id == attempt.applicant_id).first()
-    )
-    if not applicant:
-        raise HTTPException(status_code=404, detail="Applicant not found")
-
-    category = (
-        db.query(SelectionCategory)
-        .filter(
-            SelectionCategory.wave_id == applicant.wave_id,
-            SelectionCategory.name.ilike("%TIU%"),
-        )
-        .first()
-    )
-    if not category:
-        import uuid
-
-        category = SelectionCategory(
-            id=str(uuid.uuid4()),
-            wave_id=applicant.wave_id,
-            name="TIU",
-            created_at=now,
-            updated_at=now,
-        )
-        db.add(category)
-        db.commit()
-
-    criteria = (
-        db.query(SelectionCriteria)
-        .filter(
-            SelectionCriteria.category_id == category.id,
-            SelectionCriteria.name.ilike("%Google Form%"),
-        )
-        .first()
-    )
-    if not criteria:
-        import uuid
-
-        criteria = SelectionCriteria(
-            id=str(uuid.uuid4()),
-            category_id=category.id,
-            name="Google Form",
-            weight=100.0,
-            created_at=now,
-            updated_at=now,
-        )
-        db.add(criteria)
-        db.commit()
-
-    score_entry = (
-        db.query(SelectionScore)
-        .filter(
-            SelectionScore.applicant_id == applicant.id,
-            SelectionScore.criteria_id == criteria.id,
-        )
-        .first()
-    )
-    if score_entry:
-        if score_entry.score == payload.score:
-            return {
-                "status": "success",
-                "score": payload.score,
-                "already_recorded": True,
-            }
-        logger.warning(
-            "Webhook TIU ditolak: nilai untuk pendaftar %s "
-            "sudah tercatat final (%s vs %s)",
-            applicant.id,
-            score_entry.score,
-            payload.score,
-        )
-        raise HTTPException(
-            status_code=409,
-            detail=(
-                f"Nilai ujian TIU sudah tercatat final "
-                f"({score_entry.score}) dan tidak dapat diubah."
-            ),
-        )
-    else:
-        import uuid
-
-        score_entry = SelectionScore(
-            id=str(uuid.uuid4()),
-            applicant_id=applicant.id,
-            criteria_id=criteria.id,
-            score=payload.score,
-            created_at=now,
-            updated_at=now,
-        )
-        db.add(score_entry)
-
-    try:
-        db.commit()
-    except IntegrityError:
-        db.rollback()
-        # Jika request paralel lain sudah berhasil insert lebih dulu
-        existing = (
-            db.query(SelectionScore)
-            .filter(
-                SelectionScore.applicant_id == applicant.id,
-                SelectionScore.criteria_id == criteria.id,
-            )
-            .first()
-        )
-        if existing and existing.score == payload.score:
-            return {
-                "status": "success",
-                "score": payload.score,
-                "already_recorded": True,
-            }
-        elif existing:
-            raise HTTPException(
-                status_code=409,
-                detail=(
-                    f"Nilai ujian TIU sudah tercatat final "
-                    f"({existing.score}) dan tidak dapat diubah."
-                ),
-            )
-        raise
-
-    try:
-        from src.core.notif_service import send_notification
-
-        score_str = str(
-            int(payload.score) if float(payload.score).is_integer() else payload.score
-        )
-        send_notification(
-            event_key="tiu_result_ready",
-            recipient_user_id=applicant.user_id,
-            context={
-                "nilai_tiu": score_str,
-                "link_aplikasi": f"{settings.ppdb_frontend_url}/dashboard",
-            },
-        )
-    except Exception:
-        pass
-
-    return {"status": "success", "score": payload.score}
 
 
 def get_ppdb_service(db: Session = Depends(get_db)) -> PPDBService:
@@ -429,6 +142,73 @@ def deactivate_period(
 
 
 @router.delete("/periods/{id}")
+# ---------------------------------------------------------------------------
+# Period Fee Items (Master Komponen Biaya per Periode)
+# ---------------------------------------------------------------------------
+@router.get("/periods/{id}/fee-items")
+def get_period_fee_items(
+    id: str,
+    user: dict = Depends(require_ppdb_read),
+    service: PPDBService = Depends(get_ppdb_service),
+):
+    return service.get_period_fee_items(id)
+
+
+@router.post("/periods/{id}/fee-items", status_code=201)
+def create_period_fee_item(
+    id: str,
+    body: PeriodFeeItemCreate,
+    user: dict = Depends(require_ppdb_admin),
+    service: PPDBService = Depends(get_ppdb_service),
+):
+    result = service.create_period_fee_item(id, body)
+    audit_log(
+        user_id=user.get("id"),
+        user_username=user.get("username"),
+        action="create_fee_item",
+        entity_type="ppdb_period_fee_items",
+        entity_id=result.get("id"),
+    )
+    return result
+
+
+@router.put("/periods/{id}/fee-items/{item_id}")
+def update_period_fee_item(
+    id: str,
+    item_id: str,
+    body: PeriodFeeItemUpdate,
+    user: dict = Depends(require_ppdb_admin),
+    service: PPDBService = Depends(get_ppdb_service),
+):
+    result = service.update_period_fee_item(id, item_id, body)
+    audit_log(
+        user_id=user.get("id"),
+        user_username=user.get("username"),
+        action="update_fee_item",
+        entity_type="ppdb_period_fee_items",
+        entity_id=item_id,
+    )
+    return result
+
+
+@router.delete("/periods/{id}/fee-items/{item_id}")
+def delete_period_fee_item(
+    id: str,
+    item_id: str,
+    user: dict = Depends(require_ppdb_admin),
+    service: PPDBService = Depends(get_ppdb_service),
+):
+    result = service.delete_period_fee_item(id, item_id)
+    audit_log(
+        user_id=user.get("id"),
+        user_username=user.get("username"),
+        action="delete_fee_item",
+        entity_type="ppdb_period_fee_items",
+        entity_id=item_id,
+    )
+    return result
+
+
 def delete_period_endpoint(
     id: str,
     user: dict = Depends(require_ppdb_admin),
@@ -566,6 +346,25 @@ def delete_wave_fee_item(
 
 
 @router.put("/waves/{id}/fee-items/{item_id}")
+@router.put("/waves/{id}/fee-discounts/{fee_item_id}")
+def update_wave_fee_discount(
+    id: str,
+    fee_item_id: str,
+    body: WaveFeeDiscountUpdate,
+    user: dict = Depends(require_ppdb_admin),
+    service: PPDBService = Depends(get_ppdb_service),
+):
+    result = service.update_wave_fee_discount(id, fee_item_id, body)
+    audit_log(
+        user_id=user.get("id"),
+        user_username=user.get("username"),
+        action="update_wave_fee_discount",
+        entity_type="ppdb_wave_fee_discounts",
+        entity_id=f"{id}_{fee_item_id}",
+    )
+    return result
+
+
 def update_wave_fee_item(
     id: str,
     item_id: str,
@@ -600,6 +399,7 @@ def get_applicants(
     status: str | None = Query(None),
     period_id: str | None = Query(None),
     payment_status: str | None = Query(None),
+    sort: str | None = Query(None),
     user: dict = Depends(require_ppdb_read),
     service: PPDBService = Depends(get_ppdb_service),
 ):
@@ -611,7 +411,7 @@ def get_applicants(
     membatasi ke gelombang aktif saja (kompatibilitas).
     """
     return service.get_applicants(
-        page, perPage, search, wave_id, status, period_id, payment_status
+        page, perPage, search, wave_id, status, period_id, payment_status, sort
     )
 
 
@@ -688,15 +488,6 @@ def reset_applicant_password(
 # ─────────────────────────────────────────────────────────────────────────────
 # Dokumen Pendaftar
 # ─────────────────────────────────────────────────────────────────────────────
-@router.patch("/applicants/me/path")
-def change_my_path(
-    body: ApplicantChangePath,
-    user: dict[str, Any] = Depends(get_current_user),
-    service: PPDBService = Depends(get_ppdb_service),
-):
-    return service.change_my_path(user["id"], body.registration_path)
-
-
 @router.get("/documents")
 def get_my_documents(
     user: dict[str, Any] = Depends(get_current_user),
@@ -717,10 +508,11 @@ async def upload_ppdb_document(
 
 @router.post("/documents/submit")
 def submit_ppdb_documents(
+    payload: DocumentSubmitRequest | None = None,
     user: dict[str, Any] = Depends(get_current_user),
     service: PPDBService = Depends(get_ppdb_service),
 ):
-    return service.submit_documents(user)
+    return service.submit_documents(user, payload)
 
 
 @router.get("/applicants/{id}/documents")
@@ -773,61 +565,6 @@ def get_applicant_loa(
     service: PPDBService = Depends(get_ppdb_service),
 ):
     return service.get_applicant_loa(id)
-
-
-@router.get("/applicants/me/skd")
-def get_my_skd(
-    user: dict = Depends(get_current_user),
-    service: PPDBService = Depends(get_ppdb_service),
-):
-    from src.models.ppdb import PPDBApplicant
-    from src.services.payment_service import create_secure_doc_token
-
-    applicant = (
-        service.repository.db.query(PPDBApplicant)
-        .filter(
-            PPDBApplicant.user_id == user["id"],
-            PPDBApplicant.deleted_at.is_(None),
-        )
-        .first()
-    )
-    if not applicant:
-        raise HTTPException(status_code=404, detail="Data pendaftar tidak ditemukan")
-    if applicant.status != "passed":
-        raise HTTPException(status_code=400, detail="Pendaftar belum dinyatakan lulus")
-    if applicant.dp_status != "paid":
-        raise HTTPException(
-            status_code=400,
-            detail=(
-                "Surat Keterangan Diterima (SKD) hanya dapat diakses setelah "
-                "pembayaran DP berhasil diverifikasi."
-            ),
-        )
-
-    skd_data = service.get_applicant_skd(applicant.id)
-    skd_token = create_secure_doc_token("skd", applicant.id, exp_hours=720)
-    skd_data["secure_token"] = skd_token
-    return skd_data
-
-
-@router.get("/skd/download")
-def download_skd_by_token(
-    token: str = Query(...),
-    service: PPDBService = Depends(get_ppdb_service),
-):
-    from src.services.payment_service import verify_secure_doc_token
-
-    applicant_id = verify_secure_doc_token(token, "skd")
-    return service.get_applicant_skd(applicant_id)
-
-
-@router.get("/applicants/{id}/skd")
-def get_applicant_skd(
-    id: str,
-    user: dict = Depends(require_ppdb_read),
-    service: PPDBService = Depends(get_ppdb_service),
-):
-    return service.get_applicant_skd(id)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

@@ -43,7 +43,6 @@ TEST_PASSWORD = "TestPPDB123!."
 TEST_EMAIL = "testpendaftar@ppdb.local"
 TEST_FULL_NAME = "Pendaftar Test"
 TEST_PHONE = "081200000000"
-TEST_PATH = "reguler"
 TEST_STATUS = "document_uploaded_pending"
 
 
@@ -165,7 +164,6 @@ def main() -> None:
                 full_name=TEST_FULL_NAME,
                 email=user.email,
                 phone=TEST_PHONE,
-                registration_path=TEST_PATH,
                 status=TEST_STATUS,
                 payment_status="paid",
                 payment_deadline=deadline,

@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import {
-  LayoutDashboard, FileText, ShieldCheck, BookOpen, MessageSquare,
+  LayoutDashboard, FileText, BookOpen, MessageSquare,
   Trophy, Receipt,
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
@@ -25,9 +25,8 @@ import ApplicantProfileModal from '@/components/shared/ApplicantProfileModal'
 const navItems = [
   { label: 'Dashboard', icon: LayoutDashboard, href: '/applicant' },
   { label: 'Upload Dokumen', icon: FileText, href: '/applicant/dokumen' },
-  { label: 'Ujian TIU', icon: ShieldCheck, href: '/applicant/ujian-tiu' },
-  { label: 'Seleksi Tahfidz', icon: BookOpen, href: '/applicant/seleksi-tahfidz' },
-  { label: 'Seleksi Wawancara', icon: MessageSquare, href: '/applicant/seleksi-wawancara' },
+  { label: 'Tes Seleksi', icon: BookOpen, href: '/applicant/tes-seleksi' },
+  { label: 'Wawancara', icon: MessageSquare, href: '/applicant/wawancara' },
   { label: 'Pengumuman', icon: Trophy, href: '/applicant/pengumuman' },
   { label: 'Kuitansi', icon: Receipt, href: '/applicant/kuitansi' },
 ]

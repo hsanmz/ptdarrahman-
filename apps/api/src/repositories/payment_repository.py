@@ -2,19 +2,15 @@ from datetime import datetime
 from typing import Any, cast
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import and_, delete, func, or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from src.models.ppdb import (
     PPDBApplicant,
-    PPDBApplicantDiscount,
     PPDBPaymentTransaction,
     PPDBPeriod,
-    PPDBStage2Bill,
     PPDBWave,
-    PPDBWaveFeeItem,
 )
-from src.models.selection import SelectionResult
 
 WIB = ZoneInfo("Asia/Jakarta")
 
@@ -185,325 +181,9 @@ class PaymentRepository:
         )
         return cast(PPDBApplicant | None, self.db.scalars(stmt).first())
 
-    # Stage 2
-    def get_stage2_applicants(self, wave_id: str) -> tuple[list[Any], int]:
-        """
-        Ambil semua applicant Tahap 2 dengan data discount/bills/mou-nya.
-
-        FIX: bulk-load semua relasi dalam 3 query tambahan (bukan 3N).
-        Sebelumnya: 1 + 3N queries untuk N applicant.
-        Sekarang: 4 queries total, berapapun jumlah applicant.
-        """
-        stmt = (
-            select(PPDBApplicant)
-            .join(SelectionResult, SelectionResult.applicant_id == PPDBApplicant.id)
-            .where(
-                SelectionResult.graduation_status == "passed",
-                PPDBApplicant.wave_id == wave_id,
-                PPDBApplicant.deleted_at.is_(None),
-            )
-        )
-
-        applicants = self.db.scalars(stmt).all()
-        if not applicants:
-            return [], 0
-
-        applicant_ids = [a.id for a in applicants]
-
-        # Bulk-load discounts (has_discount per applicant_id)
-        discount_rows = self.db.scalars(
-            select(PPDBApplicantDiscount.applicant_id).where(
-                PPDBApplicantDiscount.applicant_id.in_(applicant_ids)
-            )
-        ).all()
-        has_discount_set: set[str] = set(discount_rows)
-
-        # Bulk-load bills
-        bill_rows = self.db.scalars(
-            select(PPDBStage2Bill).where(PPDBStage2Bill.applicant_id.in_(applicant_ids))
-        ).all()
-        bills_by_applicant: dict[str, list[PPDBStage2Bill]] = {}
-        for b in bill_rows:
-            bills_by_applicant.setdefault(b.applicant_id, []).append(b)
-
-        mou_by_applicant: dict[str, str] = {}
-
-        results = []
-        for app in applicants:
-            bills = bills_by_applicant.get(app.id, [])
-            app_dict = {
-                "id": app.id,
-                "full_name": app.full_name,
-                "nisn": app.nisn,
-                "email": app.email,
-                "phone": app.phone,
-                "registration_path": app.registration_path,
-                "discount_configured": app.id in has_discount_set,
-                "bills_generated": len(bills) > 0,
-                "total_bills": len(bills),
-                "total_paid_bills": sum(1 for b in bills if b.status == "paid"),
-                "mou_status": mou_by_applicant.get(app.id),
-            }
-            results.append(app_dict)
-
-        return results, len(results)
-
-    def get_wave_fee_items_with_discounts(
-        self, applicant_id: str, wave_id: str, early_discount_eligible: bool = False
-    ) -> list[dict]:
-        stmt = (
-            select(PPDBWaveFeeItem, PPDBApplicantDiscount)
-            .outerjoin(
-                PPDBApplicantDiscount,
-                and_(
-                    PPDBApplicantDiscount.fee_item_id == PPDBWaveFeeItem.id,
-                    PPDBApplicantDiscount.applicant_id == applicant_id,
-                ),
-            )
-            .where(PPDBWaveFeeItem.wave_id == wave_id)
-            .order_by(PPDBWaveFeeItem.order_index.asc())
-        )
-
-        rows = self.db.execute(stmt).all()
-        items = []
-        for r in rows:
-            fi = r.PPDBWaveFeeItem
-            d = r.PPDBApplicantDiscount
-
-            i_dict = {
-                "id": fi.id,
-                "wave_id": fi.wave_id,
-                "name": fi.name,
-                "nominal": fi.nominal,
-                "order_index": fi.order_index,
-                "created_at": fi.created_at,
-                "updated_at": fi.updated_at,
-                "discount": None,
-            }
-            if d:
-                if d.discount_type:
-                    i_dict["discount"] = {
-                        "discount_type": d.discount_type,
-                        "discount_value": d.discount_value,
-                        "installment_count": d.installment_count,
-                        "source": "applicant",
-                    }
-            elif fi.discount_type and (
-                fi.discount_scope == "all" or early_discount_eligible
-            ):
-                i_dict["discount"] = {
-                    "discount_type": fi.discount_type,
-                    "discount_value": fi.discount_value,
-                    "installment_count": 0,
-                    "source": "wave",
-                    "scope": fi.discount_scope,
-                }
-            items.append(i_dict)
-        return items
-
-    def get_paid_form_payment_rank(self, applicant_id: str, wave_id: str) -> int | None:
-        paid_applicants = (
-            select(
-                PPDBApplicant.id.label("applicant_id"),
-                func.min(
-                    func.coalesce(
-                        PPDBPaymentTransaction.confirmed_at,
-                        PPDBPaymentTransaction.created_at,
-                    )
-                ).label("paid_at"),
-            )
-            .join(
-                PPDBPaymentTransaction,
-                PPDBPaymentTransaction.applicant_id == PPDBApplicant.id,
-            )
-            .where(
-                PPDBApplicant.wave_id == wave_id,
-                PPDBPaymentTransaction.status == "success",
-            )
-            .group_by(PPDBApplicant.id)
-            .subquery()
-        )
-        target_paid_at_stmt = select(paid_applicants.c.paid_at).where(
-            paid_applicants.c.applicant_id == applicant_id
-        )
-        if self.db.scalar(target_paid_at_stmt) is None:
-            return None
-        target_paid_at = target_paid_at_stmt.scalar_subquery()
-        rank_stmt = (
-            select(func.count())
-            .select_from(paid_applicants)
-            .where(
-                or_(
-                    paid_applicants.c.paid_at < target_paid_at,
-                    and_(
-                        paid_applicants.c.paid_at == target_paid_at,
-                        paid_applicants.c.applicant_id <= applicant_id,
-                    ),
-                )
-            )
-        )
-        return int(self.db.scalar(rank_stmt) or 0)
-
-    def get_fee_item_by_id(self, fee_item_id: str) -> PPDBWaveFeeItem | None:
-        stmt = select(PPDBWaveFeeItem).where(PPDBWaveFeeItem.id == fee_item_id)
-        return cast(PPDBWaveFeeItem | None, self.db.scalars(stmt).first())
-
-    def get_applicant_discount(
-        self, applicant_id: str, fee_item_id: str
-    ) -> PPDBApplicantDiscount | None:
-        stmt = select(PPDBApplicantDiscount).where(
-            PPDBApplicantDiscount.applicant_id == applicant_id,
-            PPDBApplicantDiscount.fee_item_id == fee_item_id,
-        )
-        return cast(PPDBApplicantDiscount | None, self.db.scalars(stmt).first())
-
-    def save_applicant_discount(self, discount: PPDBApplicantDiscount):
-        self.db.add(discount)
-        self.db.flush()
-        self.db.commit()
-
-    def has_paid_stage2_bills(self, applicant_id: str, fee_item_id: str) -> bool:
-        stmt = select(PPDBStage2Bill.id).where(
-            PPDBStage2Bill.applicant_id == applicant_id,
-            PPDBStage2Bill.fee_item_id == fee_item_id,
-            PPDBStage2Bill.status == "paid",
-        )
-        return self.db.scalars(stmt).first() is not None
-
-    def delete_stage2_bills(self, applicant_id: str, fee_item_id: str):
-        stmt = delete(PPDBStage2Bill).where(
-            PPDBStage2Bill.applicant_id == applicant_id,
-            PPDBStage2Bill.fee_item_id == fee_item_id,
-        )
-        self.db.execute(stmt)
-        self.db.flush()
-        self.db.commit()
-
-    def save_stage2_bill(self, bill: PPDBStage2Bill):
-        self.db.add(bill)
-        self.db.flush()
-        self.db.commit()
-
     def get_wave_by_id(self, wave_id: str) -> PPDBWave | None:
         stmt = select(PPDBWave).where(PPDBWave.id == wave_id)
         return cast(PPDBWave | None, self.db.scalars(stmt).first())
-
-    def get_stage2_bills(
-        self,
-        wave_id: str,
-        applicant_id: str | None,
-        status: str | None,
-        limit: int,
-        offset: int,
-    ) -> tuple[list[Any], int]:
-        stmt = (
-            select(
-                PPDBStage2Bill,
-                PPDBApplicant.full_name,
-                PPDBWaveFeeItem.name.label("fee_item_name"),
-            )
-            .join(PPDBApplicant, PPDBStage2Bill.applicant_id == PPDBApplicant.id)
-            .join(PPDBWaveFeeItem, PPDBStage2Bill.fee_item_id == PPDBWaveFeeItem.id)
-            .where(PPDBApplicant.wave_id == wave_id)
-        )
-
-        count_stmt = (
-            select(func.count())
-            .select_from(PPDBStage2Bill)
-            .join(PPDBApplicant, PPDBStage2Bill.applicant_id == PPDBApplicant.id)
-            .where(PPDBApplicant.wave_id == wave_id)
-        )
-
-        if applicant_id:
-            stmt = stmt.where(PPDBStage2Bill.applicant_id == applicant_id)
-            count_stmt = count_stmt.where(PPDBStage2Bill.applicant_id == applicant_id)
-
-        if status:
-            stmt = stmt.where(PPDBStage2Bill.status == status)
-            count_stmt = count_stmt.where(PPDBStage2Bill.status == status)
-
-        stmt = (
-            stmt.order_by(PPDBStage2Bill.created_at.desc()).limit(limit).offset(offset)
-        )
-
-        total = self.db.scalar(count_stmt) or 0
-        rows = self.db.execute(stmt).all()
-
-        results = []
-        for r in rows:
-            b = r.PPDBStage2Bill
-            b_dict = {
-                "id": b.id,
-                "applicant_id": b.applicant_id,
-                "fee_item_id": b.fee_item_id,
-                "discount_id": b.discount_id,
-                "installment_number": b.installment_number,
-                "amount": b.amount,
-                "due_date": b.due_date,
-                "status": b.status,
-                "proof_url": b.proof_url,
-                "confirmed_by": b.confirmed_by,
-                "confirmed_at": b.confirmed_at,
-                "notes": b.notes,
-                "created_at": b.created_at,
-                "updated_at": b.updated_at,
-                "full_name": r.full_name,
-                "fee_item_name": r.fee_item_name,
-            }
-            results.append(b_dict)
-
-        return results, total
-
-    def get_my_stage2_bills(self, applicant_id: str) -> list[dict]:
-        stmt = (
-            select(
-                PPDBStage2Bill,
-                PPDBWaveFeeItem.name.label("fee_item_name"),
-                PPDBWaveFeeItem.order_index,
-            )
-            .join(PPDBWaveFeeItem, PPDBStage2Bill.fee_item_id == PPDBWaveFeeItem.id)
-            .where(PPDBStage2Bill.applicant_id == applicant_id)
-            .order_by(
-                PPDBWaveFeeItem.order_index.asc(),
-                PPDBStage2Bill.installment_number.asc(),
-            )
-        )
-        rows = self.db.execute(stmt).all()
-
-        results = []
-        for r in rows:
-            b = r.PPDBStage2Bill
-            b_dict = {
-                "id": b.id,
-                "applicant_id": b.applicant_id,
-                "fee_item_id": b.fee_item_id,
-                "discount_id": b.discount_id,
-                "installment_number": b.installment_number,
-                "amount": b.amount,
-                "due_date": b.due_date,
-                "status": b.status,
-                "proof_url": b.proof_url,
-                "confirmed_by": b.confirmed_by,
-                "confirmed_at": b.confirmed_at,
-                "notes": b.notes,
-                "created_at": b.created_at,
-                "updated_at": b.updated_at,
-                "fee_item_name": r.fee_item_name,
-                "order_index": r.order_index,
-            }
-            results.append(b_dict)
-
-        return results
-
-    def get_stage2_bill_by_id(self, bill_id: str) -> PPDBStage2Bill | None:
-        stmt = select(PPDBStage2Bill).where(PPDBStage2Bill.id == bill_id)
-        return cast(PPDBStage2Bill | None, self.db.scalars(stmt).first())
-
-    def update_stage2_bill(self, bill: PPDBStage2Bill):
-        bill.updated_at = datetime.now(WIB)
-        self.db.add(bill)
-        self.db.flush()
-        self.db.commit()
 
     def get_transaction_by_order_id(
         self, order_id: str
@@ -526,13 +206,7 @@ class PaymentRepository:
     def get_active_transaction(
         self, applicant_id: str, payment_type: str | None = None
     ) -> PPDBPaymentTransaction | None:
-        """Transaksi terbuka terakhir (pending / pending_verification).
-
-        Sengaja TIDAK memfilter `expired_at`: keputusan expired harus
-        diverifikasi ke provider dulu (lihat PaymentService), agar pembayaran
-        yang sudah masuk tidak salah dianggap gagal dan transaksi baru tidak
-        menggandakan pembayaran.
-        """
+        """Transaksi terbuka terakhir (pending / pending_verification)."""
         stmt = select(PPDBPaymentTransaction).where(
             PPDBPaymentTransaction.applicant_id == applicant_id,
             PPDBPaymentTransaction.status.in_(("pending", "pending_verification")),
@@ -549,27 +223,5 @@ class PaymentRepository:
             select(PPDBPaymentTransaction)
             .where(PPDBPaymentTransaction.applicant_id == applicant_id)
             .order_by(PPDBPaymentTransaction.created_at.desc())
-        )
-        return list(self.db.scalars(stmt).all())
-
-    def count_successful_installments(self, applicant_id: str) -> int:
-        stmt = select(func.count()).where(
-            PPDBPaymentTransaction.applicant_id == applicant_id,
-            PPDBPaymentTransaction.payment_type == "installment",
-            PPDBPaymentTransaction.status == "success",
-        )
-        return int(self.db.scalar(stmt) or 0)
-
-    def get_verified_stage2_payments(
-        self, applicant_id: str
-    ) -> list[PPDBPaymentTransaction]:
-        stmt = (
-            select(PPDBPaymentTransaction)
-            .where(
-                PPDBPaymentTransaction.applicant_id == applicant_id,
-                PPDBPaymentTransaction.payment_type.in_(["dp", "installment"]),
-                PPDBPaymentTransaction.status == "success",
-            )
-            .order_by(PPDBPaymentTransaction.created_at.asc())
         )
         return list(self.db.scalars(stmt).all())

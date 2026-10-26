@@ -4151,7 +4151,7 @@ function buildStories(academicYear) {
 
   return {
 
-    "Jalur Pendaftaran": {
+    "Penerimaan Santri": {
 
       title: "Mulai Langkah Berkah Anda di Ar-Rahman.",
 
@@ -4163,7 +4163,7 @@ function buildStories(academicYear) {
 
           : "Penerimaan Peserta Didik Baru (PPDB) membuka kesempatan bagi calon santri berprestasi."),
 
-        "Tersedia Jalur Prestasi Tahfidz Al-Qur'an (beasiswa khusus) dan Jalur Reguler Berbasis Tes Potensi Akademik & Minat Bakat."
+        "Penerimaan santri baru terpadu dengan seleksi Tahfidz Al-Qur'an 1:1 dan Wawancara Personal."
 
       ]
 
@@ -4565,7 +4565,7 @@ function App({ academicYear, shirtColor, pantsColor, showBag, showStrap, showCap
 
 
 
-      <nav aria-label="Main navigation"><button onClick={explore}>Jelajahi 3D</button>{["Jalur Pendaftaran", "Program Unggulan", "Profil Pesantren"].map((item) => <button key={item} onClick={() => setStory(item)}>{item}</button>)}</nav>
+      <nav aria-label="Main navigation"><button onClick={explore}>Jelajahi 3D</button>{["Penerimaan Santri", "Program Unggulan", "Profil Pesantren"].map((item) => <button key={item} onClick={() => setStory(item)}>{item}</button>)}</nav>
 
 
 

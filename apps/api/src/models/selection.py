@@ -29,6 +29,7 @@ class SelectionSession(Base):
     location: Mapped[str | None] = mapped_column(String(200), nullable=True)
     meeting_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    batch_name: Mapped[str | None] = mapped_column(String(50), nullable=True)
     quota: Mapped[int] = mapped_column(Integer, nullable=False, server_default="0")
     created_by: Mapped[str | None] = mapped_column(String(36), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
@@ -47,6 +48,18 @@ class SelectionResult(Base):
     )
     interview_session_id: Mapped[str | None] = mapped_column(
         String(36), nullable=True, index=True
+    )
+    interview_parent_session_id: Mapped[str | None] = mapped_column(
+        String(36), nullable=True, index=True
+    )
+    batch_name: Mapped[str | None] = mapped_column(
+        String(50), nullable=True, index=True
+    )
+    current_stage: Mapped[int] = mapped_column(
+        Integer, nullable=False, server_default="0", default=0
+    )
+    last_stage_sent_at: Mapped[datetime | None] = mapped_column(
+        DateTime, nullable=True
     )
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)

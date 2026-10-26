@@ -1,69 +1,67 @@
-[1. AKSES WEBSITE & KLIK DAFTAR]
-       │
-       ▼
+﻿[1. AKSES WEBSITE & KLIK DAFTAR]
+       â”‚
+       â–¼
 [2. PILIH JALUR & ISI DATA AWAL]
-       │
-       ▼
-[3. SISTEM GENERATE KREDENSIAL] ──► (Kirim Notif WA: Username, Password, Link Login)
-       │
-       ▼
+       â”‚
+       â–¼
+[3. SISTEM GENERATE KREDENSIAL] â”€â”€â–º (Kirim Notif WA: Username, Password, Link Login)
+       â”‚
+       â–¼
 [4. USER LOGIN KE APLIKASI/WEB]
-       │
-       ▼
+       â”‚
+       â–¼
 [5. PEMBAYARAN BIAYA FORMULIR (PAK KASIR)]
-       │ (Webhook otomatis lunas)
-       ▼
+       â”‚ (Webhook otomatis lunas)
+       â–¼
 [6. UNLOCK DASHBOARD: UPLOAD DOKUMEN]
 (Dokumen Wajib: NISN, KK, Akte Kelahiran, Medical Checkup, Pas Foto 3x4 / 4x6)
-       │
-       ├─────────────────────────────────────────────────┐
-       ▼                                                 ▼
+       â”‚
+       â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+       â–¼                                                 â–¼
 (Jalur Prestasi) = Min 3, Max 10 Sertifikat         (Jalur Tes/TIU) = Kartu Pelajar, Opsional SKL (Surat Keterangan Lulus) / Ijazah Terakhir.
 (Jalur Tahfidz)  = 1 Bukti Hafalan                  (Jalur Raport)  = 4 Raport Terakhir
-       │
-       ▼
-[7. ADMIN VERIFIKASI DOKUMEN (MANUAL)] ──► (REVISI/TIDAK VALID) ──► [NOTIF WA: UPLOAD ULANG]
-       │
-       ▼ (DOKUMEN VALID & APPROVED)
+       â”‚
+       â–¼
+[7. ADMIN VERIFIKASI DOKUMEN (MANUAL)] â”€â”€â–º (REVISI/TIDAK VALID) â”€â”€â–º [NOTIF WA: UPLOAD ULANG]
+       â”‚
+       â–¼ (DOKUMEN VALID & APPROVED)
 [8. SISTEM BACA JALUR PENDAFTARAN]
-       │
-       ├───────────────────────────┬───────────────────────────┐
-       ▼ (Jalur Tes/TIU)           ▼ (Jalur Tahfidz)           ▼ (Jalur Prestasi / Raport)
+       â”‚
+       â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”¬â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+       â–¼ (Jalur Tes/TIU)           â–¼ (Jalur Tahfidz)           â–¼ (Jalur Prestasi / Raport)
 [9a. UJIAN TULIS ONLINE]      [9b. TAKE SESSION TAHFIDZ]    [9c. SKIP UJIAN]
-(Via GForm / Sistem web       (Pilih Jadwal Tes Muka/              │
- fleksibel kapan aja)          Online dengan Penguji)              │
-       │                           │                               │
-       └───────────────────────────┴───────────────────────────────┘
-       │ (Semua berhak lanjut tanpa ada yang gugur)
-       ▼
+(Via GForm / Sistem web       (Pilih Jadwal Tes Muka/              â”‚
+ fleksibel kapan aja)          Online dengan Penguji)              â”‚
+       â”‚                           â”‚                               â”‚
+       â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”´â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+       â”‚ (Semua berhak lanjut tanpa ada yang gugur)
+       â–¼
 [10. TAKE SESSION WAWANCARA]
 (Semua pendaftar milih jadwal/slot wawancara yang tersedia)
-       │
-       ▼
+       â”‚
+       â–¼
 [11. WAWANCARA (ONLINE / OFFLINE SESUAI JADWAL YANG DI TAKE IT)]
-       │
-       ▼
+       â”‚
+       â–¼
 [12. ADMIN INPUT PENILAIAN AKHIR (PENGUMUMAN KELULUSAN)]
-       │
-       ├─────────────────────────────────────────┐
-       ▼ (TIDAK LULUS)                           ▼ (LULUS)
+       â”‚
+       â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+       â–¼ (TIDAK LULUS)                           â–¼ (LULUS)
 [NOTIF: MOHON MAAF GAGAL]                 [13. SISTEM GENERATE MOU]
-       │                                  (Kop Surat Image + Teks GDocs + Data Dinamis)
-   (SELESAI)                                     │
-                                                 ▼
+       â”‚                                  (Kop Surat Image + Teks GDocs + Data Dinamis)
+   (SELESAI)                                     â”‚
+                                                 â–¼
                                           [14. TANDA TANGAN DIGITAL]
                                           (Pendaftar TTD langsung di layar)
-                                                 │
-                                                 ▼
+                                                 â”‚
+                                                 â–¼
                                           [15. GENERATE TAGIHAN TAHAP 2]
                                           (Diskon Gelombang, SPP, Uang Gedung)
-                                                 │
-                                                 ▼
+                                                 â”‚
+                                                 â–¼
                                           [16. PEMBAYARAN TAHAP 2 (PAK KASIR)]
-                                                 │
-                                                 ▼ (LUNAS / DP MASUK)
-                                          [17. GET NO. REGISTRASI & SURAT KETERANGAN DITERIMA (SKD)]
-                                          (Sistem Auto-Generate SKD / Sertifikat Kelulusan)
-                                                 │
-                                                 ▼
+                                                 â”‚
+                                                 â–¼ (LUNAS / DP MASUK)
+                                                 â”‚
+                                                 â–¼
                                              (SELESAI)

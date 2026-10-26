@@ -8,7 +8,7 @@ import { Button } from "@/components/ui"
 import { Input } from "@/components/ui"
 import { Textarea } from "@/components/ui"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui"
-import { Plus, Trash2, Pencil, BookOpen, MessageSquare, AlertCircle } from 'lucide-react'
+import { Plus, Trash2, Pencil, BookOpen, AlertCircle, User, HeartHandshake } from 'lucide-react'
 import { ConfirmDialog } from "@/components/ui"
 import type { SelectionCategory } from './types'
 
@@ -97,12 +97,35 @@ export default function SelectionCategories() {
     })
   }
 
-  // Pisahkan secara tegas 2 Kategori Paten
-  const tahfidzFound = categories.find(c => c.name?.toLowerCase().includes('tahfidz'))
-  const wawancaraFound = categories.find(c => c.name?.toLowerCase().includes('wawancara'))
+  // Pisahkan secara tegas 3 Kategori Rubrik Paten
+  const tahfidzFound = categories.find((c) => c.name?.toLowerCase().includes('tahfidz'))
+  const santriFound = categories.find((c) => {
+    const n = c.name?.toLowerCase() || ''
+    return n.includes('santri') || n === 'wawancara'
+  })
+  const ortuFound = categories.find((c) => {
+    const n = c.name?.toLowerCase() || ''
+    return n.includes('orang tua') || n.includes('ortu') || n.includes('wali')
+  })
 
-  const tahfidzCategory: SelectionCategory = tahfidzFound || { id: 'tahfidz-placeholder', wave_id: 'global', name: 'Tahfidz', criteria: [] }
-  const wawancaraCategory: SelectionCategory = wawancaraFound || { id: 'wawancara-placeholder', wave_id: 'global', name: 'Wawancara', criteria: [] }
+  const tahfidzCategory: SelectionCategory = tahfidzFound || {
+    id: 'tahfidz-placeholder',
+    wave_id: 'global',
+    name: 'Tahfidz',
+    criteria: [],
+  }
+  const santriCategory: SelectionCategory = santriFound || {
+    id: 'wawancara-santri-placeholder',
+    wave_id: 'global',
+    name: 'Wawancara Santri',
+    criteria: [],
+  }
+  const ortuCategory: SelectionCategory = ortuFound || {
+    id: 'wawancara-ortu-placeholder',
+    wave_id: 'global',
+    name: 'Wawancara Orang Tua',
+    criteria: [],
+  }
 
   const renderRubricCard = (
     cat: SelectionCategory,
@@ -233,7 +256,7 @@ export default function SelectionCategories() {
             Konfigurasi Rubrik Penguji (Tahfidz & Wawancara)
           </p>
           <p>
-            Struktur penilaian bersifat global institusi. Kriteria yang Anda definisikan di sini otomatis menjadi formulir penilaian bagi penguji saat sesi ujian berlangsung. Nilai TIU tidak menggunakan rubrik karena disinkronkan otomatis via SEB webhook.
+            Struktur penilaian bersifat global institusi. Kriteria yang Anda definisikan di sini otomatis menjadi formulir penilaian bagi penguji saat sesi ujian berlangsung.
           </p>
         </div>
       </div>
@@ -248,10 +271,11 @@ export default function SelectionCategories() {
           <p className="text-xs text-red-600">{(error as any)?.message || 'Periksa koneksi backend dan coba refresh halaman.'}</p>
         </div>
       ) : (
-        /* Halaman langsung menampilkan 2 KOTAK UTAMA PATEN tanpa tombol tambah kategori */
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {renderRubricCard(tahfidzCategory, 'Rubrik Tahfidz', BookOpen, 'bg-emerald-600', !tahfidzFound)}
-          {renderRubricCard(wawancaraCategory, 'Rubrik Wawancara', MessageSquare, 'bg-amber-600', !wawancaraFound)}
+        /* Halaman langsung menampilkan 3 KOTAK UTAMA PATEN tanpa tombol tambah kategori */
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {renderRubricCard(tahfidzCategory, 'Rubrik Seleksi Tahfidz', BookOpen, 'bg-emerald-600', !tahfidzFound)}
+          {renderRubricCard(santriCategory, 'Rubrik Wawancara Santri', User, 'bg-blue-600', !santriFound)}
+          {renderRubricCard(ortuCategory, 'Rubrik Wawancara Orang Tua', HeartHandshake, 'bg-amber-600', !ortuFound)}
         </div>
       )}
 

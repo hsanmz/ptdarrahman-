@@ -1,12 +1,9 @@
 from fastapi import (
     APIRouter,
     Depends,
-    File,
-    Form,
     HTTPException,
     Query,
     Request,
-    UploadFile,
 )
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -17,7 +14,6 @@ from src.core.dependencies import (
     get_current_user,
     require_module_access,
 )
-from src.core.uploads import upload_file
 from src.repositories.payment_repository import PaymentRepository
 from src.services.payment_service import PaymentService
 
@@ -47,7 +43,7 @@ def get_transactions(
 
 
 class CreateQRISPayload(BaseModel):
-    payment_type: str
+    payment_type: str = "form"
     amount: int | None = None
 
 
@@ -57,8 +53,13 @@ def create_qris(
     user: dict = Depends(get_current_user),
     service: PaymentService = Depends(get_payment_service),
 ):
+    if payload.payment_type != "form":
+        raise HTTPException(
+            status_code=400,
+            detail="Hanya pembayaran formulir ('form') yang didukung.",
+        )
     return service.create_qris_transaction(
-        user["id"], payload.payment_type, payload.amount
+        user["id"], "form", payload.amount
     )
 
 
@@ -133,25 +134,6 @@ def cancel_confirm_payment(
     return service.cancel_confirm_payment(id)
 
 
-@router.get("/stage2/monitoring")
-def get_stage2_monitoring(
-    wave_id: str | None = Query(None),
-    status: str | None = Query(None),
-    search: str | None = Query(None),
-    page: int = Query(1),
-    perPage: int = Query(20),
-    user: dict = Depends(require_payment_read),
-    service: PaymentService = Depends(get_payment_service),
-):
-    return service.get_stage2_monitoring(
-        wave_id=wave_id,
-        status_filter=status,
-        search=search,
-        page=page,
-        per_page=perPage,
-    )
-
-
 @router.get("/applicants/{applicant_id}/transactions")
 def get_applicant_transactions(
     applicant_id: str,
@@ -199,122 +181,3 @@ async def pakkasir_webhook(
     payload = await _read_json_body(request)
     x_secret = request.headers.get("X-Secret")
     return service.process_pakkasir_webhook(payload, x_secret=x_secret)
-
-
-# ─── Stage 2 — Diskonasi (per peserta lulus) ─────────────────────────────────
-
-
-@router.get("/stage2/applicants")
-def get_stage2_applicants(
-    user: dict = Depends(require_payment_read),
-    service: PaymentService = Depends(get_payment_service),
-):
-    return service.get_stage2_applicants()
-
-
-@router.get("/stage2/{applicant_id}/discounts")
-def get_applicant_discounts(
-    applicant_id: str,
-    user: dict = Depends(require_payment_read),
-    service: PaymentService = Depends(get_payment_service),
-):
-    return service.get_applicant_discounts(applicant_id)
-
-
-@router.post("/stage2/{applicant_id}/discounts")
-async def save_applicant_discounts(
-    request: Request,
-    applicant_id: str,
-    user: dict = Depends(require_payment_admin),
-    service: PaymentService = Depends(get_payment_service),
-):
-    body = await request.json()
-    items = body.get("items", [])
-    return service.save_applicant_discounts(applicant_id, items)
-
-
-# ─── Stage 2 — Tagihan ────────────────────────────────────────────────────────
-
-
-@router.get("/stage2/bills")
-def get_stage2_bills(
-    applicant_id: str | None = Query(None),
-    status: str | None = Query(None),
-    page: int = Query(1),
-    perPage: int = Query(20),
-    user: dict = Depends(require_payment_read),
-    service: PaymentService = Depends(get_payment_service),
-):
-    return service.get_stage2_bills(applicant_id, status, page, perPage)
-
-
-@router.get("/stage2/my-bills")
-def get_my_stage2_bills(
-    user: dict = Depends(get_current_user),
-    service: PaymentService = Depends(get_payment_service),
-):
-    return service.get_my_stage2_bills(user["id"])
-
-
-@router.put("/stage2/bills/{bill_id}/confirm")
-def confirm_stage2_bill(
-    bill_id: str,
-    user: dict = Depends(require_payment_admin),
-    service: PaymentService = Depends(get_payment_service),
-):
-    return service.confirm_stage2_bill(bill_id, user["id"])
-
-
-@router.put("/stage2/bills/{bill_id}/cancel")
-def cancel_stage2_bill(
-    bill_id: str,
-    user: dict = Depends(require_payment_admin),
-    service: PaymentService = Depends(get_payment_service),
-):
-    return service.cancel_stage2_bill(bill_id)
-
-
-@router.post("/stage2/bills/{bill_id}/upload-proof")
-async def upload_stage2_proof(
-    bill_id: str,
-    file: UploadFile = File(...),
-    user: dict = Depends(get_current_user),
-    service: PaymentService = Depends(get_payment_service),
-):
-    result = await upload_file(file)
-    return service.upload_stage2_proof(bill_id, user["id"], result.public_url)
-
-
-class InstallmentPlanPayload(BaseModel):
-    installment_count: int
-
-
-@router.post("/stage2/my-installment-plan")
-def set_my_installment_plan(
-    payload: InstallmentPlanPayload,
-    user: dict = Depends(get_current_user),
-    service: PaymentService = Depends(get_payment_service),
-):
-    return service.configure_my_installment_plan(user["id"], payload.installment_count)
-
-
-@router.post("/stage2/my-bills/upload-proof-batch")
-async def upload_stage2_proof_batch(
-    bill_ids: str = Form(...),
-    file: UploadFile = File(...),
-    user: dict = Depends(get_current_user),
-    service: PaymentService = Depends(get_payment_service),
-):
-    import json
-
-    try:
-        parsed_ids = (
-            json.loads(bill_ids)
-            if bill_ids.startswith("[")
-            else [b.strip() for b in bill_ids.split(",") if b.strip()]
-        )
-    except Exception:
-        parsed_ids = [b.strip() for b in bill_ids.split(",") if b.strip()]
-
-    result = await upload_file(file)
-    return service.upload_stage2_proof_batch(parsed_ids, user["id"], result.public_url)

@@ -20,11 +20,10 @@ export const SEMANTIC_ONTOLOGY: Record<string, string[]> = {
   santri: ["applicant", "pendaftar", "siswa", "murid", "anak", "peserta", "biodata", "calon santri", "pelajar"],
   pendaftar: ["applicant", "santri", "siswa", "calon", "registrasi", "biodata", "peserta", "formulir"],
   dokumen: ["berkas", "ijazah", "kk", "akta", "nisn", "nik", "foto", "rapor", "upload", "lampiran", "file", "verifikasi"],
-  bayar: ["pembayaran", "keuangan", "biaya", "tagihan", "dp", "uang gedung", "spp", "dp3", "qris", "pakasir", "lunas", "transaksi", "cicilan", "kuitansi"],
+  bayar: ["pembayaran", "keuangan", "biaya", "formulir", "qris", "pakasir", "lunas", "transaksi", "kuitansi"],
   tahfidz: ["hafalan", "quran", "juz", "surah", "tajwid", "kelancaran", "simakan", "setoran", "penguji", "tahsin", "makhraj"],
   wawancara: ["interview", "pewawancara", "wali santri", "orang tua", "bk", "tanya jawab", "psikotes", "kesiapan"],
-  tiu: ["ujian", "tes", "seb", "safe exam browser", "skor", "nilai", "potensi akademik", "google form", "token tiu", "sync"],
-  lulus: ["kelulusan", "hasil", "loa", "letter of acceptance", "skd", "surat keputusan", "diterima", "pengumuman", "lolos"],
+  lulus: ["kelulusan", "hasil", "loa", "letter of acceptance", "diterima", "pengumuman", "lolos"],
   periode: ["gelombang", "kuota", "tahun ajaran", "jadwal", "pembukaan", "tutup", "kapasitas", "wave"],
   pengguna: ["user", "akun", "petugas", "admin", "panitia", "operator", "password", "superadmin", "ganti sandi"],
   role: ["peran", "hak akses", "izin", "kewenangan", "permission", "otorisasi", "privilege", "rbac"],
@@ -50,7 +49,7 @@ export const ROUTE_SEMANTIC_TAGS: Record<string, { category: SemanticSearchItem[
   },
   "/admin/data-pendaftar": {
     category: "Navigasi",
-    keywords: ["santri", "siswa", "calon", "biodata", "nisn", "nik", "jalur prestasi", "jalur tahfidz", "reguler", "kontak wali"],
+    keywords: ["santri", "siswa", "calon", "biodata", "nisn", "nik", "berkas", "kontak wali"],
     desc: "Daftar lengkap pendaftar periode aktif, biodata, dan status alur",
   },
   "/admin/verifikasi-dokumen": {
@@ -62,11 +61,6 @@ export const ROUTE_SEMANTIC_TAGS: Record<string, { category: SemanticSearchItem[
     category: "Navigasi",
     keywords: ["biaya formulir", "uang masuk", "qris", "pakasir", "transaksi", "kuitansi", "lunas", "invoice"],
     desc: "Monitoring transaksi QRIS pembayaran formulir pendaftaran",
-  },
-  "/admin/pembayaran-tahap2": {
-    category: "Navigasi",
-    keywords: ["dp", "uang gedung", "sp3", "cicilan", "termin", "tagihan", "jatuh tempo", "biaya masuk"],
-    desc: "Pengaturan dan konfirmasi DP biaya masuk serta skema cicilan",
   },
   "/admin/sessions/tahfidz": {
     category: "Navigasi",
@@ -80,8 +74,8 @@ export const ROUTE_SEMANTIC_TAGS: Record<string, { category: SemanticSearchItem[
   },
   "/admin/penilaian": {
     category: "Navigasi",
-    keywords: ["kelulusan", "skor", "nilai tiu", "hasil seleksi", "ranking", "peringkat", "lolos", "rekapitulasi"],
-    desc: "Rekapitulasi gabungan nilai TIU, Tahfidz, Wawancara & penetapan hasil",
+    keywords: ["kelulusan", "skor", "hasil seleksi", "ranking", "peringkat", "lolos", "rekapitulasi"],
+    desc: "Rekapitulasi gabungan nilai Tahfidz, Wawancara & penetapan hasil",
   },
   "/admin/review-loa": {
     category: "Navigasi",
@@ -95,18 +89,13 @@ export const ROUTE_SEMANTIC_TAGS: Record<string, { category: SemanticSearchItem[
   },
   "/admin/pengumuman": {
     category: "Navigasi",
-    keywords: ["preview loa", "template skd", "surat keterangan diterima", "wa group santri", "klausul dana"],
-    desc: "Pratinjau template LoA resmi, SKD, dan link WhatsApp Group",
+    keywords: ["preview loa", "surat penerimaan", "klausul dana"],
+    desc: "Pratinjau template LoA resmi",
   },
   "/admin/rubrik": {
     category: "Navigasi",
     keywords: ["rubrik penilaian", "kriteria tahfidz", "bobot nilai", "standar kelulusan", "passing grade"],
     desc: "Konfigurasi kriteria, bobot, dan formulir evaluator seleksi",
-  },
-  "/admin/tiu-settings": {
-    category: "Navigasi",
-    keywords: ["safe exam browser", "seb", "google form tiu", "ujian online", "webhook tiu", "token", "sinkronisasi"],
-    desc: "Pengaturan global Safe Exam Browser, Google Form, dan Webhook TIU",
   },
   "/admin/arsip": {
     category: "Navigasi",
@@ -339,7 +328,7 @@ export function buildLocalSemanticIndex(navGroups: DashboardNavGroup[]): Semanti
     {
       id: "action-new-wave",
       title: "Buka Gelombang Pendaftaran Baru",
-      subtitle: "Atur tanggal buka, kuota, harga formulir, dan minimal DP",
+      subtitle: "Atur tanggal buka, kuota, dan harga formulir",
       category: "Aksi",
       url: "/admin/periods",
       keywords: ["buka gelombang", "gelombang baru", "kuota santri", "tambah wave"],

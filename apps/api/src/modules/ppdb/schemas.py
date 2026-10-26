@@ -19,149 +19,64 @@ class PeriodUpdate(BaseModel):
     head_of_committee: str | None = None
 
 
+class PeriodFeeItemCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=200)
+    nominal: int = Field(ge=0)
+    description: str | None = Field(default=None, max_length=500)
+    order_index: int = Field(default=0, ge=0)
+
+
+class PeriodFeeItemUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    nominal: int | None = Field(default=None, ge=0)
+    description: str | None = Field(default=None, max_length=500)
+    order_index: int | None = Field(default=None, ge=0)
+
+
+class WaveFeeDiscountUpdate(BaseModel):
+    discount_type: str | None = Field(default=None, pattern=r"^(percent|nominal)$")
+    discount_value: float | None = Field(default=None, gt=0)
+    early_discount_type: str | None = Field(
+        default=None, pattern=r"^(percent|nominal)$"
+    )
+    early_discount_value: float | None = Field(default=None, gt=0)
+
+    @model_validator(mode="after")
+    def validate_discounts(self):
+        if (self.discount_type is None) != (self.discount_value is None):
+            raise ValueError("Tipe dan nilai diskon reguler harus diisi bersama")
+        if (
+            self.discount_type == "percent"
+            and self.discount_value is not None
+            and self.discount_value > 100
+        ):
+            raise ValueError("Diskon persentase reguler maksimal 100%")
+        if (self.early_discount_type is None) != (self.early_discount_value is None):
+            raise ValueError("Tipe dan nilai diskon pendaftar awal harus diisi bersama")
+        if (
+            self.early_discount_type == "percent"
+            and self.early_discount_value is not None
+            and self.early_discount_value > 100
+        ):
+            raise ValueError("Diskon persentase pendaftar awal maksimal 100%")
+        return self
+
+
 class LoASignatureRequest(BaseModel):
     signer_name: str = Field(min_length=2, max_length=255)
     signer_relation: str = Field(default="Orang Tua", max_length=50)
     signature_data: str = Field(min_length=10)
 
 
-class TIUSettingsUpdate(BaseModel):
-    google_form_url: str = Field(min_length=1, max_length=2048)
-    duration_minutes: int = Field(ge=1, le=1440)
-    webhook_secret: str | None = Field(default=None, min_length=16, max_length=255)
-
-    @field_validator("google_form_url")
-    @classmethod
-    def validate_google_form_url(cls, value: str) -> str:
-        from urllib.parse import urlparse
-
-        parsed = urlparse(value.strip())
-        if parsed.scheme != "https" or parsed.hostname not in {
-            "docs.google.com",
-            "forms.gle",
-        }:
-            raise ValueError("URL harus berupa Google Form HTTPS")
-        return value.strip()
-
-
-class TIUVerificationRequest(BaseModel):
-    google_form_url: str | None = None
-    duration_minutes: int | None = None
-    webhook_secret: str | None = None
-
-
-class TIUCheckItem(BaseModel):
-    key: str
-    status: str
-    label: str
-    detail: str
-    fix: str | None = None
-
-
-class TIUVerificationSummary(BaseModel):
-    passed: int
-    failed: int
-    warn: int
-
-
-class TIUVerificationResponse(BaseModel):
-    overall: str
-    checks: list[TIUCheckItem]
-    summary: TIUVerificationSummary
-    recommendations: list[str]
-
-
-class TIUQuestionInput(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    id: str = Field(min_length=1, max_length=200)
-    title: str = Field(min_length=1, max_length=2000)
-    options: list[str] = Field(min_length=2)
-    correct_option_index: int = Field(ge=0)
-
-    @field_validator("id", "title")
-    @classmethod
-    def trim_required_text(cls, value: str) -> str:
-        value = value.strip()
-        if not value:
-            raise ValueError("wajib diisi")
-        return value
-
-    @field_validator("options")
-    @classmethod
-    def validate_options(cls, values: list[str]) -> list[str]:
-        cleaned = [value.strip() for value in values]
-        if any(not value for value in cleaned):
-            raise ValueError("opsi jawaban tidak boleh kosong")
-        if len({value.casefold() for value in cleaned}) != len(cleaned):
-            raise ValueError("opsi jawaban tidak boleh duplikat")
-        return cleaned
-
-    @model_validator(mode="after")
-    def correct_answer_must_exist(self):
-        if self.correct_option_index >= len(self.options):
-            raise ValueError("correct_option_index harus menunjuk salah satu opsi")
-        return self
-
-
-class TIUQuestionSyncPayload(BaseModel):
-    model_config = {"extra": "forbid"}
-
-    source_form_id: str = Field(min_length=1, max_length=200)
-    questions: list[TIUQuestionInput] = Field(min_length=1)
-
-    @field_validator("source_form_id")
-    @classmethod
-    def trim_form_id(cls, value: str) -> str:
-        value = value.strip()
-        if not value:
-            raise ValueError("source_form_id wajib diisi")
-        return value
-
-    @model_validator(mode="after")
-    def question_ids_must_be_unique(self):
-        ids = [question.id for question in self.questions]
-        if len(ids) != len(set(ids)):
-            raise ValueError("id soal harus unik")
-        return self
-
-
-ALLOWED_PATHS = ("reguler", "prestasi", "tahfidz", "rapot")
-
-
-def normalize_scope_csv(value: str, allowed: tuple[str, ...], label: str) -> str:
-    """Normalisasi string CSV scope (jalur pendaftaran): buang spasi & duplikat,
-    wajib minimal satu dan semua nilai harus dikenal sistem."""
-    items: list[str] = []
-    for raw in value.split(","):
-        v = raw.strip()
-        if v and v not in items:
-            items.append(v)
-    if not items:
-        raise ValueError(f"{label} wajib dipilih minimal satu")
-    unknown = [v for v in items if v not in allowed]
-    if unknown:
-        raise ValueError(f"{label} tidak valid: {', '.join(unknown)}")
-    return ",".join(items)
-
-
 class WaveBase(BaseModel):
     name: str = Field(min_length=1, max_length=100)
-    # CSV jalur pendaftaran, contoh: "reguler,rapot". Tidak ada scope jenjang.
-    allowed_paths: str
     registration_start_date: date
     registration_end_date: date
     quota: int = Field(ge=1)
     early_discount_quota: int = Field(default=0, ge=0)
     registration_fee: int = Field(default=0, ge=0)
-    # Tahap 2 (belum dipakai): None = jangan ubah nilai yang sudah ada
     second_stage_fee: int | None = Field(default=None, ge=0)
     minimum_dp: int = Field(default=0, ge=0)
-
-    @field_validator("allowed_paths")
-    @classmethod
-    def check_allowed_paths(cls, v: str) -> str:
-        return normalize_scope_csv(v, ALLOWED_PATHS, "Jalur pendaftaran")
 
     @model_validator(mode="after")
     def check_schedule_order(self):
@@ -183,7 +98,6 @@ class WaveUpdate(BaseModel):
     """Update parsial — hanya field yang dikirim yang diubah."""
 
     name: str | None = Field(default=None, min_length=1, max_length=100)
-    allowed_paths: str | None = None
     registration_start_date: date | None = None
     registration_end_date: date | None = None
     quota: int | None = Field(default=None, ge=1)
@@ -191,13 +105,6 @@ class WaveUpdate(BaseModel):
     registration_fee: int | None = Field(default=None, ge=0)
     second_stage_fee: int | None = Field(default=None, ge=0)
     minimum_dp: int | None = Field(default=None, ge=0)
-
-    @field_validator("allowed_paths")
-    @classmethod
-    def check_allowed_paths(cls, v: str | None) -> str | None:
-        if v is None:
-            return None
-        return normalize_scope_csv(v, ALLOWED_PATHS, "Jalur pendaftaran")
 
 
 def _digits_or_none(value: str | None, length: int, label: str) -> str | None:
@@ -260,48 +167,33 @@ class HealthIdentificationForm(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    # 1. Riwayat penyakit kronis — Ya / Tidak. Jika Ya, isi keterangan
     chronic_disease: bool
     chronic_disease_description: str | None = None
 
-    # 2. Pernah didiagnosis kondisi tertentu — checkbox
     diagnosed_conditions: list[str] = Field(default_factory=list)
     diagnosed_conditions_other: str | None = None
     diagnosed_conditions_description: str | None = None
 
-    # 3. Alergi — Ya / Tidak. Jika Ya, pilih jenis alergi
     allergies: bool
     allergy_types: list[str] = Field(default_factory=list)
     allergy_other: str | None = None
     allergy_description: str | None = None
 
-    # 4. Pengobatan rutin — Ya / Tidak. Jika Ya, isi keterangan
     regular_medication: bool
     regular_medication_description: str | None = None
 
-    # 5. Keterbatasan fisik — Ya / Tidak. Jika Ya, isi keterangan
     physical_limitation: bool
     physical_limitation_description: str | None = None
 
-    # 6. Riwayat rawat inap / operasi 2 tahun terakhir — Ya / Tidak.
-    # Jika Ya, isi keterangan
     hospitalization_history: bool
     hospitalization_history_description: str | None = None
 
-    # 7. Kebutuhan khusus saat belajar — Ya / Tidak. Jika Ya, isi keterangan
     special_needs: bool
     special_needs_description: str | None = None
 
-    # 8. Nama kontak darurat
     emergency_contact_name: str = Field(min_length=1, max_length=150)
-
-    # 9. Hubungan kontak darurat dengan calon peserta didik
     emergency_contact_relation: str = Field(min_length=1, max_length=100)
-
-    # 10. Nomor telepon kontak darurat
     emergency_contact_phone: str = Field(min_length=9, max_length=16)
-
-    # Pernyataan wajib dibaca & disetujui pendaftar
     health_declaration_confirmed: bool
 
     @field_validator("emergency_contact_phone")
@@ -324,7 +216,6 @@ class HealthIdentificationForm(BaseModel):
 
     @model_validator(mode="after")
     def validate_health_rules(self):
-        # 1. Chronic disease
         if self.chronic_disease:
             if (
                 not self.chronic_disease_description
@@ -337,7 +228,6 @@ class HealthIdentificationForm(BaseModel):
         else:
             self.chronic_disease_description = None
 
-        # 2. Diagnosed conditions
         for cond in self.diagnosed_conditions:
             if cond not in DIAGNOSED_CONDITIONS_OPTIONS:
                 raise ValueError(f"Kondisi diagnosis '{cond}' tidak valid")
@@ -357,7 +247,6 @@ class HealthIdentificationForm(BaseModel):
                 self.diagnosed_conditions_description.strip() or None
             )
 
-        # 3. Allergies
         if self.allergies:
             for item in self.allergy_types:
                 if item not in ALLERGY_OPTIONS:
@@ -378,7 +267,6 @@ class HealthIdentificationForm(BaseModel):
             self.allergy_other = None
             self.allergy_description = None
 
-        # 4. Regular medication
         if self.regular_medication:
             if (
                 not self.regular_medication_description
@@ -393,7 +281,6 @@ class HealthIdentificationForm(BaseModel):
         else:
             self.regular_medication_description = None
 
-        # 5. Physical limitation
         if self.physical_limitation:
             if (
                 not self.physical_limitation_description
@@ -408,7 +295,6 @@ class HealthIdentificationForm(BaseModel):
         else:
             self.physical_limitation_description = None
 
-        # 6. Hospitalization
         if self.hospitalization_history:
             if (
                 not self.hospitalization_history_description
@@ -423,7 +309,6 @@ class HealthIdentificationForm(BaseModel):
         else:
             self.hospitalization_history_description = None
 
-        # 7. Special needs
         if self.special_needs:
             if (
                 not self.special_needs_description
@@ -436,7 +321,6 @@ class HealthIdentificationForm(BaseModel):
         else:
             self.special_needs_description = None
 
-        # Statement
         if not self.health_declaration_confirmed:
             raise ValueError("Pernyataan kebenaran data kesehatan wajib disetujui")
 
@@ -446,10 +330,9 @@ class HealthIdentificationForm(BaseModel):
 class ApplicantRegister(BaseModel):
     full_name: str = Field(min_length=1, max_length=100)
     email: EmailStr
-    # Panjang & format divalidasi manual di bawah supaya pesan error konsisten
     phone: str = Field(max_length=16)
-    registration_path: str
     gender: str | None = None
+    graduation_year: str | None = None
     birth_place: str | None = Field(default=None, max_length=100)
     birth_date: date | None = None
     nisn: str | None = None
@@ -497,6 +380,16 @@ class ApplicantRegister(BaseModel):
     @classmethod
     def check_nik(cls, v: str | None) -> str | None:
         return _digits_or_none(v, 16, "NIK")
+
+    @field_validator("graduation_year")
+    @classmethod
+    def check_graduation_year(cls, v: str | None) -> str | None:
+        if v is None or v == "":
+            return None
+        v = v.strip()
+        if not v.isdigit() or len(v) != 4:
+            raise ValueError("Tahun kelulusan harus 4 digit angka")
+        return v
 
     @field_validator("postal_code")
     @classmethod
@@ -547,47 +440,17 @@ class ApplicantPasswordReset(BaseModel):
     password: str
 
 
-# ── CRUD pendaftar oleh Superadmin ───────────────────────────────────────────
-# Konsep password TIDAK berubah: username & password tetap dibuat otomatis oleh
-# sistem saat pendaftaran, dan perubahan password tetap lewat endpoint khusus
-# (PUT /applicants/{id}/password). karena itu tidak ada field kredensial di
-# bawah ini — hanya data profil, penempatan gelombang, dan status.
-
-
-class ApplicantChangePath(BaseModel):
-    registration_path: str = Field(min_length=1)
-
-
 class ApplicantAdminCreate(ApplicantRegister):
-    """Buat pendaftar dari panel Superadmin.
-
-    Berbeda dari ``/ppdb/register`` (publik): tidak butuh gelombang aktif dan
-    jalur tidak dibatasi ``allowed_paths``, karena
-    admin yang memutuskan. ``wave_id`` wajib diisi eksplisit supaya pendaftar
-    selalu punya label periode & gelombang.
-
-    Sengaja TIDAK ada field password/username: konsep kredensial tetap sama
-    dengan pendaftaran publik, yaitu dibuat otomatis oleh sistem. Password hanya
-    dikembalikan sekali di respons pembuatan, dan perubahan password hanya
-    lewat ``PUT /applicants/{id}/password``.
-    """
-
     wave_id: str = Field(min_length=1)
 
 
 class ApplicantAdminUpdate(BaseModel):
-    """Update sebagian data pembangun. Semua field opsional (partial update).
-
-    ``exclude_unset`` dipakai di service supaya field yang tidak dikirim tetap
-    menyimpan nilai lama.
-    """
-
     wave_id: str | None = None
     full_name: str | None = Field(default=None, min_length=1, max_length=100)
     email: EmailStr | None = None
     phone: str | None = Field(default=None, max_length=16)
-    registration_path: str | None = None
     gender: str | None = None
+    graduation_year: str | None = None
     birth_place: str | None = Field(default=None, max_length=100)
     birth_date: date | None = None
     nisn: str | None = None
@@ -641,6 +504,16 @@ class ApplicantAdminUpdate(BaseModel):
     def check_nik(cls, v: str | None) -> str | None:
         return _digits_or_none(v, 16, "NIK")
 
+    @field_validator("graduation_year")
+    @classmethod
+    def check_graduation_year(cls, v: str | None) -> str | None:
+        if v is None or v == "":
+            return None
+        v = v.strip()
+        if not v.isdigit() or len(v) != 4:
+            raise ValueError("Tahun kelulusan harus 4 digit angka")
+        return v
+
     @field_validator("postal_code")
     @classmethod
     def check_postal_code(cls, v: str | None) -> str | None:
@@ -648,18 +521,15 @@ class ApplicantAdminUpdate(BaseModel):
 
 
 class ApplicantProfileUpdate(BaseModel):
-    """Pembaruan data formulir mandiri oleh pendaftar dari halaman profil."""
-
     full_name: str | None = Field(default=None, min_length=1, max_length=100)
     phone: str | None = Field(default=None, max_length=16)
     gender: str | None = None
+    graduation_year: str | None = None
     birth_place: str | None = Field(default=None, max_length=100)
     birth_date: date | None = None
     nisn: str | None = None
     nik: str | None = None
     previous_school: str | None = Field(default=None, max_length=150)
-
-    # Orang tua / wali
     parent_name: str | None = Field(default=None, max_length=150)
     father_name: str | None = Field(default=None, max_length=150)
     father_job: str | None = Field(default=None, max_length=100)
@@ -672,8 +542,6 @@ class ApplicantProfileUpdate(BaseModel):
     parent_phone: str | None = Field(default=None, max_length=20)
     parent_income: str | None = Field(default=None, max_length=100)
     parent_email: str | None = Field(default=None, max_length=100)
-
-    # Domisili
     province: str | None = Field(default=None, max_length=100)
     city: str | None = Field(default=None, max_length=100)
     district: str | None = Field(default=None, max_length=100)
@@ -702,6 +570,16 @@ class ApplicantProfileUpdate(BaseModel):
     @classmethod
     def check_nik(cls, v: str | None) -> str | None:
         return _digits_or_none(v, 16, "NIK")
+
+    @field_validator("graduation_year")
+    @classmethod
+    def check_graduation_year(cls, v: str | None) -> str | None:
+        if v is None or v == "":
+            return None
+        v = v.strip()
+        if not v.isdigit() or len(v) != 4:
+            raise ValueError("Tahun kelulusan harus 4 digit angka")
+        return v
 
     @field_validator("postal_code")
     @classmethod
@@ -757,3 +635,8 @@ class WaveFeeItemUpdate(WaveFeeItemCreate):
 class DocumentVerify(BaseModel):
     status: str = Field(pattern=r"^document_(approved|rejected)$")
     rejection_reason: str | None = None
+
+
+class DocumentSubmitRequest(BaseModel):
+    deferred_commitment: bool = False
+    deferred_note: str | None = None

@@ -1,11 +1,15 @@
 import { HealthIdentificationViewer } from './HealthIdentificationViewer'
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiFetch, apiFetchBlob } from '@/api/client'
 import {
   Dialog,
   DialogContent,
   DialogTitle,
+  DialogHeader,
+  DialogDescription,
+  DialogFooter,
+  Textarea,
   Tabs,
   TabsList,
   TabsTrigger,
@@ -36,13 +40,12 @@ import {
   Mail,
   Home,
   Loader2,
-  Brain,
+  GraduationCap,
   Printer,
 } from 'lucide-react'
 import { useToast } from '@/components/Toast'
 import ApplicantTranscriptModal from './ApplicantTranscriptModal'
 import ApplicantLoAModal from './ApplicantLoAModal'
-import ApplicantSKDModal from './ApplicantSKDModal'
 
 interface ApplicantDossierModalProps {
   open: boolean
@@ -102,10 +105,13 @@ export default function ApplicantDossierModal({
   applicantId,
 }: ApplicantDossierModalProps) {
   const { toast } = useToast()
+  const queryClient = useQueryClient()
   const [downloadingZip, setDownloadingZip] = useState(false)
   const [transcriptOpen, setTranscriptOpen] = useState(false)
   const [loaOpen, setLoaOpen] = useState(false)
-  const [skdOpen, setSkdOpen] = useState(false)
+  const [rescheduleOpen, setRescheduleOpen] = useState(false)
+  const [targetSessionId, setTargetSessionId] = useState('')
+  const [rescheduleReason, setRescheduleReason] = useState('')
 
   const { data: dossier, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['applicant-dossier', applicantId],
@@ -119,8 +125,41 @@ export default function ApplicantDossierModal({
   const documents = dossier?.documents || []
   const transcript = dossier?.transcript
   const loa = dossier?.loa
-  const skd = dossier?.skd
   const payments = dossier?.payments
+
+  const { data: availableSessions = [] } = useQuery({
+    queryKey: ['available-reschedule-sessions', applicant?.wave_id],
+    queryFn: async () => {
+      const res = await apiFetch<any>('/selection/sessions')
+      const all: any[] = res?.data || []
+      return applicant?.wave_id ? all.filter((s) => s.wave_id === applicant.wave_id) : all
+    },
+    enabled: rescheduleOpen,
+  })
+
+  const rescheduleMutation = useMutation({
+    mutationFn: async () => {
+      if (!targetSessionId) throw new Error('Pilih sesi target')
+      return await apiFetch(`/selection/applicants/${applicantId}/move-session`, {
+        method: 'POST',
+        body: JSON.stringify({
+          target_session_id: targetSessionId,
+          reason: rescheduleReason.trim() || undefined,
+        }),
+      })
+    },
+    onSuccess: (res: any) => {
+      toast('success', res?.message || 'Jadwal seleksi pendaftar berhasil dipindahkan!')
+      setRescheduleOpen(false)
+      setTargetSessionId('')
+      setRescheduleReason('')
+      queryClient.invalidateQueries({ queryKey: ['applicant-dossier', applicantId] })
+      queryClient.invalidateQueries({ queryKey: ['selection-sessions'] })
+    },
+    onError: (err: any) => {
+      toast('error', err.message || 'Gagal memindahkan sesi pendaftar')
+    },
+  })
 
   const handleDownloadZip = async () => {
     if (!applicantId || !applicant) return
@@ -165,7 +204,7 @@ export default function ApplicantDossierModal({
                 </div>
                 <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
                   <Shield className="h-3.5 w-3.5 text-emerald-600" />
-                  Pencarian Lintas Periode & Gelombang Â· Tercatat di Audit Log
+                  Pencarian Lintas Periode & Gelombang · Tercatat di Audit Log
                 </p>
               </div>
 
@@ -204,13 +243,7 @@ export default function ApplicantDossierModal({
                 <div>
                   <span className="text-muted-foreground block">Periode / Gelombang</span>
                   <span className="font-medium text-slate-700">
-                    {applicant.period_name || 'Periode Aktif'} Â· {applicant.wave_name || 'Gelombang'}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-muted-foreground block">Jalur Pendaftaran</span>
-                  <span className="font-medium text-slate-700 capitalize">
-                    {applicant.registration_path || '-'}
+                    {applicant.period_name || 'Periode Aktif'} · {applicant.wave_name || 'Gelombang'}
                   </span>
                 </div>
                 <div>
@@ -267,7 +300,7 @@ export default function ApplicantDossierModal({
                     Dokumen ({documents.length})
                   </TabsTrigger>
                   <TabsTrigger value="seleksi" className="text-xs gap-1.5 shrink-0 px-3 py-1.5">
-                    <Brain className="h-3.5 w-3.5" />
+                    <GraduationCap className="h-3.5 w-3.5" />
                     Seleksi & Nilai
                   </TabsTrigger>
                   <TabsTrigger value="pembayaran" className="text-xs gap-1.5 shrink-0 px-3 py-1.5">
@@ -276,7 +309,7 @@ export default function ApplicantDossierModal({
                   </TabsTrigger>
                   <TabsTrigger value="loa" className="text-xs gap-1.5 shrink-0 px-3 py-1.5">
                     <Award className="h-3.5 w-3.5" />
-                    LoA & SKD
+                    LoA
                   </TabsTrigger>
                 </TabsList>
 
@@ -330,6 +363,10 @@ export default function ApplicantDossierModal({
                       <div>
                         <span className="text-xs text-muted-foreground block">Asal Sekolah</span>
                         <span className="font-medium text-slate-800">{applicant.previous_school || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-xs text-muted-foreground block">Tahun Kelulusan</span>
+                        <span className="font-medium text-slate-800">{applicant.graduation_year || '-'}</span>
                       </div>
                       <div className="sm:col-span-2 md:col-span-3">
                         <span className="text-xs text-muted-foreground block mb-1">Riwayat Kesehatan</span>
@@ -498,69 +535,35 @@ export default function ApplicantDossierModal({
 
                 {/* TAB 3: SELEKSI & NILAI */}
                 <TabsContent value="seleksi" className="space-y-6">
-                  {/* TIU Result Card */}
-                  <div className="rounded-xl border border-slate-200 p-5 bg-white space-y-4">
-                    <div className="flex items-center justify-between border-b pb-3">
-                      <div className="flex items-center gap-2">
-                        <Brain className="h-4 w-4 text-emerald-600" />
-                        <h3 className="font-semibold text-slate-800 text-sm">
-                          Hasil Ujian TIU (Safe Exam Browser)
-                        </h3>
-                      </div>
-                      <Badge variant="outline" className="text-xs font-mono">
-                        Webhook Otomatis
-                      </Badge>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div className="p-4 rounded-lg bg-emerald-50/50 border border-emerald-100 flex flex-col justify-center items-center">
-                        <span className="text-xs text-emerald-800 font-medium">Skor TIU</span>
-                        <span className="text-3xl font-extrabold text-emerald-700 mt-1">
-                          {transcript?.tiu_score != null ? transcript.tiu_score : 'â€”'}
-                        </span>
-                        <span className="text-[10px] text-emerald-600 mt-1">Skala 0 - 100</span>
-                      </div>
-                      <div className="sm:col-span-2 space-y-2 text-xs text-slate-600 justify-center flex flex-col">
-                        <div className="flex justify-between border-b pb-1.5">
-                          <span className="text-muted-foreground">Status Pengerjaan</span>
-                          <span className="font-medium text-slate-800">
-                            {transcript?.tiu_score != null ? 'Selesai Dikerjakan' : 'Belum Selesai / Belum Ikut'}
-                          </span>
-                        </div>
-                        <div className="flex justify-between border-b pb-1.5">
-                          <span className="text-muted-foreground">Waktu Penyelesaian</span>
-                          <span className="font-medium text-slate-800">
-                            {formatDate(transcript?.tiu_completed_at)}
-                          </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-muted-foreground">Mode Ujian</span>
-                          <span className="font-medium text-slate-800">
-                            Safe Exam Browser (SEB Desktop Desktop/Laptop)
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* Rubric Breakdown */}
                   <div className="rounded-xl border border-slate-200 p-5 bg-white space-y-4">
                     <div className="flex items-center justify-between border-b pb-3">
                       <div className="flex items-center gap-2">
                         <Award className="h-4 w-4 text-emerald-600" />
                         <h3 className="font-semibold text-slate-800 text-sm">
-                          Penilaian Rubrik (Tahfidz & Wawancara)
+                          Penilaian Seleksi Tahfidz &amp; Wawancara Terpadu
                         </h3>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs gap-1.5"
-                        onClick={() => setTranscriptOpen(true)}
-                      >
-                        <Printer className="h-3 w-3" />
-                        Buka Transkrip Resmi
-                      </Button>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
+                          onClick={() => setRescheduleOpen(true)}
+                        >
+                          <Calendar className="h-3 w-3" />
+                          Pindah Sesi
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1.5"
+                          onClick={() => setTranscriptOpen(true)}
+                        >
+                          <Printer className="h-3 w-3" />
+                          Buka Transkrip Resmi
+                        </Button>
+                      </div>
                     </div>
 
                     {transcript?.evaluations?.length > 0 ? (
@@ -619,7 +622,7 @@ export default function ApplicantDossierModal({
                       <div className="flex items-center gap-2">
                         <CreditCard className="h-4 w-4 text-emerald-600" />
                         <h3 className="font-semibold text-slate-800 text-sm">
-                          Pembayaran Biaya Formulir (Tahap 1)
+                          Pembayaran Biaya Formulir
                         </h3>
                       </div>
                       <Badge variant="outline" className="text-xs font-mono">
@@ -680,71 +683,6 @@ export default function ApplicantDossierModal({
                       </p>
                     )}
                   </div>
-
-                  {/* Stage 2 / Installments */}
-                  <div className="rounded-xl border border-slate-200 p-5 bg-white space-y-4">
-                    <div className="flex items-center justify-between border-b pb-3">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-emerald-600" />
-                        <h3 className="font-semibold text-slate-800 text-sm">
-                          Tagihan Biaya Masuk & Cicilan (Tahap 2)
-                        </h3>
-                      </div>
-                      <Badge variant="outline" className="text-xs font-mono">
-                        Webhook Otomatis
-                      </Badge>
-                    </div>
-
-                    {payments?.stage2_bills?.length > 0 ? (
-                      <Table className="min-w-[650px]">
-                        <TableHeader>
-                          <TableRow className="bg-slate-50/50">
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Termin Cicilan</TableHead>
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Nominal Tagihan</TableHead>
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Jatuh Tempo</TableHead>
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Status</TableHead>
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Konfirmasi Gateway</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {payments.stage2_bills.map((b: any) => (
-                            <TableRow key={b.id}>
-                              <TableCell className="text-xs font-medium">
-                                Cicilan Ke-{b.installment_number}
-                              </TableCell>
-                              <TableCell className="text-xs font-semibold text-emerald-700">
-                                {formatRupiah(b.amount)}
-                              </TableCell>
-                              <TableCell className="text-xs text-muted-foreground">
-                                {formatDate(b.due_date)}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant={
-                                    b.status === 'paid'
-                                      ? 'success'
-                                      : b.status === 'overdue'
-                                      ? 'destructive'
-                                      : 'warning'
-                                  }
-                                  className="text-[10px] uppercase font-bold"
-                                >
-                                  {b.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-xs text-muted-foreground">
-                                {formatDate(b.confirmed_at)}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    ) : (
-                      <p className="text-xs text-muted-foreground py-4 text-center">
-                        Belum ada data tagihan biaya masuk / cicilan tahap 2.
-                      </p>
-                    )}
-                  </div>
                 </TabsContent>
 
                 {/* TAB 5: SURAT LoA */}
@@ -756,7 +694,7 @@ export default function ApplicantDossierModal({
                           Surat Penerimaan Resmi (Letter of Acceptance)
                         </h3>
                         <p className="text-xs text-muted-foreground">
-                          Nomor: {loa?.letter_number || '-'} Â· Diterbitkan: {formatDate(loa?.issued_at)}
+                          Nomor: {loa?.letter_number || '-'} · Diterbitkan: {formatDate(loa?.issued_at)}
                         </p>
                       </div>
                       <Button
@@ -783,32 +721,6 @@ export default function ApplicantDossierModal({
                     </div>
                   </div>
 
-                  <div className="rounded-xl border border-slate-200 p-5 bg-white space-y-4">
-                    <div className="flex items-center justify-between border-b pb-3">
-                      <div>
-                        <h3 className="font-semibold text-slate-800 text-sm">
-                          Surat Keterangan Diterima (SKD)
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          Nomor: {skd?.letter_number || "-"}
-                        </p>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-7 text-xs gap-1.5"
-                        onClick={() => setSkdOpen(true)}
-                      >
-                        <Printer className="h-3 w-3" />
-                        Cetak SKD
-                      </Button>
-                    </div>
-
-                    <div className="bg-slate-50 p-4 rounded-lg border text-xs space-y-3 font-mono">
-                      <p className="text-slate-600">Background URL: {skd?.background_url || "Belum ada"}</p>
-                      <p className="text-slate-600">Grup WA: {skd?.whatsapp_group_link || "Belum ada"}</p>
-                    </div>
-                  </div>
                 </TabsContent>
               </Tabs>
             )}
@@ -827,11 +739,84 @@ export default function ApplicantDossierModal({
         onOpenChange={setLoaOpen}
         applicantId={applicantId}
       />
-      <ApplicantSKDModal
-        open={skdOpen}
-        onOpenChange={setSkdOpen}
-        applicantId={applicantId}
-      />
+      {/* Modal Pindah Sesi Seleksi */}
+      <Dialog open={rescheduleOpen} onOpenChange={setRescheduleOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
+              <Calendar className="h-5 w-5 text-blue-600" />
+              Pindah Sesi Seleksi
+            </DialogTitle>
+            <DialogDescription className="text-xs text-slate-500">
+              Pindahkan jadwal seleksi pendaftar ini ke sesi lain di gelombang yang sama. Sistem otomatis mengirimkan notifikasi jadwal baru via WhatsApp.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <div>
+              <label className="text-xs font-semibold text-slate-700 block mb-1">
+                Pilih Sesi Seleksi Baru <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={targetSessionId}
+                onChange={(e) => setTargetSessionId(e.target.value)}
+                className="w-full text-xs rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">-- Pilih Sesi Target --</option>
+                {availableSessions.map((s: any) => (
+                  <option key={s.id} value={s.id}>
+                    [{s.session_type === 'interview' ? 'Wawancara' : 'Tahfidz'}] {s.name || s.title} ({s.session_date ? formatDate(s.session_date) : ''} · {s.start_time || ''} - {s.end_time || ''})
+                  </option>
+                ))}
+              </select>
+              {availableSessions.length === 0 && (
+                <p className="text-[11px] text-amber-600 mt-1">
+                  Belum ada sesi seleksi lain yang tersedia di gelombang ini.
+                </p>
+              )}
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-slate-700 block mb-1">
+                Alasan Pemindahan (Opsional)
+              </label>
+              <Textarea
+                placeholder="Contoh: Peserta sakit / berhalangan hadir pada tanggal sesi sebelumnya..."
+                value={rescheduleReason}
+                onChange={(e) => setRescheduleReason(e.target.value)}
+                className="text-xs"
+                rows={3}
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRescheduleOpen(false)}
+              disabled={rescheduleMutation.isPending}
+            >
+              Batal
+            </Button>
+            <Button
+              size="sm"
+              className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5"
+              onClick={() => rescheduleMutation.mutate()}
+              disabled={!targetSessionId || rescheduleMutation.isPending}
+            >
+              {rescheduleMutation.isPending ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Memindahkan...
+                </>
+              ) : (
+                'Konfirmasi Pindah Sesi'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }

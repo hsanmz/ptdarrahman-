@@ -1,5 +1,5 @@
-<div align="center">
-  <h1>⚙️ Core API Backend</h1>
+﻿<div align="center">
+  <h1>âš™ï¸ Core API Backend</h1>
   <p><strong>Mesin Utama Penggerak Sistem Terpadu</strong></p>
 
   [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -12,29 +12,23 @@
 
 Aplikasi ini adalah **backend utama** untuk seluruh ekosistem Pesantren Tahfidz Qur'an dan Digital Ar-Rahman. Menangani seluruh transaksi dan logika bisnis untuk Company Profile, PPDB, dan Superadmin.
 
-## 🚀 Peran & Tanggung Jawab (Fitur Inti)
+## ðŸš€ Peran & Tanggung Jawab (Fitur Inti)
 
-- 🔐 **Otorisasi Terpusat & Keamanan:** Sistem RBAC (Role-Based Access Control) berbasis HTTP-only Cookie JWT untuk Pendaftar, Admin PPDB, Penguji/Pewawancara, dan Superadmin.
-- 🛡️ **Pelacakan Sesi & Keamanan Multi-Perangkat:** Deteksi metadata login (browser, OS, device, IP) dengan kemampuan pemantauan sesi aktif dan pemutusan sesi jarak jauh (*remote session revocation*).
-- 🔍 **Pencarian Global Terpadu (`/search/global`):** Pencarian modular cepat lintas pendaftar, berita, program, fasilitas, staf, akun pengguna, dan log aktivitas audit sesuai level RBAC.
-- 🚦 **Transaksi PPDB & Gelombang (Atomik):** Mengatur validasi periode tunggal, alokasi gelombang otomatis, kuota pendaftaran, dan pembatalan otomatis invoice pending saat kuota terpenuhi.
-- 👤 **Profil Mandiri Pendaftar (`/ppdb/applicants/me`):** Pembacaan dan pembaruan mandiri data pendaftar dan kuesioner kesehatan dengan penguncian otomatis pasca-kelulusan.
-- 💳 **Integrasi Payment Gateway Pakasir API v2:**
+- ðŸ” **Otorisasi Terpusat & Keamanan:** Sistem RBAC (Role-Based Access Control) berbasis HTTP-only Cookie JWT untuk Pendaftar, Admin PPDB, Penguji/Pewawancara, dan Superadmin.
+- ðŸ›¡ï¸ **Pelacakan Sesi & Keamanan Multi-Perangkat:** Deteksi metadata login (browser, OS, device, IP) dengan kemampuan pemantauan sesi aktif dan pemutusan sesi jarak jauh (*remote session revocation*).
+- ðŸ” **Pencarian Global Terpadu (`/search/global`):** Pencarian modular cepat lintas pendaftar, berita, program, fasilitas, staf, akun pengguna, dan log aktivitas audit sesuai level RBAC.
+- ðŸš¦ **Transaksi PPDB & Gelombang (Atomik):** Mengatur validasi periode tunggal, alokasi gelombang otomatis, kuota pendaftaran, dan pembatalan otomatis invoice pending saat kuota terpenuhi.
+- ðŸ‘¤ **Profil Mandiri Pendaftar (`/ppdb/applicants/me`):** Pembacaan dan pembaruan mandiri data pendaftar dan kuesioner kesehatan dengan penguncian otomatis pasca-kelulusan.
+- ðŸ’³ **Integrasi Payment Gateway Pakasir API v2:**
   - Pembuatan QRIS dinamis untuk pembayaran formulir dan pembayaran Tahap 2 (DP & cicilan).
   - Webhook 1 Pintu terverifikasi dengan header `X-Secret` dan idempotency guard.
   - Penerbitan kuitansi resmi bertanda tangan digital (HMAC signed token) untuk verifikasi publik (`/payment/public-receipt/{id}`).
   - Background scheduler untuk pengingat jatuh tempo cicilan (H-3) via WhatsApp.
-- 📝 **Integrasi Ujian TIU (Safe Exam Browser):**
-  - Pembuatan tiket attempt unik sekali pakai dalam file `.seb` dengan server timer.
-  - Pre-filled Google Form URL otomatis terkunci di SEB tanpa bilah alamat.
-  - Penerimaan nilai real-time melalui webhook Google Apps Script (`POST /ppdb/webhook/tiu`).
-- 📜 **LoA, SKD, dan Arsip Dossier Lengkap:**
   - Penerbitan LoA resmi beserta fitur tanda tangan digital orang tua.
-  - Penerbitan Surat Keterangan Diterima (SKD) otomatis pasca pelunasan DP.
   - Pencarian arsip dossier lintas periode/gelombang dan ekspor bundle ZIP (biodata, PDF ringkasan, berkas lampiran) dengan catatan audit IP address.
-- 📡 **Message Broker:** Memicu *event* Redis (notifikasi akun, kuota habis, jadwal ujian, hasil TIU, pengingat hari Senin) yang dieksekusi oleh microservice `apps/whatsapp`.
+- ðŸ“¡ **Message Broker:** Memicu *event* Redis (notifikasi akun, kuota habis, konfirmasi sesi, pengingat hari Senin) yang dieksekusi oleh microservice `apps/whatsapp`.
 
-## 📦 Menjalankan secara Lokal (Non-Docker)
+## ðŸ“¦ Menjalankan secara Lokal (Non-Docker)
 
 Sangat disarankan menjalankan API ini menggunakan Docker. Namun, untuk sekadar *local debugging*:
 
@@ -57,7 +51,7 @@ uvicorn src.main:app --reload --port 8000
 > - Saat dijalankan secara lokal manual (non-Docker), backend FastAPI berjalan di `http://localhost:8000`.
 > - Saat dijalankan via Docker Compose, port container dipetakan ke host di `http://localhost:8080`.
 
-## 🐳 Deployment (Sangat Disarankan)
+## ðŸ³ Deployment (Sangat Disarankan)
 
 Kami merekomendasikan Docker WSL2 dengan dukungan mode NAT untuk *name resolution* yang andal.
 
@@ -66,10 +60,10 @@ Kami merekomendasikan Docker WSL2 dengan dukungan mode NAT untuk *name resolutio
 docker compose up -d --build api
 ```
 
-## 📚 Bacaan Lebih Lanjut
-- 🤖 [**Panduan Arsitektur Backend (AGENTS.md)**](AGENTS.md) — Struktur layer (Router, Service, Repository), model database, dan konvensi coding backend.
-- 📖 [**Dokumen Requirements Global**](../../docs/REQUIREMENTS.md) — Aturan bisnis periode, kuota, rubrik, dan formulir kesehatan.
-- 🐳 [**Panduan Docker Setup**](../../docs/DOCKER_SETUP.md) — Konfigurasi runbook Docker WSL2.
+## ðŸ“š Bacaan Lebih Lanjut
+- ðŸ¤– [**Panduan Arsitektur Backend (AGENTS.md)**](AGENTS.md) â€” Struktur layer (Router, Service, Repository), model database, dan konvensi coding backend.
+- ðŸ“– [**Dokumen Requirements Global**](../../docs/REQUIREMENTS.md) â€” Aturan bisnis periode, kuota, rubrik, dan formulir kesehatan.
+- ðŸ³ [**Panduan Docker Setup**](../../docs/DOCKER_SETUP.md) â€” Konfigurasi runbook Docker WSL2.
 
 ---
-⬅️ [Kembali ke Halaman Utama](../../README.md)
+â¬…ï¸ [Kembali ke Halaman Utama](../../README.md)

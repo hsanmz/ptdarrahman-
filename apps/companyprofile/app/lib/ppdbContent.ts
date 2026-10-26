@@ -1,7 +1,7 @@
 /**
  * Konten statis landing PPDB halaman `/ppdb` (copy hero 3D + seksi di bawah hero).
  *
- * Kartu Jalur Pendaftaran, Pilar Kurikulum, langkah Alur Pendaftaran, dan
+ * Kartu Program Pembinaan, Pilar Kurikulum, langkah Alur Pendaftaran, dan
  * teks seksi/CTA TIDAK lagi dikelola dari CMS Company Profile — semuanya
  * ditulis langsung di sini (mengikuti kit copywriting PTD Ar-Rahman yang
  * semula disemai migrasi 0042 + 0045). Satu-satunya data yang tetap dinamis
@@ -75,9 +75,9 @@ yang Menguasai Rekayasa Teknologi`,
   hero_cta_href: '/register',
   hero_register_label: 'Daftar PPDB',
   hero_register_href: '/register',
-  jalur_title: 'Jalur Pendaftaran Santri Baru',
+  jalur_title: 'Program Pembinaan Santri Baru',
   jalur_desc:
-    'Pilihlah jalur penerimaan yang sesuai dengan minat dan potensi ananda untuk bergabung bersama Pesantren Tahfidz Qur\u2019an dan Digital Ar-Rahman.',
+    'Pesantren Tahfidz Qur\u2019an dan Digital Ar-Rahman membina santri melalui program terpadu tahfidz, sains teknologi terapan, dan karakter islami.',
   kurikulum_title: 'Kurikulum Holistik Masa Depan',
   kurikulum_desc:
     'Keseimbangan antara ilmu ukhrawi dan bekal teknologi kontemporer',
@@ -99,11 +99,11 @@ const STATIC_JALUR: PpdbJalurCard[] = [
     content: {
       order: 1,
       accent: 'emerald',
-      kicker: 'Seleksi Reguler Berbasis Minat',
-      title: 'Jalur Reguler',
+      kicker: 'Pembinaan Karakter & Sains',
+      title: 'Program Reguler Terpadu',
       desc: 'Bagi calon santri putra yang siap mengikuti pembinaan terpadu tahfidz 30 juz dan teknologi informasi dari tingkat dasar hingga mahir.',
       items: [],
-      cta_label: 'Daftar Jalur Reguler',
+      cta_label: 'Daftar Sekarang',
       cta_href: '/register',
     },
   },
@@ -114,10 +114,10 @@ const STATIC_JALUR: PpdbJalurCard[] = [
       order: 2,
       accent: 'amber',
       kicker: 'Uji Tahfidz 1:1',
-      title: 'Jalur Prestasi Tahfidz',
+      title: 'Program Tahfidz Intensif',
       desc: "Bagi calon santri putra yang telah memiliki bekal hafalan Al-Qur'an dan siap diuji pada sesi Tahfidz 1:1.",
       items: [],
-      cta_label: 'Daftar Jalur Prestasi Tahfidz',
+      cta_label: 'Daftar Sekarang',
       cta_href: '/register',
     },
   },
@@ -128,10 +128,10 @@ const STATIC_JALUR: PpdbJalurCard[] = [
       order: 3,
       accent: 'sky',
       kicker: 'Prestasi Olimpiade & Minat Teknologi',
-      title: 'Jalur Prestasi Akademik & Digital',
+      title: 'Program Sains & Digital',
       desc: 'Bagi calon santri putra yang memiliki prestasi olimpiade sains/tafsir, bahasa, atau minat kuat di bidang pemrograman dan teknologi.',
       items: [],
-      cta_label: 'Daftar Jalur Prestasi Akademik',
+      cta_label: 'Daftar Sekarang',
       cta_href: '/register',
     },
   },
@@ -142,10 +142,10 @@ const STATIC_JALUR: PpdbJalurCard[] = [
       order: 4,
       accent: 'violet',
       kicker: 'Program Orang Tua Asuh',
-      title: 'Jalur Beasiswa / Orang Tua Asuh',
+      title: 'Program Beasiswa / Yatim Dhuafa',
       desc: "Dukungan pendidikan bagi calon santri putra yatim/dhuafa yang memiliki tekad kuat menghafal Al-Qur'an 30 juz di PTD Ar-Rahman.",
       items: [],
-      cta_label: 'Daftar Jalur Beasiswa',
+      cta_label: 'Daftar Sekarang',
       cta_href: '/register',
     },
   },

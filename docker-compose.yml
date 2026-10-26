@@ -28,8 +28,8 @@ services:
         VITE_API_URL: ${FRONTEND_VITE_API_URL:-http://localhost:8080}
     ports:
       - "3000:3000"   # companyprofile (Next.js)
-      - "5173:5173"   # ppdb (Vite)
-      - "5174:5174"   # superadmin (Vite)
+      - "5173:5173"   # superadmin (Vite)
+      - "5174:5174"   # ppdb (Vite)
     depends_on:
       api:
         condition: service_healthy

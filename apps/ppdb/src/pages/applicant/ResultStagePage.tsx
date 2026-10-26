@@ -33,8 +33,8 @@ export default function ResultStagePage() {
   return (
     <div className="mx-auto max-w-4xl w-full space-y-6">
       <ApplicantPageHeader
-        title="Hasil Kelulusan & LoA"
-        description="Pengumuman resmi hasil seleksi penerimaan santri baru beserta dokumen LoA dan tahapan daftar ulang."
+        title="Hasil Pendaftaran & LoA"
+        description="Hasil resmi pendaftaran calon santri beserta dokumen LoA."
         docKey="applicant-result"
       />
 

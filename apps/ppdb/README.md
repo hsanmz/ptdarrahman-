@@ -1,5 +1,5 @@
-<div align="center">
-  <h1>🎓 PPDB Frontend</h1>
+﻿<div align="center">
+  <h1>ðŸŽ“ PPDB Frontend</h1>
   <p><strong>Aplikasi Portal Pendaftaran Peserta Didik Baru & Backoffice PPDB</strong></p>
 
   [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
@@ -11,41 +11,38 @@
 
 Aplikasi frontend berbasis **Vite + React + TypeScript** untuk sistem Penerimaan Peserta Didik Baru (PPDB) di Pesantren Tahfidz Qur'an dan Digital Ar-Rahman. Aplikasi ini menyatukan portal mandiri calon santri/wali murid dengan panel operasional panitia PPDB.
 
-## ✨ Fitur & Layanan Utama
+## âœ¨ Fitur & Layanan Utama
 
-### 👨‍🎓 Portal Calon Santri (Pendaftar)
-- 📝 **Registrasi Bertahap:** 7 tahapan form (Pilih Jalur bebas-jenjang, Biodata, Data Orang Tua/Wali, Kontak, Domisili, Kuesioner Kesehatan 10 pertanyaan, dan Persetujuan).
-- 💳 **Pembayaran Biaya Formulir:** Terintegrasi QRIS dinamis Pakasir v2 dengan timer otomatis dan penerbitan kuitansi resmi.
-- 📁 **Unggah Dokumen:** Pengunggahan berkas wajib (NISN, KK, Akte, Pas Foto) serta berkas khusus per jalur (Prestasi, Tahfidz, Akademik).
-- 💻 **Ujian TIU Online (Safe Exam Browser):** Pengunduhan file `.seb` otomatis dengan timer server yang mengunci layar perangkat komputer.
-- 📅 **Booking Sesi 1:1:** Pemilihan jadwal mandiri untuk Ujian Tahfidz dan Wawancara bersama penguji.
-- 📜 **Kelulusan & Tanda Tangan LoA:** Preview Letter of Acceptance (LoA) resmi dan pembubuhan tanda tangan digital orang tua.
-- 💰 **Pembayaran Tahap 2 (DP & Cicilan):** Pembayaran DP via QRIS, simulasi/pengaturan skema cicilan biaya pendidikan, dan pengunggahan bukti pembayaran.
-- 🎓 **SKD & Komunitas Resmi:** Penerbitan Surat Keterangan Diterima (SKD) bernomor registrasi resmi dan tautan bergabung ke WhatsApp Group angkatan.
-- 👤 **Profil Mandiri & Keamanan Sesi:** Peninjauan dan pembaruan data formulir pendaftaran serta kuesioner kesehatan secara mandiri di `/applicant/profile`, editor foto avatar, ganti kata sandi, dan pemantauan sesi login aktif.
+### ðŸ‘¨â€ðŸŽ“ Portal Calon Santri (Pendaftar)
+- ðŸ“ **Registrasi Bertahap:** 6 tahapan form (Biodata Santri, Data Orang Tua/Wali, Kontak, Domisili, Kuesioner Kesehatan 10 pertanyaan, dan Persetujuan).
+- ðŸ’³ **Pembayaran Biaya Formulir:** Terintegrasi QRIS dinamis Pakasir v2 dengan timer otomatis dan penerbitan kuitansi resmi.
+- ðŸ“ **Unggah Dokumen:** Pengunggahan berkas persyaratan wajib seragam (NISN, KK, Akta Kelahiran, Pas Foto, KTP Orang Tua/Wali, dan 4 Rapor Terakhir).
+- ðŸ“… **Booking Sesi 1:1:** Pemilihan jadwal mandiri untuk Ujian Tahfidz dan Wawancara bersama penguji.
+- ðŸ“œ **Kelulusan & Tanda Tangan LoA:** Preview Letter of Acceptance (LoA) resmi dan pembubuhan tanda tangan digital orang tua.
+- ðŸ’° **Pembayaran Tahap 2 (DP & Cicilan):** Pembayaran DP via QRIS, simulasi/pengaturan skema cicilan biaya pendidikan, dan pengunggahan bukti pembayaran.
+- ðŸ‘¤ **Profil Mandiri & Keamanan Sesi:** Peninjauan dan pembaruan data formulir pendaftaran serta kuesioner kesehatan secara mandiri di `/applicant/profile`, editor foto avatar, ganti kata sandi, dan pemantauan sesi login aktif.
 
-### 🛡️ Backoffice Admin PPDB (`/admin/*`)
-- 📊 **Monitoring Pendaftar:** Pelacakan status berkas, verifikasi dokumen, dan kuesioner kesehatan.
-- ⏱️ **Manajemen Gelombang & Periode:** Penjadwalan, kuota pembayaran otomatis, dan diskon pendaftar awal.
-- 📝 **Pengaturan TIU & Rubrik:** Konfigurasi Pre-filled URL Google Form, durasi ujian, secret webhook Apps Script, dan bobot rubrik.
-- 🎙️ **Penjadwalan 1:1:** Manajemen slot penguji Tahfidz dan pewawancara.
-- ⚖️ **Penilaian & LoA:** Input skor evaluator, penentuan status kelulusan, dan review LoA pendaftar.
-- 💳 **Monitoring Keuangan & Detail Cicilan (`/admin/pembayaran-tahap2/:id`):** Pemantauan pembayaran formulir serta buku besar detail per pendaftar (status DP, skema cicilan, jatuh tempo termin, dan riwayat kuitansi).
-- 🖨️ **Cetak Dokumen Resmi:** Engine cetak layout baku A4 langsung dari browser (Formulir Pendaftar, Lembar Penilaian, Kuitansi Resmi, LoA, dan SKD).
-- 🗄️ **Arsip Dossier:** Pencarian data dossier lengkap lintas periode dan gelombang, serta ekspor bundle ZIP satu-klik dengan log audit.
+### ðŸ›¡ï¸ Backoffice Admin PPDB (`/admin/*`)
+- ðŸ“Š **Monitoring Pendaftar:** Pelacakan status berkas, verifikasi dokumen, dan kuesioner kesehatan.
+- â±ï¸ **Manajemen Gelombang & Periode:** Penjadwalan, kuota pembayaran otomatis, dan diskon pendaftar awal.
+- ðŸ“ **Pengaturan Rubrik Penilaian:** Konfigurasi kriteria evaluasi dan bobot rubrik (Tahfidz dan Wawancara).
+- ðŸŽ™ï¸ **Penjadwalan 1:1:** Manajemen slot penguji Tahfidz dan pewawancara.
+- âš–ï¸ **Penilaian & LoA:** Input skor evaluator, penentuan status kelulusan, dan review LoA pendaftar.
+- ðŸ’³ **Monitoring Keuangan & Detail Cicilan (`/admin/pembayaran-tahap2/:id`):** Pemantauan pembayaran formulir serta buku besar detail per pendaftar (status DP, skema cicilan, jatuh tempo termin, dan riwayat kuitansi).
+- ðŸ—„ï¸ **Arsip Dossier:** Pencarian data dossier lengkap lintas periode dan gelombang, serta ekspor bundle ZIP satu-klik dengan log audit.
 
-### 🌐 Rute Verifikasi Publik (Tanpa Login)
-- 🧾 `/kuitansi/:id` & `/receipt/:id`: Verifikasi keaslian bukti bayar kuitansi resmi.
-- 📜 `/loa/:registrationNo`: Verifikasi keaslian surat penerimaan LoA santri.
+### ðŸŒ Rute Verifikasi Publik (Tanpa Login)
+- ðŸ§¾ `/kuitansi/:id` & `/receipt/:id`: Verifikasi keaslian bukti bayar kuitansi resmi.
+- ðŸ“œ `/loa/:registrationNo`: Verifikasi keaslian surat penerimaan LoA santri.
 
-## 🛠️ Stack Teknologi
+## ðŸ› ï¸ Stack Teknologi
 
 - **Framework:** React 19, Vite 8, React Router v7
 - **Bahasa:** TypeScript
 - **Styling:** Tailwind CSS v3, Radix UI primitives, Lucide React
 - **Koneksi API:** Berkomunikasi dengan [`apps/api`](../api/README.md) via HTTP-only Cookies (`credentials: 'include'`)
 
-## 📦 Menjalankan secara Lokal
+## ðŸ“¦ Menjalankan secara Lokal
 
 Buka terminal di root repository:
 
@@ -58,14 +55,12 @@ pnpm --filter ppdb dev
 ```
 
 > **Informasi Port:**
-> - Saat dijalankan secara lokal (`pnpm --filter ppdb dev`), Vite dev server default berjalan pada `http://localhost:5174`.
-> - Saat dijalankan melalui Docker Compose (produksi/preview), container memetakan PPDB ke port `http://localhost:5173`.
+> - Baik dijalankan secara lokal (`pnpm --filter ppdb dev`) maupun melalui Docker Compose (produksi/preview), PPDB berjalan pada port `http://localhost:5174`.
 > - Jika menggunakan Docker untuk API backend, pastikan `VITE_API_URL` diarahkan ke `http://localhost:8080` atau IP WSL Anda.
 
-## 📚 Bacaan Lebih Lanjut
-- 🤖 [**Panduan Frontend PPDB (AGENTS.md)**](AGENTS.md) — Rincian lengkap 8 rute tahapan pendaftar, rute admin, dan arsitektur komponen.
-- 📖 [**Dokumen Requirements Global**](../../docs/REQUIREMENTS.md) — Aturan bisnis periode, kuota, rubrik penilaian, dan formulir kesehatan.
-- 💻 [**Panduan Ujian TIU Safe Exam Browser**](../../docs/PANDUAN_UJIAN_TIU_SEB.md) — Panduan pengerjaan ujian SEB pendaftar.
+## ðŸ“š Bacaan Lebih Lanjut
+- ðŸ¤– [**Panduan Frontend PPDB (AGENTS.md)**](AGENTS.md) â€” Rincian lengkap rute tahapan pendaftar, rute admin, dan arsitektur komponen.
+- ðŸ“– [**Dokumen Requirements Global**](../../docs/REQUIREMENTS.md) â€” Aturan bisnis periode, kuota, rubrik penilaian, dan formulir kesehatan.
 
 ---
-⬅️ [Kembali ke Halaman Utama](../../README.md)
+â¬…ï¸ [Kembali ke Halaman Utama](../../README.md)

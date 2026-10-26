@@ -56,6 +56,7 @@ class UserService:
                 user.id,
                 user_row={
                     "id": user.id,
+                    "full_name": user.full_name,
                     "email": user.email,
                     "username": user.username,
                     "phone": user.phone,
@@ -156,6 +157,10 @@ class UserService:
         if not user:
             raise HTTPException(status_code=404, detail="User not found")
 
+        original_username = user.username
+        original_email = user.email or ""
+        original_phone = user.phone or ""
+
         if data.get("username"):
             user.username = data["username"]
         if data.get("email") is not None:
@@ -185,9 +190,14 @@ class UserService:
         # Invalidate Redis cache so next request re-fetches fresh data
         invalidate_user_cache(user_id)
 
+        account_fields_changed = (
+            user.username != original_username
+            or (user.email or "") != original_email
+            or (user.phone or "") != original_phone
+        )
         if data.get("password"):
             self._send_credentials("password_reset", updated_user, data["password"])
-        elif data.get("email") or data.get("phone"):
+        if account_fields_changed:
             self._send_credentials("account_updated", updated_user)
 
         return {

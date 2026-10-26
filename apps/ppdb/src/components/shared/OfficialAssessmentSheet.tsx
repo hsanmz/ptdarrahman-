@@ -6,8 +6,6 @@ import { API_BASE } from '@/api/client'
 export interface OfficialAssessmentSheetProps {
   applicant: any
   categories: any[]
-  tiuScore?: number | null
-  tiuCompletedAt?: string | null
   evaluatorNotes?: string | null
   graduationStatus?: string | null
   logoUrl?: string | null
@@ -18,8 +16,6 @@ const OfficialAssessmentSheet = forwardRef<HTMLDivElement, OfficialAssessmentShe
     {
       applicant,
       categories = [],
-      tiuScore,
-      tiuCompletedAt,
       evaluatorNotes,
       graduationStatus,
       logoUrl: logoUrlProp,
@@ -62,10 +58,6 @@ const OfficialAssessmentSheet = forwardRef<HTMLDivElement, OfficialAssessmentShe
         })
         .catch(() => {})
     }, [logoUrlProp])
-
-    const isTiuPath = ['reguler', 'umum', 'seleksi', 'tes'].some((p) =>
-      (applicant?.registration_path || '').toLowerCase().includes(p)
-    )
 
     const tahfidzCat = categories.find((c) => c.category_name?.toLowerCase().includes('tahfidz'))
     const wawancaraCat = categories.find((c) => c.category_name?.toLowerCase().includes('wawancara'))
@@ -165,7 +157,7 @@ const OfficialAssessmentSheet = forwardRef<HTMLDivElement, OfficialAssessmentShe
               {/* Kolom Tengah: Judul Kop Lembaga Rata Tengah (1 Baris Utuh) */}
               <div className="flex-1 text-center px-1">
                 <h1 className="text-[13.5px] sm:text-[14px] font-black tracking-tight text-slate-900 uppercase leading-tight whitespace-nowrap">
-                  PESANTREN TAHFIDZ QUR&apos;AN DAN DIGITAL ARRAHMAN
+                  PESANTREN TAHFIDZ QUR&apos;AN DAN DIGITAL AR-RAHMAN
                 </h1>
                 <p className="text-[9.5px] sm:text-[10px] font-bold text-emerald-800 uppercase tracking-wide mt-1 whitespace-nowrap">
                   PANITIA PENERIMAAN PESERTA DIDIK BARU TAHUN AJARAN 2026/2027
@@ -216,9 +208,9 @@ const OfficialAssessmentSheet = forwardRef<HTMLDivElement, OfficialAssessmentShe
                   <td className="text-slate-400">:</td>
                   <td className="font-semibold text-slate-800 font-mono">{applicant?.nisn || applicant?.nik || '—'}</td>
 
-                  <td className="text-slate-500 font-medium py-0.5 pl-4">Jalur Pendaftaran</td>
+                  <td className="text-slate-500 font-medium py-0.5 pl-4">Gelombang</td>
                   <td className="text-slate-400">:</td>
-                  <td className="font-semibold text-slate-800 capitalize">{applicant?.registration_path || 'Reguler'}</td>
+                  <td className="font-semibold text-slate-800 capitalize">{applicant?.wave_name || 'Gelombang 1'}</td>
                 </tr>
                 <tr className="leading-normal">
                   <td className="text-slate-500 font-medium py-0.5">Asal Sekolah</td>
@@ -251,39 +243,14 @@ const OfficialAssessmentSheet = forwardRef<HTMLDivElement, OfficialAssessmentShe
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {/* TIU */}
-                <tr>
-                  <td className="py-1.5 px-2.5 text-center font-bold text-slate-600 border-r border-slate-200">1</td>
-                  <td className="py-1.5 px-2.5 font-semibold text-slate-900 border-r border-slate-200">
-                    Tes Inteligensi Umum (TIU)
-                  </td>
-                  <td className="py-1.5 px-2.5 text-slate-600 border-r border-slate-200">
-                    Pilihan Ganda · Safe Exam Browser (SEB)
-                  </td>
-                  <td className="py-1.5 px-2.5 text-center font-bold text-slate-900 border-r border-slate-200">
-                    {tiuScore != null ? (
-                      <span className="text-emerald-800 font-black">{tiuScore} <span className="text-slate-400 font-normal">/ 100</span></span>
-                    ) : isTiuPath ? (
-                      <span className="text-amber-700">Belum Ujian</span>
-                    ) : (
-                      <span className="text-slate-500 font-medium">Bebas Tes</span>
-                    )}
-                  </td>
-                  <td className="py-1.5 px-2.5 text-slate-600 text-[9.5px]">
-                    {tiuScore != null
-                      ? `Selesai (${tiuCompletedAt ? new Date(tiuCompletedAt).toLocaleDateString('id-ID') : 'Terekam'})`
-                      : isTiuPath ? 'Menunggu pelaksanaan ujian SEB' : 'Jalur Bebas Tes TIU'}
-                  </td>
-                </tr>
-
                 {/* Tahfidz */}
                 <tr>
-                  <td className="py-1.5 px-2.5 text-center font-bold text-slate-600 border-r border-slate-200">2</td>
+                  <td className="py-1.5 px-2.5 text-center font-bold text-slate-600 border-r border-slate-200">1</td>
                   <td className="py-1.5 px-2.5 font-semibold text-slate-900 border-r border-slate-200">
                     Ujian Tahfidz Al-Qur&apos;an
                   </td>
                   <td className="py-1.5 px-2.5 text-slate-600 border-r border-slate-200">
-                    Sesi 1:1 Evaluasi Hafalan &amp; Tajwid
+                    Ujian Seleksi Hafalan &amp; Tajwid
                   </td>
                   <td className="py-1.5 px-2.5 text-center font-bold text-slate-900 border-r border-slate-200">
                     {tahfidzAvg != null ? (
@@ -299,12 +266,12 @@ const OfficialAssessmentSheet = forwardRef<HTMLDivElement, OfficialAssessmentShe
 
                 {/* Wawancara */}
                 <tr>
-                  <td className="py-1.5 px-2.5 text-center font-bold text-slate-600 border-r border-slate-200">3</td>
+                  <td className="py-1.5 px-2.5 text-center font-bold text-slate-600 border-r border-slate-200">2</td>
                   <td className="py-1.5 px-2.5 font-semibold text-slate-900 border-r border-slate-200">
                     Ujian Wawancara Santri &amp; Wali
                   </td>
                   <td className="py-1.5 px-2.5 text-slate-600 border-r border-slate-200">
-                    Sesi 1:1 Kepribadian &amp; Komitmen
+                    Wawancara Terpadu Kepribadian &amp; Komitmen
                   </td>
                   <td className="py-1.5 px-2.5 text-center font-bold text-slate-900 border-r border-slate-200">
                     {wawancaraAvg != null ? (
@@ -490,7 +457,7 @@ const OfficialAssessmentSheet = forwardRef<HTMLDivElement, OfficialAssessmentShe
                 <span>Dokumen Sah &amp; Terverifikasi Sistem</span>
               </div>
               <p className="text-[8.5px] text-slate-500 leading-tight">
-                Rekapitulasi nilai ini sah diterbitkan otomatis dari database seleksi PPDB Pesantren PTDARRAHMAN. Keaslian data dapat diperiksa melalui pemindaian kode QR di samping.
+                Rekapitulasi nilai ini sah diterbitkan otomatis dari database seleksi PPDB PTDARRAHMAN. Keaslian data dapat diperiksa melalui pemindaian kode QR di samping.
               </p>
               <p className="text-[8px] font-mono text-slate-400">
                 REG NO: {regNo}

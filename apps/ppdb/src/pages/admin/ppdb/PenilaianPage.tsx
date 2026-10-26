@@ -14,7 +14,6 @@ import {
   CheckCircle2,
   XCircle,
   Clock,
-  Brain,
   BookOpen,
   MessageSquare,
   Info,
@@ -120,19 +119,13 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
 
   const appData = data?.applicant || applicant
   const categories: any[] = data?.categories || []
-  const tiuScore = data?.tiu_score
-  const tiuCompletedAt = data?.tiu_completed_at
   const evaluatorNotes = data?.evaluator_notes
   const graduationStatus = data?.graduation_status || applicant.status
 
   // Kelengkapan nilai — keputusan lulus/tidak lulus hanya aktif bila seluruh
-  // nilai (TIU jalur TIU, Tahfidz, Wawancara, rubrik lain) sudah masuk.
+  // nilai (Tahfidz, Wawancara, rubrik lain) sudah masuk.
   const missingScores: string[] = Array.isArray(data?.missing_scores) ? data.missing_scores : []
   const scoresComplete = !isLoading && !!data && missingScores.length === 0
-
-  const isTiuPath = ['reguler', 'umum', 'seleksi', 'tes'].some(p =>
-    (appData.registration_path || '').toLowerCase().includes(p)
-  )
 
   const tahfidzCategory = categories.find(c => c.category_name?.toLowerCase().includes('tahfidz'))
   const wawancaraCategory = categories.find(c => c.category_name?.toLowerCase().includes('wawancara'))
@@ -179,10 +172,10 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
               <div>
                 <DialogTitle className="text-base flex items-center gap-2">
                   <Award className="h-5 w-5 text-emerald-600" />
-                  Hasil Seleksi Pendaftar
+                  Hasil Pendaftaran Pendaftar
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                  Rekapitulasi hasil penilaian murni (TIU otomatis via webhook & evaluasi rubrik). Validasi kelulusan dilakukan oleh admin.
+                  Rekapitulasi hasil penilaian (evaluasi rubrik Tahfidz & Wawancara). Validasi kelulusan dilakukan oleh admin.
                 </DialogDescription>
               </div>
 
@@ -259,67 +252,12 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                 <span className="font-semibold text-slate-700">{appData.nisn || appData.nik || '—'}</span>
               </div>
               <div>
-                <span className="text-muted-foreground block text-[11px]">Jalur Pendaftaran</span>
-                <span className="font-medium text-slate-700 capitalize">{appData.registration_path || '—'}</span>
-              </div>
-              <div>
                 <span className="text-muted-foreground block text-[11px]">Gelombang PPDB</span>
                 <span className="font-medium text-slate-700">{appData.wave_name || '—'}</span>
               </div>
             </div>
 
-            {/* SEKSI 1: HASIL TES TIU (Tes Inteligensi Umum) */}
-            <div className="space-y-2 border rounded-xl p-4 bg-white shadow-sm">
-              <div className="flex items-center justify-between border-b pb-2">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 bg-blue-50 text-blue-700 rounded-lg">
-                    <Brain className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <h4 className="font-semibold text-sm text-slate-800">1. Hasil Tes Inteligensi Umum (TIU)</h4>
-                    <p className="text-[11px] text-muted-foreground">Ujian SEB (Safe Exam Browser) · Sinkronisasi Otomatis Webhook</p>
-                  </div>
-                </div>
-                {isTiuPath && (
-                  <Badge variant="outline" className="text-[10px] bg-blue-50/50 text-blue-700 border-blue-200">
-                    Jalur Seleksi
-                  </Badge>
-                )}
-              </div>
-
-              {!isTiuPath && tiuScore == null ? (
-                <div className="p-3 bg-slate-50 border border-dashed rounded-lg text-xs text-muted-foreground flex items-center gap-2">
-                  <Info className="h-4 w-4 text-slate-400 shrink-0" />
-                  <span>Jalur pendaftaran ini tidak mewajibkan ujian pilihan ganda TIU.</span>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                  <div className="bg-blue-50/40 border border-blue-100 rounded-lg p-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-xs text-blue-900 font-medium">Skor Pilihan Ganda TIU</p>
-                      <p className="text-[10px] text-blue-700/80">Skala 0 - 100</p>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-2xl font-bold text-blue-700">
-                        {tiuScore != null ? tiuScore : '—'}
-                      </span>
-                      <span className="text-xs text-blue-900 font-medium"> / 100</span>
-                    </div>
-                  </div>
-
-                  <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 text-xs flex flex-col justify-center">
-                    <span className="text-muted-foreground text-[11px]">Waktu Penyelesaian:</span>
-                    <span className="font-medium text-slate-700 mt-0.5">
-                      {tiuCompletedAt
-                        ? new Date(tiuCompletedAt).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) + ' WIB'
-                        : tiuScore != null ? 'Tercatat di sistem' : 'Belum mengikuti ujian TIU'}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* SEKSI 2: HASIL TES TAHFIDZ */}
+            {/* SEKSI 1: HASIL TES TAHFIDZ */}
             <div className="space-y-2 border rounded-xl p-4 bg-white shadow-sm">
               <div className="flex items-center justify-between border-b pb-2">
                 <div className="flex items-center gap-2">
@@ -327,7 +265,7 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                     <BookOpen className="h-4 w-4" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-sm text-slate-800">2. Hasil Uji Tahfidz Al-Qur'an</h4>
+                    <h4 className="font-semibold text-sm text-slate-800">1. Hasil Uji Tahfidz Al-Qur'an</h4>
                     <p className="text-[11px] text-muted-foreground">Penilaian Penguji Tahfidz Sesuai Rubrik</p>
                   </div>
                 </div>
@@ -368,7 +306,7 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
               )}
             </div>
 
-            {/* SEKSI 3: HASIL TES WAWANCARA */}
+            {/* SEKSI 2: HASIL TES WAWANCARA */}
             <div className="space-y-2 border rounded-xl p-4 bg-white shadow-sm">
               <div className="flex items-center justify-between border-b pb-2">
                 <div className="flex items-center gap-2">
@@ -376,7 +314,7 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                     <MessageSquare className="h-4 w-4" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-sm text-slate-800">3. Hasil Uji Wawancara</h4>
+                    <h4 className="font-semibold text-sm text-slate-800">2. Hasil Uji Wawancara</h4>
                     <p className="text-[11px] text-muted-foreground">Penilaian Pewawancara Sesuai Rubrik</p>
                   </div>
                 </div>
@@ -497,7 +435,7 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                 <div className="flex items-center gap-2">
                   <UserCheck className="h-5 w-5 text-slate-700" />
                   <div>
-                    <span className="font-bold text-sm text-slate-900 block">Status Hasil Seleksi</span>
+                    <span className="font-bold text-sm text-slate-900 block">Status Hasil Pendaftaran</span>
                     <span className="text-[11px] text-muted-foreground">Keputusan kelulusan calon santri</span>
                   </div>
                 </div>
@@ -505,7 +443,7 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                   variant={graduationStatus === 'passed' ? 'success' : graduationStatus === 'failed' ? 'destructive' : 'warning'}
                   className="text-xs uppercase px-3 py-1 font-bold"
                 >
-                  {graduationStatus === 'passed' ? 'LULUS SELEKSI' : graduationStatus === 'failed' ? 'TIDAK LULUS' : 'DALAM PROSES SELEKSI'}
+                  {graduationStatus === 'passed' ? 'LULUS' : graduationStatus === 'failed' ? 'TIDAK LULUS' : 'DALAM PROSES'}
                 </Badge>
               </div>
 
@@ -650,8 +588,6 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
           ref={assessmentSheetRef}
           applicant={appData}
           categories={categories}
-          tiuScore={tiuScore}
-          tiuCompletedAt={tiuCompletedAt}
           evaluatorNotes={evaluatorNotes}
           graduationStatus={graduationStatus}
           logoUrl={logoUrl}
@@ -723,7 +659,7 @@ export default function PenilaianPage() {
     <div className="space-y-6 animate-fade-in">
       <PageHeaderCard
         title="Hasil Pendaftaran"
-        description="Rekapitulasi hasil seleksi calon santri — nilai TIU (otomatis via webhook), Tahfidz, dan Wawancara. Admin dapat memvalidasi kelulusan di sini."
+        description="Rekapitulasi penilaian calon santri — Akademik, Psikologi, Tahfidz, dan Wawancara. Admin menetapkan hasil pendaftaran di sini."
         loading={loading}
         docKey="ppdb-penilaian"
         action={
@@ -740,7 +676,7 @@ export default function PenilaianPage() {
       />
 
       {!loading && hasActivePeriod === false && (
-        <NoActiveWaveBanner message="Tidak ada periode yang aktif saat ini. Aktifkan periode terlebih dahulu untuk melihat hasil seleksi." />
+        <NoActiveWaveBanner message="Tidak ada periode yang aktif saat ini. Aktifkan periode terlebih dahulu untuk melihat hasil pendaftaran." />
       )}
 
       {/* Filter Tabs */}
@@ -795,8 +731,6 @@ export default function PenilaianPage() {
                 <tr>
                   <th className="py-3 px-4 text-left whitespace-nowrap">Nama Pendaftar</th>
                   <th className="py-3 px-4 text-left whitespace-nowrap">Email / No. WA</th>
-                  <th className="py-3 px-4 text-left whitespace-nowrap">Jalur Pendaftaran</th>
-                  <th className="py-3 px-4 text-left whitespace-nowrap">Skor TIU</th>
                   <th className="py-3 px-4 text-left whitespace-nowrap">Status Seleksi</th>
                 </tr>
               </thead>
@@ -804,12 +738,12 @@ export default function PenilaianPage() {
                 {loading ? (
                   Array.from({ length: 5 }).map((_, idx) => (
                     <tr key={idx} className="animate-pulse">
-                      <td colSpan={5} className="py-4 px-4 h-12 bg-slate-50/50" />
+                      <td colSpan={3} className="py-4 px-4 h-12 bg-slate-50/50" />
                     </tr>
                   ))
                 ) : applicants.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="py-12 text-center text-muted-foreground text-sm">
+                    <td colSpan={3} className="py-12 text-center text-muted-foreground text-sm">
                       Belum ada pendaftar yang sesuai kriteria pencarian.
                     </td>
                   </tr>
@@ -819,7 +753,7 @@ export default function PenilaianPage() {
                       key={applicant.id}
                       onClick={() => setSelectedApplicant(applicant)}
                       className="hover:bg-slate-50/80 cursor-pointer transition-colors"
-                      title="Klik untuk melihat lembar hasil seleksi & validasi kelulusan"
+                      title="Klik untuk melihat penilaian & penetapan hasil pendaftaran"
                     >
                       <td className="py-3 px-4">
                         <div className="min-w-0">
@@ -830,20 +764,6 @@ export default function PenilaianPage() {
                       <td className="py-3 px-4 text-slate-600">
                         <div>{applicant.email || '-'}</div>
                         <div className="text-xs text-muted-foreground">{applicant.phone || '-'}</div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <Badge variant="outline" className="capitalize text-xs font-medium">
-                          {applicant.registration_path || '-'}
-                        </Badge>
-                      </td>
-                      <td className="py-3 px-4">
-                        {(applicant as any).tiu_score != null ? (
-                          <span className="font-bold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200 text-xs">
-                            {(applicant as any).tiu_score}
-                          </span>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        )}
                       </td>
                       <td className="py-3 px-4">
                         <SelectionBadge status={applicant.status} />

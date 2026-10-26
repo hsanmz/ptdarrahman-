@@ -53,15 +53,15 @@ describe('exportDocUtils — Standard A4 & Multi-page PDF Export', () => {
     expect(mockSave).toHaveBeenCalledWith('test-loa-document.pdf')
   })
 
-  it('mengekspor canvas landscape ke format A4 PDF (297mm x 210mm) untuk sertifikat SKD', () => {
+  it('mengekspor canvas landscape ke format A4 PDF (297mm x 210mm)', () => {
     const canvas = document.createElement('canvas')
     canvas.width = 2245
     canvas.height = 1587
 
-    exportCanvasesToPdf([canvas], 'test-skd-document', { orientation: 'landscape' })
+    exportCanvasesToPdf([canvas], 'test-landscape-document', { orientation: 'landscape' })
 
     expect(mockAddImage).toHaveBeenCalledWith('data:image/png;base64,mockPngData', 'PNG', 0, 0, 297, 210, undefined, 'NONE')
-    expect(mockSave).toHaveBeenCalledWith('test-skd-document.pdf')
+    expect(mockSave).toHaveBeenCalledWith('test-landscape-document.pdf')
   })
 
   it('mengunduh canvas sebagai file gambar PNG beresolusi tinggi', () => {

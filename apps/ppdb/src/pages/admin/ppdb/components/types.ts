@@ -36,8 +36,6 @@ export interface SelectionResult {
   applicant_id: string
   full_name: string
   email: string
-  registration_path: string
-  registration_level: string
   applicant_status: string
   session_id?: string
   session_name?: string

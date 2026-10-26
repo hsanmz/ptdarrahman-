@@ -6,6 +6,7 @@ from zoneinfo import ZoneInfo
 from fastapi import HTTPException
 
 from src.core.notif_service import send_notifications
+from src.models.ppdb import NotificationLog
 from src.models.selection import (
     SelectionCategory,
     SelectionCriteria,
@@ -42,9 +43,36 @@ def _parse_session_date(raw: str | None) -> date | None:
         ) from exc
 
 
-def _is_tiu_category_name(name: str) -> bool:
-    normalized = " ".join(name.casefold().replace("-", " ").split())
-    return "tiu" in normalized.split() or "intelegensi umum" in normalized
+def _notify_assessment_completed_once(db: Any, applicant: Any, stage_name: str) -> None:
+    if not applicant.user_id or not stage_name:
+        return
+    already_notified = (
+        db.query(NotificationLog.id)
+        .filter(
+            NotificationLog.recipient_user_id == applicant.user_id,
+            NotificationLog.event_key == "assessment_stage_completed",
+            NotificationLog.status.in_(("queued", "sent")),
+            NotificationLog.body_sent.like(f"%{stage_name}%"),
+        )
+        .first()
+    )
+    if already_notified:
+        return
+
+    from src.core.config import settings
+
+    send_notifications(
+        [
+            (
+                "assessment_stage_completed",
+                {
+                    "nama_tahap": stage_name,
+                    "link_aplikasi": f"{settings.ppdb_frontend_url}/applicant/tes-seleksi",
+                },
+            )
+        ],
+        applicant.user_id,
+    )
 
 
 def selection_score_gaps(db: Any, applicant: Any) -> list[str]:
@@ -52,7 +80,6 @@ def selection_score_gaps(db: Any, applicant: Any) -> list[str]:
 
     Keputusan kelulusan (lulus/tidak lulus) hanya boleh ditetapkan setelah
     seluruh nilai wajib masuk:
-    - ujian TIU (khusus jalur TIU),
     - rubrik Tahfidz,
     - rubrik Wawancara,
     - seluruh kriteria pada kategori rubrik lain milik gelombang/global.
@@ -60,8 +87,6 @@ def selection_score_gaps(db: Any, applicant: Any) -> list[str]:
     Mengembalikan daftar label komponen yang belum lengkap (kosong = lengkap).
     """
     from sqlalchemy import and_, or_, select
-
-    from src.services.ppdb_service import is_tiu_path
 
     wave_id = getattr(applicant, "wave_id", None)
     stmt = (
@@ -98,25 +123,10 @@ def selection_score_gaps(db: Any, applicant: Any) -> list[str]:
 
     gaps: list[str] = []
 
-    # 1. TIU wajib hanya untuk jalur TIU (nilai masuk otomatis via webhook).
-    if is_tiu_path(getattr(applicant, "registration_path", None)):
-        tiu_scores = [
-            score
-            for name, scores in scores_by_category.items()
-            if _is_tiu_category_name(name)
-            for score in scores
-        ]
-        if not any(score is not None for score in tiu_scores):
-            gaps.append("ujian TIU")
-
-    # 2. Seluruh kriteria tiap kategori rubrik harus terisi nilainya.
+    # Seluruh kriteria tiap kategori rubrik harus terisi nilainya.
     for name, scores in scores_by_category.items():
-        if _is_tiu_category_name(name):
-            continue
         if not scores or any(score is None for score in scores):
             gaps.append(_label(name))
-
-    # 3. Rubrik Tahfidz & Wawancara wajib tersedia untuk setiap pendaftar.
     if not any("tahfidz" in name.casefold() for name in scores_by_category):
         gaps.append("ujian Tahfidz")
     if not any("wawancara" in name.casefold() for name in scores_by_category):
@@ -167,14 +177,15 @@ class SelectionService:
     ) -> dict[str, Any]:
         now = _now_wib()
         sess_date = _parse_session_date(body.session_date)
-        wave_id = self._get_active_wave_id_or_400()
+        wave_id = getattr(body, "wave_id", None) or self._get_active_wave_id_or_400()
         sid = str(uuid4())
-        quota = body.quota if body.quota > 0 else 1  # 1 Slot = 1 Pendaftar (Sesi 1:1)
+        quota = body.quota  # 0 = massal / seluruh pendaftar gelombang
         session = SelectionSession(
             id=sid,
             wave_id=wave_id,
             name=body.name,
             session_type=body.session_type,
+            batch_name=getattr(body, "batch_name", None),
             session_date=sess_date,
             start_time=body.start_time,
             end_time=body.end_time,
@@ -190,9 +201,20 @@ class SelectionService:
         )
         self.repo.create_session(session)
         self.repo.db.commit()
-        return {"id": sid, "message": "Sesi 1:1 berhasil dibuat"}
 
-    def get_session_evaluation_detail(self, session_id: str) -> dict[str, Any]:
+        # Otomatis cek dan jalankan stage progression / pengiriman jadwal bertahap dengan anti-ban delay
+        try:
+            from src.services.selection_stage_service import SelectionStageService
+
+            SelectionStageService(self.repo.db).check_and_advance_stages()
+        except Exception:
+            pass
+
+        return {"id": sid, "message": "Jadwal seleksi berhasil dibuat"}
+
+    def get_session_evaluation_detail(
+        self, session_id: str, applicant_id: str | None = None
+    ) -> dict[str, Any]:
         from sqlalchemy import or_
 
         from src.models.selection import SelectionResult
@@ -202,21 +224,27 @@ class SelectionService:
         if not session:
             raise HTTPException(status_code=404, detail="Sesi tidak ditemukan")
 
-        # Cari pendaftar yang mengambil sesi ini
-        s_res = (
-            self.repo.db.query(SelectionResult)
-            .filter(
-                or_(
-                    SelectionResult.session_id == session_id,
-                    SelectionResult.interview_session_id == session_id,
-                )
+        # Cari pendaftar yang terdaftar pada sesi ini
+        query = self.repo.db.query(SelectionResult).filter(
+            or_(
+                SelectionResult.session_id == session_id,
+                SelectionResult.interview_session_id == session_id,
+                SelectionResult.interview_parent_session_id == session_id,
             )
-            .first()
         )
+        if applicant_id:
+            s_res = query.filter(SelectionResult.applicant_id == applicant_id).first()
+            if not s_res:
+                s_res = self.repo.db.query(SelectionResult).filter(
+                    SelectionResult.applicant_id == applicant_id
+                ).first()
+        else:
+            s_res = query.first()
+
         if not s_res or not s_res.applicant_id:
             raise HTTPException(
                 status_code=400,
-                detail="Sesi ini belum diambil oleh pendaftar (status masih merah).",
+                detail="Belum ada pendaftar yang terdaftar di sesi seleksi ini.",
             )
 
         ppdb_repo = PPDBRepository(self.repo.db)
@@ -230,10 +258,6 @@ class SelectionService:
         applicant_detail["documents"] = ppdb_repo.get_applicant_documents(
             s_res.applicant_id
         )
-
-        # Nilai TIU jika ada
-        tiu_res = self.repo.get_tiu_result_by_applicant(s_res.applicant_id)
-        tiu_score = tiu_res.score if tiu_res else None
 
         # Nilai Tahfidz yang sudah ada
         tahfidz_scores = []
@@ -287,23 +311,22 @@ class SelectionService:
                 if cat.id in seen_cat_ids:
                     continue
                 seen_cat_ids.add(cat.id)
-                if not _is_tiu_category_name(cat.name):
-                    crit_list = self.repo.get_criteria_by_category(cat.id)
-                    matched_categories.append(
-                        {
-                            "id": cat.id,
-                            "name": cat.name,
-                            "criteria": [
-                                {
-                                    "id": cr.id,
-                                    "name": cr.name,
-                                    "description": cr.description,
-                                    "weight": cr.weight,
-                                }
-                                for cr in crit_list
-                            ],
-                        }
-                    )
+                crit_list = self.repo.get_criteria_by_category(cat.id)
+                matched_categories.append(
+                    {
+                        "id": cat.id,
+                        "name": cat.name,
+                        "criteria": [
+                            {
+                                "id": cr.id,
+                                "name": cr.name,
+                                "description": cr.description,
+                                "weight": cr.weight,
+                            }
+                            for cr in crit_list
+                        ],
+                    }
+                )
 
         existing_scores = {}
         for sc, c_name, cat_name in scores_rows:
@@ -321,7 +344,6 @@ class SelectionService:
             "categories": matched_categories,
             "existing_scores": existing_scores,
             "evaluator_notes": s_res.notes or "",
-            "tiu_score": tiu_score,
             "tahfidz_scores": tahfidz_scores,
             "graduation_status": s_res.graduation_status,
         }
@@ -329,9 +351,25 @@ class SelectionService:
     def update_session(self, session_id: str, body: SessionUpdate) -> dict[str, Any]:
         now = _now_wib()
         session = self._require_active_wave_session(session_id)
+        old_schedule = (
+            session.name,
+            session.session_date,
+            session.start_time,
+            session.end_time,
+            session.mode,
+            session.location,
+            session.meeting_url,
+        )
+        assigned_applicants = self.repo.get_applicants_in_session(
+            session_id, session_type=session.session_type or "tahfidz"
+        )
 
         session.name = body.name
         session.session_type = body.session_type
+        if getattr(body, "wave_id", None):
+            session.wave_id = body.wave_id
+        if hasattr(session, "batch_name"):
+            session.batch_name = getattr(body, "batch_name", None)
         session.session_date = _parse_session_date(body.session_date)
         session.start_time = body.start_time
         session.end_time = body.end_time
@@ -345,6 +383,46 @@ class SelectionService:
 
         self.repo.update_session(session)
         self.repo.db.commit()
+
+        new_schedule = (
+            session.name,
+            session.session_date,
+            session.start_time,
+            session.end_time,
+            session.mode,
+            session.location,
+            session.meeting_url,
+        )
+        if old_schedule != new_schedule:
+            from src.core.config import settings
+
+            location_or_link = session.meeting_url or session.location or "-"
+            for applicant in assigned_applicants:
+                if not applicant.user_id:
+                    continue
+                try:
+                    send_notifications(
+                        [
+                            (
+                                "session_confirmed",
+                                {
+                                    "nama_ujian": f"{session.name} (Jadwal Diperbarui)",
+                                    "tanggal": str(session.session_date or "-"),
+                                    "jam_mulai": session.start_time or "-",
+                                    "jam_selesai": session.end_time or "-",
+                                    "lokasi_atau_link": location_or_link,
+                                    "link_aplikasi": f"{settings.ppdb_frontend_url}/applicant/tes-seleksi",
+                                },
+                            )
+                        ],
+                        applicant.user_id,
+                    )
+                except Exception:
+                    import logging
+
+                    logging.getLogger("ptdarrahman.selection").exception(
+                        "Failed to notify applicant about updated selection schedule"
+                    )
         return {"message": "Sesi berhasil diperbarui"}
 
     def delete_session(self, session_id: str) -> dict[str, Any]:
@@ -371,7 +449,7 @@ class SelectionService:
 
     def get_categories(self) -> list[dict[str, Any]]:
         now = _now_wib()
-        required_cats = ["Tahfidz", "Wawancara"]
+        required_cats = ["Tahfidz", "Wawancara Santri", "Wawancara Orang Tua"]
 
         # Kategori bersifat global (tidak terikat gelombang aktif)
         existing = (
@@ -379,10 +457,40 @@ class SelectionService:
             .filter(SelectionCategory.wave_id == "global")
             .all()
         )
-        existing_names = {c.name for c in existing}
+        existing_map = {c.name: c for c in existing}
 
+        # Jika ada kategori lama bernama "Wawancara", ubah menjadi "Wawancara Santri" jika belum ada
+        if "Wawancara" in existing_map and "Wawancara Santri" not in existing_map:
+            w_cat = existing_map["Wawancara"]
+            w_cat.name = "Wawancara Santri"
+            w_cat.updated_at = now
+            self.repo.db.commit()
+            existing = (
+                self.repo.db.query(SelectionCategory)
+                .filter(SelectionCategory.wave_id == "global")
+                .all()
+            )
+            existing_map = {c.name: c for c in existing}
+
+        default_criteria_seed = {
+            "Tahfidz": [
+                ("Kelancaran Hafalan Al-Qur'an", 40.0, "Kelancaran hafalan surah & juz yang diujikan"),
+                ("Tajwid, Tartil & Makhorijul Huruf", 60.0, "Kaidah tajwid, makhraj, dan kefasihan tilawah"),
+            ],
+            "Wawancara Santri": [
+                ("Motivasi Belajar & Adab Santri", 50.0, "Kemauan kuat menuntut ilmu dan kesantunan akhlak"),
+                ("Kemandirian & Kesiapan Mondok", 50.0, "Kesiapan tinggal mandiri di asrama pesantren"),
+            ],
+            "Wawancara Orang Tua": [
+                ("Komitmen Pembinaan & Kerjasama", 50.0, "Dukungan orang tua terhadap program pesantren"),
+                ("Dukungan Moral & Tata Tertib", 50.0, "Keselarasan visi pendidikan dan kepatuhan aturan"),
+            ],
+        }
+
+        has_new = False
         for name in required_cats:
-            if name not in existing_names:
+            if name not in existing_map:
+                has_new = True
                 new_cat = SelectionCategory(
                     id=str(uuid4()),
                     wave_id="global",
@@ -391,8 +499,20 @@ class SelectionService:
                     updated_at=now,
                 )
                 self.repo.db.add(new_cat)
+                self.repo.db.flush()
+                for cr_name, cr_weight, cr_desc in default_criteria_seed.get(name, []):
+                    new_crit = SelectionCriteria(
+                        id=str(uuid4()),
+                        category_id=new_cat.id,
+                        name=cr_name,
+                        description=cr_desc,
+                        weight=cr_weight,
+                        created_at=now,
+                        updated_at=now,
+                    )
+                    self.repo.db.add(new_crit)
 
-        if len(existing_names) < len(required_cats):
+        if has_new:
             self.repo.db.commit()
             existing = (
                 self.repo.db.query(SelectionCategory)
@@ -401,8 +521,8 @@ class SelectionService:
             )
 
         valid_categories = [c for c in existing if c.name in required_cats]
-        # Urutkan Tahfidz pertama, Wawancara kedua
-        valid_categories.sort(key=lambda c: 0 if c.name == "Tahfidz" else 1)
+        order_map = {"Tahfidz": 0, "Wawancara Santri": 1, "Wawancara Orang Tua": 2}
+        valid_categories.sort(key=lambda c: order_map.get(c.name, 99))
 
         result = []
         for c in valid_categories:
@@ -417,14 +537,6 @@ class SelectionService:
 
     def create_category(self, body: CategoryCreate) -> dict[str, Any]:
         now = _now_wib()
-        if _is_tiu_category_name(body.name):
-            raise HTTPException(
-                status_code=400,
-                detail=(
-                    "Nilai TIU masuk otomatis dan tidak menggunakan kategori "
-                    "input manual."
-                ),
-            )
         cid = str(uuid4())
         cat = SelectionCategory(
             id=cid, wave_id="global", name=body.name, created_at=now, updated_at=now
@@ -513,7 +625,6 @@ class SelectionService:
                 "full_name": app.full_name,
                 "email": app.email,
                 "phone": app.phone,
-                "registration_path": app.registration_path,
                 "applicant_status": app.status,
                 "session_name": s_ses.name if s_ses else None,
                 "session_date": s_ses.session_date if s_ses else None,
@@ -533,7 +644,6 @@ class SelectionService:
             raise HTTPException(status_code=404, detail="Pendaftar tidak ditemukan")
         s_res = self.repo.get_selection_result_by_applicant(applicant_id)
         scores = self.repo.get_applicant_scores(applicant_id)
-        tiu = self.repo.get_tiu_result_by_applicant(applicant_id)
         return {
             "result_id": s_res.id if s_res else None,
             "applicant_id": applicant_id,
@@ -542,10 +652,6 @@ class SelectionService:
             "scores": [
                 {"criteria_id": sc.criteria_id, "score": sc.score} for sc in scores
             ],
-            "tiu_score": tiu.score if tiu else None,
-            "tiu_completed_at": tiu.completed_at.isoformat()
-            if tiu and tiu.completed_at
-            else None,
         }
 
     def save_result(self, body: ApplicantScoreSave) -> dict[str, Any]:
@@ -557,9 +663,16 @@ class SelectionService:
         if not app:
             raise HTTPException(status_code=404, detail="Pendaftar tidak ditemukan")
 
+        # Catatan evaluasi per santri wajib diisi sebelum menyimpan nilai
+        if not body.notes or not body.notes.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="Catatan evaluasi wajib diisi sebelum menyimpan nilai.",
+            )
+
         # Pastikan baris hasil ada dulu agar notes/skor tersimpan.
         self.repo.ensure_selection_result(body.applicant_id, now)
-        self.repo.update_selection_result_notes(body.applicant_id, body.notes, now)
+        self.repo.update_selection_result_notes(body.applicant_id, body.notes.strip(), now)
 
         for sc in body.scores:
             if not math.isfinite(sc.score) or sc.score < 0 or sc.score > 100:
@@ -576,11 +689,6 @@ class SelectionService:
             ):
                 raise HTTPException(
                     status_code=400, detail="Kriteria tidak ditemukan atau tidak valid"
-                )
-            if _is_tiu_category_name(category.name):
-                raise HTTPException(
-                    status_code=400,
-                    detail="Nilai TIU masuk otomatis dan tidak dapat diinput manual.",
                 )
             existing = self.repo.get_selection_score(body.applicant_id, sc.criteria_id)
             if existing:
@@ -602,8 +710,6 @@ class SelectionService:
 
         # Notifikasi berdasarkan tipe sesi yang diassign ke pendaftar (Fase 3 spec).
         try:
-            from src.core.config import settings
-
             app = self.repo.get_applicant_by_id(body.applicant_id)
             if app:
                 first_crit = (
@@ -618,24 +724,9 @@ class SelectionService:
                 )
                 cat_name = (cat.name or "").lower() if cat else ""
 
-                if "tahfidz" in cat_name:
-                    send_notifications(
-                        [
-                            (
-                                "tahfidz_score_recorded",
-                                {
-                                    "link_aplikasi": (
-                                        f"{settings.ppdb_frontend_url}/dashboard"
-                                    ),
-                                },
-                            )
-                        ],
-                        app.user_id,
-                    )
-                elif "wawancara" in cat_name or "interview" in cat_name:
-                    send_notifications(
-                        [("interview_completed", {})],
-                        app.user_id,
+                if cat_name:
+                    _notify_assessment_completed_once(
+                        self.repo.db, app, cat.name
                     )
         except Exception:
             import logging
@@ -646,6 +737,18 @@ class SelectionService:
 
         return {"message": "Nilai berhasil disimpan"}
 
+    def save_results_bulk(
+        self, items: list[ApplicantScoreSave]
+    ) -> dict[str, Any]:
+        if not items:
+            return {"message": "Tidak ada data nilai yang disimpan", "count": 0}
+        for item in items:
+            self.save_result(item)
+        return {
+            "message": f"Berhasil menyimpan {len(items)} penilaian peserta",
+            "count": len(items),
+        }
+
     def update_applicant_status(
         self, applicant_id: str, body: ApplicantStatusUpdate
     ) -> dict[str, Any]:
@@ -653,6 +756,7 @@ class SelectionService:
         app = self.repo.get_applicant_by_id(applicant_id)
         if not app:
             raise HTTPException(status_code=404, detail="Pendaftar tidak ditemukan")
+        previous_status = app.status
 
         if body.status not in ["passed", "failed", "selection"]:
             raise HTTPException(status_code=400, detail="Status tidak valid")
@@ -677,7 +781,7 @@ class SelectionService:
         self.repo.update_applicant(app)
 
         # Sinkronkan graduation_status agar filter pendaftar lulus
-        # (Tahap 2 / MOU) ikut terisi.
+        # (Kelulusan / LoA) ikut terisi.
         result_row = self.repo.ensure_selection_result(applicant_id, now)
         result_row.graduation_status = {"passed": "passed", "failed": "failed"}.get(
             body.status
@@ -690,33 +794,29 @@ class SelectionService:
 
         self.repo.db.commit()
 
-        # Send notification if passed or failed
-        if body.status == "passed":
+        # Notify the applicant of the registration outcome, not the assessment results.
+        if body.status == "passed" and previous_status != "passed":
             from src.core.config import settings
 
             send_notifications(
                 [
                     (
-                        "selection_result_passed",
+                        "registration_result_passed",
                         {
-                            "nama_sekolah": (
-                                "Pesantren Tahfidz Qur'an dan Digital Ar-Rahman"
-                            ),
-                            "link_aplikasi": f"{settings.ppdb_frontend_url}/dashboard",
+                            "nama_peserta": app.full_name,
+                            "link_aplikasi": f"{settings.ppdb_frontend_url}/applicant/pengumuman",
                         },
                     ),
                 ],
                 app.user_id,
             )
-        elif body.status == "failed":
+        elif body.status == "failed" and previous_status != "failed":
             send_notifications(
                 [
                     (
-                        "selection_result_failed",
+                        "registration_result_failed",
                         {
-                            "nama_sekolah": (
-                                "Pesantren Tahfidz Qur'an dan Digital Ar-Rahman"
-                            ),
+                            "nama_peserta": app.full_name,
                         },
                     ),
                 ],
@@ -733,6 +833,7 @@ class SelectionService:
         s_res = self.repo.get_selection_result_by_applicant(app.id)
         tahfidz_session = None
         interview_session = None
+        interview_parent_session = None
         if s_res:
             if s_res.session_id:
                 s_row = self.repo.get_session_by_id(s_res.session_id)
@@ -744,6 +845,11 @@ class SelectionService:
                 if i_row:
                     interview_session = i_row.__dict__.copy()
                     interview_session.pop("_sa_instance_state", None)
+            if hasattr(s_res, "interview_parent_session_id") and s_res.interview_parent_session_id:
+                p_row = self.repo.get_session_by_id(s_res.interview_parent_session_id)
+                if p_row:
+                    interview_parent_session = p_row.__dict__.copy()
+                    interview_parent_session.pop("_sa_instance_state", None)
 
         scores = self.repo.get_applicant_scores_with_details(app.id)
         has_tahfidz = any(
@@ -760,27 +866,131 @@ class SelectionService:
         av_rows = self.repo.get_sessions(app.wave_id)
         available_tahfidz = []
         available_interview = []
+        available_parent_interview = []
         available = []
         for s, _, booked_count in av_rows:
             sd = s.__dict__.copy()
             sd.pop("_sa_instance_state", None)
             sd["booked_count"] = booked_count or 0
             stype = (s.session_type or "").lower()
-            if "wawancara" in stype or "interview" in stype:
-                if has_tahfidz:
-                    available_interview.append(sd)
-                    available.append(sd)
+            if "ortu" in stype or "parent" in stype:
+                available_parent_interview.append(sd)
+                available.append(sd)
+            elif "wawancara" in stype or "interview" in stype:
+                available_interview.append(sd)
+                available.append(sd)
             else:
                 available_tahfidz.append(sd)
                 available.append(sd)
+
+        # Fallback ke jadwal gelombang jika belum di-assign spesifik
+        if not tahfidz_session and available_tahfidz:
+            tahfidz_session = available_tahfidz[0]
+        if not interview_session and available_interview:
+            interview_session = available_interview[0]
+        if not interview_parent_session and available_parent_interview:
+            interview_parent_session = available_parent_interview[0]
+
+        # Ambil Jadwal CBT (Akademik & Psikologi) untuk gelombang ini
+        cbt_schedules = []
+        try:
+            from src.models.cbt import ExamSchedule
+            cbt_rows = (
+                self.repo.db.query(ExamSchedule)
+                .filter(ExamSchedule.wave_id == app.wave_id)
+                .order_by(ExamSchedule.session_date.asc(), ExamSchedule.start_time.asc())
+                .all()
+            )
+            for cs in cbt_rows:
+                c_dict = cs.__dict__.copy()
+                c_dict.pop("_sa_instance_state", None)
+                cbt_schedules.append(c_dict)
+        except Exception:
+            pass
+
+        # Gabungkan semua jadwal dan urutkan secara kronologis
+        all_schedules = []
+        for cs in cbt_schedules:
+            all_schedules.append({
+                "id": cs["id"],
+                "name": cs["name"],
+                "category": cs.get("category", "akademik"),
+                "type": "cbt",
+                "session_date": str(cs["session_date"]) if cs.get("session_date") else None,
+                "start_time": cs.get("start_time"),
+                "end_time": cs.get("end_time"),
+                "mode": cs.get("mode", "offline"),
+                "location": cs.get("location"),
+                "meeting_url": cs.get("meeting_url"),
+                "officer_name": cs.get("officer_name"),
+            })
+        if tahfidz_session:
+            all_schedules.append({
+                "id": tahfidz_session["id"],
+                "name": tahfidz_session["name"],
+                "category": "tahfidz",
+                "type": "tahfidz",
+                "session_date": str(tahfidz_session["session_date"]) if tahfidz_session.get("session_date") else None,
+                "start_time": tahfidz_session.get("start_time"),
+                "end_time": tahfidz_session.get("end_time"),
+                "mode": tahfidz_session.get("mode", "offline"),
+                "location": tahfidz_session.get("location"),
+                "meeting_url": tahfidz_session.get("meeting_url"),
+                "officer_name": tahfidz_session.get("officer_name"),
+            })
+        if interview_session:
+            all_schedules.append({
+                "id": interview_session["id"],
+                "name": interview_session["name"],
+                "category": "wawancara_santri",
+                "type": "interview",
+                "session_date": str(interview_session["session_date"]) if interview_session.get("session_date") else None,
+                "start_time": interview_session.get("start_time"),
+                "end_time": interview_session.get("end_time"),
+                "mode": interview_session.get("mode", "offline"),
+                "location": interview_session.get("location"),
+                "meeting_url": interview_session.get("meeting_url"),
+                "officer_name": interview_session.get("officer_name"),
+            })
+        if interview_parent_session:
+            all_schedules.append({
+                "id": interview_parent_session["id"],
+                "name": interview_parent_session["name"],
+                "category": "wawancara_ortu",
+                "type": "interview_parent",
+                "session_date": str(interview_parent_session["session_date"]) if interview_parent_session.get("session_date") else None,
+                "start_time": interview_parent_session.get("start_time"),
+                "end_time": interview_parent_session.get("end_time"),
+                "mode": interview_parent_session.get("mode", "offline"),
+                "location": interview_parent_session.get("location"),
+                "meeting_url": interview_parent_session.get("meeting_url"),
+                "officer_name": interview_parent_session.get("officer_name"),
+            })
+
+        all_schedules.sort(key=lambda x: (x.get("session_date") or "9999-99-99", x.get("start_time") or "99:99"))
+
+        today_iso = datetime.now(WIB).date().isoformat()
+        upcoming = [s for s in all_schedules if s.get("session_date") and s["session_date"] >= today_iso]
+        next_upcoming = upcoming[0] if upcoming else (all_schedules[0] if all_schedules else None)
+        same_day_exams = (
+            [s for s in upcoming if s.get("session_date") == next_upcoming["session_date"]]
+            if next_upcoming
+            else []
+        )
 
         return {
             "session": tahfidz_session or interview_session,
             "tahfidz_session": tahfidz_session,
             "interview_session": interview_session,
+            "interview_parent_session": interview_parent_session,
+            "cbt_schedules": cbt_schedules,
+            "all_schedules": all_schedules,
+            "next_upcoming_exam": next_upcoming,
+            "same_day_exams": same_day_exams,
             "available_sessions": available,
             "available_tahfidz_sessions": available_tahfidz,
             "available_interview_sessions": available_interview,
+            "available_parent_interview_sessions": available_parent_interview,
             "has_tahfidz_score": has_tahfidz,
             "has_interview_score": has_interview,
         }
@@ -824,17 +1034,6 @@ class SelectionService:
                 app.id, session_id, now, session_type="wawancara"
             )
         else:
-            reg_path = (app.registration_path or "").lower()
-            if any(k in reg_path for k in ["reguler", "tiu", "tes"]):
-                tiu = self.repo.get_tiu_result_by_applicant(app.id)
-                if not tiu or tiu.score is None:
-                    raise HTTPException(
-                        status_code=400,
-                        detail=(
-                            "Pendaftar jalur TIU wajib menyelesaikan ujian TIU "
-                            "terlebih dahulu sebelum memilih jadwal sesi Tahfidz."
-                        ),
-                    )
             self.repo.update_selection_result_session(
                 app.id, session_id, now, session_type="tahfidz"
             )
@@ -871,44 +1070,6 @@ class SelectionService:
                 "session_confirmed notification failed; continuing"
             )
 
-        # Notifikasi ke pembuat sesi (Admin / Evaluator)
-        if session.created_by:
-            try:
-                creator_user = self.repo.get_user_by_id(session.created_by)
-                if creator_user:
-                    stype_label = (
-                        "Ujian Tahfidz"
-                        if "tahfidz" in (session.session_type or "").lower()
-                        else "Wawancara"
-                    )
-                    send_notifications(
-                        [
-                            (
-                                "officer_session_booked",
-                                {
-                                    "nama_petugas": creator_user.full_name
-                                    or session.officer_name,
-                                    "nama_sesi": session.name,
-                                    "jenis_sesi": stype_label,
-                                    "nama_pendaftar": app.full_name,
-                                    "tanggal": str(session.session_date)
-                                    if session.session_date
-                                    else "-",
-                                    "jam_mulai": session.start_time or "-",
-                                    "jam_selesai": session.end_time or "selesai",
-                                    "lokasi_atau_link": location_or_link,
-                                },
-                            )
-                        ],
-                        creator_user.id,
-                    )
-            except Exception:
-                import logging
-
-                logging.getLogger("ptdarrahman.selection").exception(
-                    "officer_session_booked notification failed; continuing"
-                )
-
         return {"message": f"Berhasil memilih {session.name}"}
 
     def applicant_get_my_results(self, user_id: str) -> dict[str, Any]:
@@ -918,14 +1079,6 @@ class SelectionService:
 
         s_res = self.repo.get_selection_result_by_applicant(app.id)
         notes = s_res.notes if s_res else None
-
-        # Nilai TIU jika ada
-        tiu_res = self.repo.get_tiu_result_by_applicant(app.id)
-        tiu_score = tiu_res.score if tiu_res else None
-        tiu_date = getattr(tiu_res, "completed_at", None) or getattr(
-            tiu_res, "created_at", None
-        )
-        tiu_completed_at = tiu_date.isoformat() if (tiu_res and tiu_date) else None
 
         scores_rows = self.repo.get_applicant_scores_full(app.id)
         scores = []
@@ -993,8 +1146,6 @@ class SelectionService:
             final_total_score = round(s_res.score, 2)
         else:
             all_component_scores = list(category_averages)
-            if tiu_score is not None:
-                all_component_scores.append(float(tiu_score))
 
             if all_component_scores:
                 final_total_score = round(
@@ -1003,15 +1154,44 @@ class SelectionService:
             else:
                 final_total_score = None
 
+        # CBT Attempts (Akademik & Psikologi)
+        cbt_results = {}
+        try:
+            from src.models.cbt import ExamAttempt, ExamSchedule
+
+            cbt_attempts = (
+                self.repo.db.query(ExamAttempt, ExamSchedule)
+                .join(ExamSchedule, ExamAttempt.schedule_id == ExamSchedule.id)
+                .filter(ExamAttempt.applicant_id == app.id)
+                .all()
+            )
+            for att, sched in cbt_attempts:
+                cbt_results[sched.category] = {
+                    "schedule_id": sched.id,
+                    "schedule_name": sched.name,
+                    "category": sched.category,
+                    "status": att.status,
+                    "score": att.score,
+                    "finished_at": att.finished_at.isoformat() if att.finished_at else None,
+                }
+        except Exception:
+            pass
+
+        tahfidz_score = None
+        for cat in categories_list:
+            if "tahfidz" in cat["category_name"].lower():
+                tahfidz_score = cat["subtotal_score"]
+                break
+
         return {
             "notes": notes,
             "graduation_status": s_res.graduation_status if s_res else app.status,
             "graduation_notes": s_res.graduation_notes if s_res else None,
-            "tiu_score": tiu_score,
-            "tiu_completed_at": tiu_completed_at,
             "categories": categories_list,
             "total_score": final_total_score,
             "scores": scores,
+            "cbt_results": cbt_results,
+            "tahfidz_score": tahfidz_score,
         }
 
     def auto_assign_sessions(self) -> dict[str, Any]:
@@ -1072,32 +1252,143 @@ class SelectionService:
         }
 
     def send_h1_reminders(self) -> dict[str, Any]:
-        wave_id = self.repo.get_active_wave_id()
-        if not wave_id:
-            return {"message": "No active wave", "sent": 0}
-
-        tomorrow = (
-            datetime.now(ZoneInfo("Asia/Jakarta")).date() + timedelta(days=1)
-        ).isoformat()
-        sessions = self.repo.get_sessions_by_date(wave_id, tomorrow)
+        now = datetime.now(WIB)
+        reminder_window_start = now + timedelta(minutes=55)
+        reminder_window_end = now + timedelta(minutes=65)
+        dates = {now.date(), reminder_window_end.date()}
+        sessions = self.repo.get_sessions_by_dates(
+            [target_date.isoformat() for target_date in dates]
+        )
 
         sent_count = 0
+        skipped_count = 0
         for s in sessions:
-            apps = self.repo.get_applicants_in_session(s.id)
+            if not s.session_date or not s.start_time:
+                continue
+            try:
+                start_time = datetime.strptime(s.start_time, "%H:%M").time()
+            except ValueError:
+                continue
+            starts_at = datetime.combine(s.session_date, start_time, tzinfo=WIB)
+            if not reminder_window_start <= starts_at <= reminder_window_end:
+                continue
+
+            apps = self.repo.get_applicants_in_session(s.id, s.session_type or "")
             if not apps:
                 continue
 
-            notif_data = {
-                "session_name": s.name,
-                "start_time": s.start_time or "-",
-                "location": s.location or "-",
-            }
-
             for app in apps:
-                if app.user_id:
-                    send_notifications(
-                        [("selection_reminder", notif_data)], app.user_id
-                    )
-                    sent_count += 1
+                if not app.user_id:
+                    continue
 
-        return {"message": f"Sent {sent_count} reminders", "sent": sent_count}
+                already_notified = (
+                    self.repo.db.query(NotificationLog.id)
+                    .filter(
+                        NotificationLog.event_key == "reminder_exam_1hour",
+                        NotificationLog.recipient_user_id == app.user_id,
+                        NotificationLog.status.in_(("queued", "sent")),
+                        NotificationLog.created_at
+                        >= now.replace(tzinfo=None) - timedelta(hours=24),
+                        NotificationLog.body_sent.like(f"%{s.name}%"),
+                    )
+                    .first()
+                )
+                if already_notified:
+                    skipped_count += 1
+                    continue
+
+                send_notifications(
+                    [
+                        (
+                            "reminder_exam_1hour",
+                            {
+                                "nama_ujian": s.name,
+                                "waktu": s.start_time,
+                                "lokasi_atau_link": s.meeting_url or s.location or "-",
+                            },
+                        )
+                    ],
+                    app.user_id,
+                )
+                sent_count += 1
+
+        return {
+            "message": f"Sent {sent_count} one-hour session reminders",
+            "sent": sent_count,
+            "skipped_recent": skipped_count,
+        }
+
+    def move_applicant_session(
+        self, applicant_id: str, target_session_id: str, reason: str | None = None
+    ) -> dict[str, Any]:
+        from src.core.config import settings
+
+        now = _now_wib()
+        app = self.repo.get_applicant_by_id(applicant_id)
+        if not app:
+            raise HTTPException(status_code=404, detail="Pendaftar tidak ditemukan")
+
+        target_session = self.repo.get_session_by_id(target_session_id)
+        if not target_session:
+            from src.models.cbt import ExamSchedule
+            from src.modules.cbt.service import CBTService
+
+            target_exam = self.repo.db.query(ExamSchedule).filter(ExamSchedule.id == target_session_id).first()
+            if target_exam:
+                return CBTService.move_candidate_schedule(
+                    self.repo.db,
+                    current_schedule_id=target_exam.id,
+                    applicant_id=applicant_id,
+                    target_schedule_id=target_exam.id,
+                    reason=reason,
+                )
+            raise HTTPException(status_code=404, detail="Sesi target tidak ditemukan")
+
+        s_res = self.repo.ensure_selection_result(applicant_id, now)
+        stype = (target_session.session_type or "tahfidz").lower()
+        if "ortu" in stype or "parent" in stype:
+            s_res.interview_parent_session_id = target_session.id
+        elif "wawancara" in stype or "interview" in stype:
+            s_res.interview_session_id = target_session.id
+        else:
+            s_res.session_id = target_session.id
+
+        if target_session.batch_name:
+            s_res.batch_name = target_session.batch_name
+            s_res.current_stage = 1
+
+        if reason:
+            existing_notes = s_res.notes or ""
+            move_note = f"[Pindah Sesi ke {target_session.name}]: {reason}"
+            s_res.notes = f"{existing_notes}\n{move_note}".strip()
+
+        s_res.updated_at = now
+        self.repo.db.commit()
+
+        # Kirim notifikasi WhatsApp perubahan jadwal
+        try:
+            location_or_link = target_session.meeting_url or target_session.location or "-"
+            send_notifications(
+                [
+                    (
+                        "session_confirmed",
+                        {
+                            "nama_ujian": f"{target_session.name} (Jadwal Baru)",
+                            "tanggal": str(target_session.session_date) if target_session.session_date else "-",
+                            "jam_mulai": target_session.start_time or "-",
+                            "jam_selesai": target_session.end_time or "-",
+                            "lokasi_atau_link": location_or_link,
+                            "link_aplikasi": f"{settings.ppdb_frontend_url}/dashboard",
+                        },
+                    )
+                ],
+                app.user_id,
+            )
+        except Exception:
+            pass
+
+        return {
+            "message": f"Berhasil memindahkan jadwal {app.full_name} ke {target_session.name}",
+            "session_id": target_session.id,
+            "session_name": target_session.name,
+        }

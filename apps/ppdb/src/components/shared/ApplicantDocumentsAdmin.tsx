@@ -24,6 +24,7 @@ interface DocumentItem {
 interface ApplicantDocumentsAdminProps {
   applicantId: string
   currentStatus: string
+  rejectionReason?: string | null
   onVerified?: () => void
 }
 
@@ -39,6 +40,7 @@ const DOC_LABELS: Record<string, string> = {
 export default function ApplicantDocumentsAdmin({
   applicantId,
   currentStatus,
+  rejectionReason,
   onVerified,
 }: ApplicantDocumentsAdminProps) {
   const { toast } = useToast()
@@ -142,7 +144,7 @@ export default function ApplicantDocumentsAdmin({
         <div className="flex items-start sm:items-center gap-2">
           <AlertTriangle className="h-4 w-4 text-amber-600" />
           <span>
-            Verifikasi berkas wajib & tambahan calon santri. Dokumen yang ditolak akan otomatis memicu WhatsApp instruksi revisi.
+            Verifikasi berkas persyaratan calon santri. Dokumen yang ditolak akan otomatis memicu WhatsApp instruksi revisi.
           </span>
         </div>
         <Badge
@@ -162,6 +164,22 @@ export default function ApplicantDocumentsAdmin({
             : 'Menunggu Verifikasi'}
         </Badge>
       </div>
+
+      {/* Banner Komitmen Berkas Menyusul */}
+      {rejectionReason?.startsWith('[BERKAS MENYUSUL]') && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-900 flex items-start gap-2.5">
+          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <span className="font-bold text-amber-950 block">Komitmen Berkas Menyusul:</span>
+            <p className="text-amber-800 leading-relaxed">
+              {rejectionReason.replace('[BERKAS MENYUSUL]: ', '')}
+            </p>
+            <p className="text-[11px] text-amber-700 font-medium">
+              Calon santri dapat disetujui (Approve) untuk melanjutkan ke seleksi ujian tahfidz &amp; wawancara, dan berkas fisik dapat ditagihkan saat daftar ulang.
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Grid Dokumen 1 Modul */}
       {docs.length === 0 ? (

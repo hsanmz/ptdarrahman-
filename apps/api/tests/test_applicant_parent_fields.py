@@ -9,7 +9,6 @@ def _valid_register_payload(**overrides):
         "full_name": "Ahmad Fauzi",
         "email": "fauzi@example.com",
         "phone": "081234567890",
-        "registration_path": "reguler",
         "province": "Jawa Barat",
         "city": "Kota Bogor",
         "district": "Bogor Barat",
