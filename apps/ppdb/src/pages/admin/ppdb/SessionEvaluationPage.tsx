@@ -1,9 +1,10 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, Component, type ReactNode } from 'react'
 import { useParams, useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as api from '@/api/client'
 import { useToast } from '@/components/Toast'
 import { useCanPage } from '@/hooks/useCan'
+import { DocTrigger } from '@repo/ui'
 import {
   Button,
   Badge,
@@ -29,7 +30,31 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-export default function SessionEvaluationPage() {
+// ── Helpers ──
+const formatDateSafe = (d?: any) => {
+  if (!d) return '-'
+  try {
+    const dt = new Date(d)
+    if (isNaN(dt.getTime())) return String(d)
+    return dt.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+  } catch {
+    return String(d)
+  }
+}
+
+const safeStr = (v?: any, fallback = '-') => {
+  if (v === null || v === undefined) return fallback
+  const s = String(v).trim()
+  return s.length > 0 ? s : fallback
+}
+
+const cleanPhone = (p?: any) => {
+  if (!p) return ''
+  return String(p).replace(/[^0-9]/g, '')
+}
+
+// ── Inner Page Component ──
+function SessionEvaluationContent() {
   const { sessionType = 'tahfidz', sessionId } = useParams<{
     sessionType: string
     sessionId: string
@@ -82,9 +107,9 @@ export default function SessionEvaluationPage() {
   const [notesOrtu, setNotesOrtu] = useState<string>('')
 
   // Helper untuk membaca dan memisahkan catatan Tahfidz dan Wawancara
-  const parseNotes = (raw?: string | null) => {
+  const parseNotes = (raw?: any) => {
     if (!raw) return { tahfidz: '', santri: '', ortu: '', general: '' }
-    const text = raw.trim()
+    const text = String(raw).trim()
     const tahfidzMatch = text.match(/(?:^|\n)\[Tahfidz\]:\s*([\s\S]*?)(?=(?:\n\[|$))/i)
     const santriMatch =
       text.match(/(?:^|\n)\[Wawancara Santri\]:\s*([\s\S]*?)(?=(?:\n\[|$))/i) ||
@@ -105,18 +130,22 @@ export default function SessionEvaluationPage() {
   }
 
   // Helper untuk menggabungkan catatan Tahfidz dan Wawancara saat simpan
-  const buildNotes = (existingRaw?: string | null) => {
+  const buildNotes = (existingRaw?: any) => {
     const parsed = parseNotes(existingRaw)
     const parts: string[] = []
 
+    const cleanTahfidz = String(notesTahfidz || '').trim()
+    const cleanSantri = String(notesSantri || '').trim()
+    const cleanOrtu = String(notesOrtu || '').trim()
+
     if (isTahfidz) {
-      if (notesTahfidz.trim()) parts.push(`[Tahfidz]: ${notesTahfidz.trim()}`)
+      if (cleanTahfidz) parts.push(`[Tahfidz]: ${cleanTahfidz}`)
       if (parsed.santri) parts.push(`[Wawancara Santri]: ${parsed.santri}`)
       if (parsed.ortu) parts.push(`[Wawancara Ortu]: ${parsed.ortu}`)
     } else {
       if (parsed.tahfidz) parts.push(`[Tahfidz]: ${parsed.tahfidz}`)
-      if (notesSantri.trim()) parts.push(`[Wawancara Santri]: ${notesSantri.trim()}`)
-      if (notesOrtu.trim()) parts.push(`[Wawancara Ortu]: ${notesOrtu.trim()}`)
+      if (cleanSantri) parts.push(`[Wawancara Santri]: ${cleanSantri}`)
+      if (cleanOrtu) parts.push(`[Wawancara Ortu]: ${cleanOrtu}`)
     }
 
     if (parts.length === 0 && parsed.general) {
@@ -145,19 +174,23 @@ export default function SessionEvaluationPage() {
     mutationFn: async () => {
       if (!data?.applicant?.id) throw new Error('Data pendaftar tidak ada')
 
+      const cleanTahfidz = String(notesTahfidz || '').trim()
+      const cleanSantri = String(notesSantri || '').trim()
+      const cleanOrtu = String(notesOrtu || '').trim()
+
       // Validasi Catatan Wajib Diisi (Mandatory Notes)
       if (isTahfidz) {
-        if (!notesTahfidz.trim()) {
+        if (!cleanTahfidz) {
           throw new Error('Catatan hasil ujian Tahfidz wajib diisi sebelum menyimpan nilai!')
         }
       } else {
-        if (wawancaraMode === 'santri' && !notesSantri.trim()) {
+        if (wawancaraMode === 'santri' && !cleanSantri) {
           throw new Error('Catatan hasil wawancara calon santri wajib diisi sebelum menyimpan nilai!')
         }
-        if (wawancaraMode === 'ortu' && !notesOrtu.trim()) {
+        if (wawancaraMode === 'ortu' && !cleanOrtu) {
           throw new Error('Catatan hasil wawancara orang tua/wali wajib diisi sebelum menyimpan nilai!')
         }
-        if (wawancaraMode === 'semua' && !notesSantri.trim() && !notesOrtu.trim()) {
+        if (wawancaraMode === 'semua' && !cleanSantri && !cleanOrtu) {
           throw new Error('Catatan wawancara santri atau orang tua wajib diisi sebelum menyimpan nilai!')
         }
       }
@@ -205,13 +238,18 @@ export default function SessionEvaluationPage() {
     )
   }
 
-  if (error || !data) {
+  if (error || !data || !data.session || !data.applicant) {
+    const errorMsg =
+      (error as any)?.message ||
+      (error as any)?.detail ||
+      'Belum ada pendaftar yang terdaftar di sesi ini atau data belum lengkap. Silakan pilih santri dari daftar jadwal seleksi.'
+
     return (
       <div className="flex h-[60vh] flex-col items-center justify-center gap-4 text-center p-4">
         <AlertCircle className="h-12 w-12 text-rose-500" />
-        <h2 className="text-lg font-bold text-slate-900">Gagal Membuka Sesi</h2>
+        <h2 className="text-lg font-bold text-slate-900">Gagal Membuka Ruang Penilaian</h2>
         <p className="max-w-md text-sm text-slate-600">
-          {(error as any)?.message || 'Belum ada pendaftar yang terdaftar di sesi ini atau data tidak ditemukan.'}
+          {errorMsg}
         </p>
         <Button
           onClick={handleBack}
@@ -224,7 +262,9 @@ export default function SessionEvaluationPage() {
     )
   }
 
-  const { session, applicant, categories = [] } = data
+  const session = data.session || {}
+  const applicant = data.applicant || {}
+  const categories = Array.isArray(data.categories) ? data.categories : []
 
   const isSantriCategory = (catName: string) => {
     const n = (catName || '').toLowerCase()
@@ -236,21 +276,17 @@ export default function SessionEvaluationPage() {
     return n.includes('orang tua') || n.includes('ortu')
   }
 
-  const santriCriteria = useMemo(() => {
-    return categories
-      .filter((cat: any) => isSantriCategory(cat.name))
-      .flatMap((cat: any) =>
-        (cat.criteria || []).map((cr: any) => ({ ...cr, categoryName: cat.name }))
-      )
-  }, [categories])
+  const santriCriteria = categories
+    .filter((cat: any) => isSantriCategory(cat.name))
+    .flatMap((cat: any) =>
+      (cat.criteria || []).map((cr: any) => ({ ...cr, categoryName: cat.name }))
+    )
 
-  const ortuCriteria = useMemo(() => {
-    return categories
-      .filter((cat: any) => isOrtuCategory(cat.name))
-      .flatMap((cat: any) =>
-        (cat.criteria || []).map((cr: any) => ({ ...cr, categoryName: cat.name }))
-      )
-  }, [categories])
+  const ortuCriteria = categories
+    .filter((cat: any) => isOrtuCategory(cat.name))
+    .flatMap((cat: any) =>
+      (cat.criteria || []).map((cr: any) => ({ ...cr, categoryName: cat.name }))
+    )
 
   const isSantriEvaluated =
     santriCriteria.length > 0 &&
@@ -261,7 +297,7 @@ export default function SessionEvaluationPage() {
         typeof scores[c.id] === 'number' &&
         !isNaN(scores[c.id])
     ) &&
-    !!notesSantri.trim()
+    !!String(notesSantri || '').trim()
 
   const isOrtuEvaluated =
     ortuCriteria.length > 0 &&
@@ -272,46 +308,40 @@ export default function SessionEvaluationPage() {
         typeof scores[c.id] === 'number' &&
         !isNaN(scores[c.id])
     ) &&
-    !!notesOrtu.trim()
+    !!String(notesOrtu || '').trim()
 
-  const displayedCategories = useMemo(() => {
-    if (isTahfidz) return categories
-    if (wawancaraMode === 'santri') {
-      const list = categories.filter((c: any) => isSantriCategory(c.name))
-      return list.length > 0 ? list : categories
-    }
-    if (wawancaraMode === 'ortu') {
-      const list = categories.filter((c: any) => isOrtuCategory(c.name))
-      return list.length > 0 ? list : categories
-    }
-    return categories
-  }, [categories, isTahfidz, wawancaraMode])
+  const displayedCategories = isTahfidz
+    ? categories
+    : wawancaraMode === 'santri'
+    ? categories.filter((c: any) => isSantriCategory(c.name)).length > 0
+      ? categories.filter((c: any) => isSantriCategory(c.name))
+      : categories
+    : wawancaraMode === 'ortu'
+    ? categories.filter((c: any) => isOrtuCategory(c.name)).length > 0
+      ? categories.filter((c: any) => isOrtuCategory(c.name))
+      : categories
+    : categories
 
   // Active criteria for score header & status counter
-  const activeCriteria = useMemo(() => {
-    if (isTahfidz) {
-      return categories.flatMap((cat: any) =>
+  const activeCriteria = isTahfidz
+    ? categories.flatMap((cat: any) =>
         (cat.criteria || []).map((cr: any) => ({ ...cr, categoryName: cat.name }))
       )
-    }
-    if (wawancaraMode === 'santri') {
-      return santriCriteria.length > 0
-        ? santriCriteria
-        : categories.flatMap((cat: any) =>
-            (cat.criteria || []).map((cr: any) => ({ ...cr, categoryName: cat.name }))
-          )
-    }
-    if (wawancaraMode === 'ortu') {
-      return ortuCriteria.length > 0
-        ? ortuCriteria
-        : categories.flatMap((cat: any) =>
-            (cat.criteria || []).map((cr: any) => ({ ...cr, categoryName: cat.name }))
-          )
-    }
-    return categories.flatMap((cat: any) =>
-      (cat.criteria || []).map((cr: any) => ({ ...cr, categoryName: cat.name }))
-    )
-  }, [categories, isTahfidz, wawancaraMode, santriCriteria, ortuCriteria])
+    : wawancaraMode === 'santri'
+    ? santriCriteria.length > 0
+      ? santriCriteria
+      : categories.flatMap((cat: any) =>
+          (cat.criteria || []).map((cr: any) => ({ ...cr, categoryName: cat.name }))
+        )
+    : wawancaraMode === 'ortu'
+    ? ortuCriteria.length > 0
+      ? ortuCriteria
+      : categories.flatMap((cat: any) =>
+          (cat.criteria || []).map((cr: any) => ({ ...cr, categoryName: cat.name }))
+        )
+    : categories.flatMap((cat: any) =>
+        (cat.criteria || []).map((cr: any) => ({ ...cr, categoryName: cat.name }))
+      )
 
   // Calculate weighted or average final score
   const totalWeight = activeCriteria.reduce((sum: number, c: any) => sum + (c.weight || 0), 0)
@@ -339,10 +369,11 @@ export default function SessionEvaluationPage() {
     })
     calculatedScore = filledCriteriaCount > 0 ? Math.round((sum / filledCriteriaCount) * 10) / 10 : 0
   }
+  if (isNaN(calculatedScore)) calculatedScore = 0
 
-  // Parse health history if stored as JSON or string
+  // Parse health history if stored as JSON or string safely
   let diseaseHistoryParsed: any = null
-  if (applicant.disease_history) {
+  if (applicant?.disease_history) {
     try {
       diseaseHistoryParsed =
         typeof applicant.disease_history === 'string'
@@ -352,15 +383,22 @@ export default function SessionEvaluationPage() {
       diseaseHistoryParsed = null
     }
   }
+  if (
+    !diseaseHistoryParsed ||
+    typeof diseaseHistoryParsed !== 'object' ||
+    Array.isArray(diseaseHistoryParsed)
+  ) {
+    diseaseHistoryParsed = null
+  }
 
   // Pas foto document if available
-  const photoDoc = (applicant.documents || []).find(
+  const photoDoc = (applicant?.documents || []).find(
     (d: any) =>
       (d.doc_type || d.document_type || d.original_name || '').toLowerCase().includes('foto') ||
       (d.mime_type || '').startsWith('image/')
   )
 
-  const isCompleted = session.status_color === 'green'
+  const isCompleted = session?.status_color === 'green'
 
   return (
     <div className="-m-3.5 sm:-m-4 md:-m-6 lg:-m-8 flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-3.6rem)] lg:max-h-[calc(100vh-3.6rem)] lg:overflow-hidden bg-background animate-fade-in select-text">
@@ -390,7 +428,7 @@ export default function SessionEvaluationPage() {
           )}
         >
           <User className="h-3.5 w-3.5 shrink-0" />
-          <span className="truncate">Identitas {applicant.full_name?.split(' ')[0] || 'Santri'}</span>
+          <span className="truncate">Identitas {String(applicant.full_name || 'Santri').split(' ')[0]}</span>
         </button>
       </div>
 
@@ -444,12 +482,7 @@ export default function SessionEvaluationPage() {
                 <span className="text-slate-300 select-none">·</span>
                 <span className="flex items-center gap-1 shrink-0 font-medium text-slate-600">
                   <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
-                  {session.session_date
-                    ? new Date(session.session_date).toLocaleDateString('id-ID', {
-                        day: 'numeric',
-                        month: 'short',
-                      })
-                    : '-'}
+                  {formatDateSafe(session.session_date)}
                 </span>
                 <span className="text-slate-300 select-none">·</span>
                 <span className="flex items-center gap-1 shrink-0 font-medium text-slate-600">
@@ -488,6 +521,8 @@ export default function SessionEvaluationPage() {
                 </span>
               </div>
 
+              <DocTrigger docKey="ppdb-session-evaluation" variant="light" />
+
               {canCrud && (
                 <Button
                   onClick={() => saveMutation.mutate()}
@@ -508,7 +543,6 @@ export default function SessionEvaluationPage() {
                   </span>
                 </Button>
               )}
-
             </div>
           </div>
         </div>
@@ -846,7 +880,7 @@ export default function SessionEvaluationPage() {
               />
             ) : (
               <div className="h-14 w-14 sm:h-16 sm:w-16 rounded-2xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white flex items-center justify-center font-bold text-lg sm:text-xl shadow-xs shrink-0">
-                {(applicant.full_name || 'A')[0]}
+                {String(applicant.full_name || 'A')[0]}
               </div>
             )}
 
@@ -884,12 +918,12 @@ export default function SessionEvaluationPage() {
                 <Phone className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                 {applicant.phone ? (
                   <a
-                    href={`https://wa.me/${applicant.phone.replace(/[^0-9]/g, '')}`}
+                    href={`https://wa.me/${cleanPhone(applicant.phone)}`}
                     target="_blank"
                     rel="noreferrer"
                     className="truncate text-emerald-700 hover:underline font-medium"
                   >
-                    {applicant.phone}
+                    {String(applicant.phone)}
                   </a>
                 ) : (
                   <span className="text-slate-400">-</span>
@@ -935,7 +969,7 @@ export default function SessionEvaluationPage() {
               <p className="text-slate-600 truncate">Pekerjaan: {applicant.father_job || '-'}</p>
               <p className="text-slate-600 flex items-center gap-1 mt-1 truncate">
                 <Phone className="h-3 w-3 text-emerald-600 shrink-0" />
-                {applicant.father_phone || '-'}
+                {safeStr(applicant.father_phone)}
               </p>
             </div>
 
@@ -946,7 +980,7 @@ export default function SessionEvaluationPage() {
               <p className="text-slate-600 truncate">Pekerjaan: {applicant.mother_job || '-'}</p>
               <p className="text-slate-600 flex items-center gap-1 mt-1 truncate">
                 <Phone className="h-3 w-3 text-emerald-600 shrink-0" />
-                {applicant.mother_phone || '-'}
+                {safeStr(applicant.mother_phone)}
               </p>
             </div>
 
@@ -1087,11 +1121,11 @@ export default function SessionEvaluationPage() {
               <div className="p-2.5 rounded-lg bg-amber-50/70 border border-amber-200/80 space-y-1">
                 <span className="font-bold text-amber-900 block">Kontak Darurat Kesehatan</span>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-amber-800">
-                  <span>Nama: <strong>{diseaseHistoryParsed.emergency_contact_name || '-'}</strong></span>
-                  <span>Hubungan: <strong>{diseaseHistoryParsed.emergency_contact_relation || '-'}</strong></span>
+                  <span>Nama: <strong>{safeStr(diseaseHistoryParsed.emergency_contact_name)}</strong></span>
+                  <span>Hubungan: <strong>{safeStr(diseaseHistoryParsed.emergency_contact_relation)}</strong></span>
                   <span className="flex items-center gap-1 font-bold">
                     <Phone className="h-3 w-3" />
-                    {diseaseHistoryParsed.emergency_contact_phone || '-'}
+                    {safeStr(diseaseHistoryParsed.emergency_contact_phone)}
                   </span>
                 </div>
               </div>
@@ -1148,5 +1182,57 @@ export default function SessionEvaluationPage() {
         </div>
       </aside>
     </div>
+  )
+}
+
+// ── In-page Error Boundary to prevent RootErrorBoundary crashing ──
+interface ErrorBoundaryState {
+  hasError: boolean
+  error: Error | null
+}
+
+class SessionEvaluationErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
+  constructor(props: { children: ReactNode }) {
+    super(props)
+    this.state = { hasError: false, error: null }
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error }
+  }
+
+  componentDidCatch(error: Error, errorInfo: any) {
+    console.error('SessionEvaluationPage caught error:', error, errorInfo)
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="flex h-[60vh] flex-col items-center justify-center gap-4 text-center p-4">
+          <AlertCircle className="h-12 w-12 text-rose-500" />
+          <h2 className="text-lg font-bold text-slate-900">Gagal Membuka Ruang Penilaian</h2>
+          <p className="max-w-md text-sm text-slate-600">
+            {this.state.error?.message || 'Terjadi kesalahan saat memuat data penilaian. Silakan coba kembali.'}
+          </p>
+          <Button
+            onClick={() => window.history.back()}
+            variant="outline"
+            className="gap-2"
+          >
+            <ArrowLeft className="h-4 w-4" /> Kembali ke Halaman Sebelumnya
+          </Button>
+        </div>
+      )
+    }
+
+    return this.props.children
+  }
+}
+
+export default function SessionEvaluationPage() {
+  return (
+    <SessionEvaluationErrorBoundary>
+      <SessionEvaluationContent />
+    </SessionEvaluationErrorBoundary>
   )
 }

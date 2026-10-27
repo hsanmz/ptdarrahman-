@@ -1,63 +1,54 @@
-﻿[ADMIN KEUANGAN]                                   [ADMIN VERIFIKATOR / PENGUJI]
-          â”‚                                                  â”‚
-[MONITORING PEMBAYARAN FORMULIR]                   [1. VERIFIKASI DOKUMEN 1 MODUL]
-(Status Pak Kasir via Webhook)                     (Cek Dokumen Wajib & Tambahan sekaligus dlm 1 layar)
-Pendaftar belum bayar menerima pengingat setiap Senin sampai gelombang ditutup.
-Saat kuota tercapai, tagihan formulir pending dibatalkan dan pendaftar diberi info gelombang berikutnya.
-          â”‚                                                  â”‚
-          â”‚                                                  â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-          â”‚                                                  â–¼             â–¼
-          â”‚                                        [APPROVE SEMUA]   [REJECT DOKUMEN SPESIFIK] -> [AUTO NOTIF WA]
-          â”‚                                                  â”‚
-          â”‚                                                  â–¼
-          â”‚                                        [1b. BACA FORMULIR KESEHATAN PENDAFTAR]
-          â”‚                                        (Data kesehatan pendaftar: riwayat penyakit,
-          â”‚                                         diagnosis, alergi, pengobatan rutin, keterbatasan fisik,
-          â”‚                                         rawat inap, kebutuhan khusus, kontak darurat, pernyataan.
-          â”‚                                         Data sensitif â€” akses dibatasi dan dapat diaudit.
-          â”‚                                         Rincian: REQUIREMENTS.md.)
-          â”‚                                                  â”‚
-          â”‚                                                  â–¼
-          â”‚                                        [2. MONITOR HASIL TIU OTOMATIS]
-          â”‚                                        (Soal disinkronkan dari Google Form melalui
-          â”‚                                         Apps Script tanpa publish manual; hasil nilai masuk
-          â”‚                                         real-time ke sistem lewat webhook Apps Script.
-          â”‚                                         Sistem menyimpan hasil dan kirim notifikasi WA;
-          â”‚                                         admin tidak input nilai TIU manual.)
-          â”‚                                                  â”‚
-          â”‚                                                  â–¼
-          â”‚                                        [3. EXECUTE UJIAN TAHFIDZ]
-          â”‚                                        (Penguji input nilai Tahfidz agar Pendaftar
-          â”‚                                         bisa membuka jadwal Take Session Wawancara)
-          â”‚                                                  â”‚
-          â”‚                                                  â–¼
-          â”‚                                        [4. EXECUTE WAWANCARA]
-          â”‚                                        (Interviewer input Nilai Wawancara)
-          â”‚                                                  â”‚
-          â”‚                                                  â–¼
-          â”‚                                        [5. SISTEM AUTO-GENERATE DOKUMEN TRANSKRIP]
-          â”‚                                                  â”‚
-          â”‚                                                  â–¼
-          â”‚                                        [6. KEPUTUSAN FINAL (LULUS / TIDAK LULUS)]
-          â”‚                                                  â”‚
-          â”‚                                                  â”œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
-          â”‚                                                  â–¼ (TIDAK LULUS)            â–¼ (LULUS)
-          â”‚                                            [SET TIDAK LULUS]         [GENERATE LoA]
-          â”‚                                                                             â”‚
-          â–¼                                                                             â–¼
-[7. MONITORING PEMBAYARAN TAHAP 2 & CICILAN] â—„â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
-(Cek masuknya DP via Pak Kasir)
-(Pantau alur tagihan cicilan yang dipilih Pendaftar)
-          â”‚
-          â–¼ (JIKA DP MASUK & PEMBAYARAN TAHAP 2 CLEAR)
-          â”‚
-          â–¼
-[KIRIM WA NOTIFIKASI INFO BERHASIL, TAGIHAN AKTIF, & LINK WA GROUP]
-
-PENANGANAN ADMIN UNTUK PENGECUALIAN
-- Webhook pembayaran duplikat tidak boleh menggandakan transaksi atau hitungan kuota.
-- Pembayaran sukses yang terlambat setelah tagihan dibatalkan karena kuota penuh ditandai untuk pemeriksaan admin; jangan pindahkan pendaftar otomatis.
-- Jika sinkronisasi soal gagal/tidak didukung, paket soal valid terakhir tetap digunakan dan admin mendapat pesan kesalahan. Tidak ada tahap publish manual.
-- Dashboard konfigurasi menampilkan status dan waktu sinkronisasi terakhir agar admin tahu apakah perubahan Google Form sudah masuk.
-- Jika peserta melaporkan koneksi putus, cari attempt aktifnya. Jawaban otomatis tersimpan di server; setelah koneksi pulih peserta resume attempt yang sama melalui SEB dan jawaban tersimpan dipulihkan. Jangan membuat attempt tambahan atau mengubah nilai diam-diam. Timer tetap berjalan.
-- Arsip/dossier serta unduhan hanya untuk admin dengan izin khusus; akses sensitif harus dapat diaudit.
+[ADMIN KEUANGAN & BACKOFFICE]                      [ADMIN VERIFIKATOR & PENGUJI]
+          │                                                  │
+[MONITORING PEMBAYARAN FORMULIR]                   [1. VERIFIKASI BERKAS PERSYARATAN]
+(Status Pakasir via Webhook QRIS Dinamis)          (Cek NISN, KK, Akta, Pas Foto, KTP Ortu, 4 Rapor dlm 1 layar)
+Pendaftar belum bayar menerima pengingat           Dua kolom verifikasi dengan viewer berkas terintegrasi.
+setiap Senin sampai gelombang ditutup.                       │
+Saat kuota tercapai, tagihan formulir pending                ├─────────────────────────────┐
+dibatalkan otomatis via webhook idempoten.                   ▼                             ▼
+          │                                        [APPROVE SEMUA]               [REJECT DOKUMEN SPESIFIK]
+          │                                                  │                     (Kirim Notif WA Revisi)
+          │                                                  ▼
+          │                                        [1b. BACA FORMULIR IDENTIFIKASI KESEHATAN]
+          │                                        (10 soal baku: riwayat penyakit kronis, diagnosis,
+          │                                         alergi, obat rutin, fisik, rawat inap, kebutuhan khusus,
+          │                                         kontak darurat. Data sensitif — akses dibatasi dan diaudit).
+          │                                                  │
+          │                                                  ▼
+          │                                        [2. CBT AKADEMIK & PSIKOLOGI (LIVE MONITORING)]
+          │                                        - Kelola Bank Soal per periode (MCQ A-E, kunci jawaban, durasi).
+          │                                        - Penjadwalan batch ujian CBT massal + PIN sesi.
+          │                                        - Konsol live monitoring (/admin/monitoring/:category/:scheduleId).
+          │                                        - Deteksi pelanggaran keluar layar > 5 detik (anti-cheating).
+          │                                        - Tombol "Unfreeze Peserta" untuk membuka kembali peserta terkunci.
+          │                                        - Auto-grading skor ujian tersimpan otomatis di database.
+          │                                                  │
+          │                                                  ▼
+          │                                        [3. SELEKSI TAHFIDZ AL-QUR'AN]
+          │                                        (Penguji menilai tartil, tajwid, dan hafalan via rubrik berbobot resmi).
+          │                                                  │
+          │                                                  ▼
+          │                                        [4. WAWANCARA TERPADU (SANTRI & ORTU/WALI)]
+          │                                        (Evaluasi kesiapan santri tinggal di asrama dan komitmen orang tua).
+          │                                                  │
+          │                                                  ▼
+          │                                        [5. REKAPITULASI PENILAIAN SELEKSI GABUNGAN]
+          │                                        (Tabel rekapitulasi nilai akhir: Akademik, Psikologi, Tahfidz, Wawancara).
+          │                                                  │
+          │                                                  ▼
+          │                                        [6. KEPUTUSAN FINAL (LULUS / TIDAK LULUS)]
+          │                                                  │
+          │                                                  ├─────────────────────────────┐
+          │                                                  ▼ (TIDAK LULUS)               ▼ (LULUS)
+          │                                            [SET TIDAK LULUS]            [TERBITKAN LoA RESMI]
+          │                                            (Notif WA Pengumuman)        (Klausul non-refundable, QR HMAC,
+          │                                                                          notif WA kelulusan & link LoA).
+          │                                                                                │
+          ▼                                                                                ▼
+[7. MONITORING REVIEW LoA & TTD DIGITAL] ◄─────────────────────────────────────────────────┘
+- Pantau status tanda tangan digital orang tua/wali santri pada LoA (/admin/review-loa).
+- Saat ditandatangani, data formulir pendaftar terkunci permanen (is_locked = true).
+- Nomor registrasi unik resmi terbit (REG-{YYYYMMDD}-{XXXX}) dan link grup WA aktif.
+- Rincian biaya pendidikan resmi disajikan transparan pada LoA.
+- Pembayaran biaya pendidikan dilakukan DI LUAR APLIKASI (transfer ke Rekening Resmi PTDARRAHMAN
+  atau tunai di kantor bendahara pesantren). Tidak ada pembayaran online tahap 2 di portal PPDB.

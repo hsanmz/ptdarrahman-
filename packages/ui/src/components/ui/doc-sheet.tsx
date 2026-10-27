@@ -24,6 +24,7 @@ import {
   QrCode,
   Smartphone,
   RefreshCw,
+  Video,
   X,
 } from 'lucide-react'
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle, SheetDescription } from './sheet'
@@ -813,6 +814,91 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
         content: (
           <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
             Setiap klik opsi jawaban peserta tersimpan secara instan di database. Saat durasi ujian berakhir, sistem secara otomatis mensubmit seluruh lembar jawaban peserta dan menghitung skor akhir seketika.
+          </p>
+        ),
+      },
+    ],
+  },
+
+  'ppdb-jadwal-tahfidz': {
+    title: 'Jadwal Seleksi Tahfidz Qur\'an',
+    subtitle: 'Panduan penjadwalan ujian seleksi Tahfidz massal per gelombang dan batch.',
+    sections: [
+      {
+        number: 1,
+        title: 'Penjadwalan Massal Per Gelombang & Batch',
+        icon: CalendarDays,
+        content: (
+          <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            Ujian Tahfidz Al-Qur'an dijadwalkan secara terstruktur untuk seluruh calon santri di gelombang aktif. Admin dapat membagi jadwal ke dalam beberapa batch/kloter (contoh: Sesi 1, Sesi 2) dengan penguji asatidz yang ditunjuk.
+          </p>
+        ),
+      },
+      {
+        number: 2,
+        title: 'Mode Ujian (Offline & Online)',
+        icon: Video,
+        content: (
+          <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <p>
+              • <strong>Mode Offline:</strong> Berlangsung langsung tatap muka di kampus Pesantren Tahfidz Qur&apos;an dan Digital Ar-Rahman sesuai lokasi ruangan yang ditentukan.
+            </p>
+            <p>
+              • <strong>Mode Online:</strong> Dilakukan via tautan telekonferensi Zoom/Google Meet resmi yang dapat diakses langsung oleh peserta.
+            </p>
+          </div>
+        ),
+      },
+      {
+        number: 3,
+        title: 'Penginputan Nilai & Evaluasi Rubrik',
+        icon: Award,
+        content: (
+          <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            Klik tombol <strong>Kelola / Form Nilai</strong> pada jadwal untuk membuka daftar peserta dan menginput skor rubrik Tahfidz (kelancaran, tajwid, makhraj, dan hafalan) beserta catatan evaluator.
+          </p>
+        ),
+      },
+    ],
+  },
+
+  'ppdb-jadwal-wawancara': {
+    title: 'Jadwal Wawancara Terpadu (Santri & Ortu)',
+    subtitle: 'Panduan wawancara komitmen pendidikan calon santri dan orang tua/wali santri.',
+    sections: [
+      {
+        number: 1,
+        title: 'Wawancara Terpadu Satu Waktu',
+        icon: Users,
+        content: (
+          <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            Wawancara dilakukan dalam satu jadwal bersamaan yang mencakup evaluasi kesiapan calon santri sekaligus komitmen orang tua/wali santri dalam mendukung pendidikan di pesantren.
+          </p>
+        ),
+      },
+      {
+        number: 2,
+        title: 'Dua Aspek Penilaian Mandiri',
+        icon: Layers,
+        content: (
+          <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <p>
+              Pewawancara menilai dua instrumen rubrik:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-slate-600">
+              <li><strong>Rubrik Calon Santri:</strong> Kesiapan asrama, motivasi tahfidz & IT, kepribadian, dan kemandirian santri.</li>
+              <li><strong>Rubrik Orang Tua / Wali:</strong> Komitmen pembiayaan, persetujuan tata tertib, dan keselarasan visi pendidikan keluarga.</li>
+            </ul>
+          </div>
+        ),
+      },
+      {
+        number: 3,
+        title: 'Fitur Pemindahan Jadwal (Reschedule)',
+        icon: RefreshCw,
+        content: (
+          <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            Jika orang tua/santri berhalangan pada slot yang telah ditentukan, panitia dapat memindahkan peserta ke jadwal atau batch lain melalui tombol <strong>Pindah Sesi</strong>. Peserta otomatis menerima notifikasi pembaruan via WhatsApp.
           </p>
         ),
       },

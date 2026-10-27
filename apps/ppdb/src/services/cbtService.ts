@@ -14,7 +14,19 @@ export interface BankSoalItem {
   updated_at: string
 }
 
+export interface BankScheduleShare {
+  id: string
+  name: string
+  batch_name: string | null
+  session_date: string
+  start_time: string
+  mode: 'offline' | 'online'
+  access_token: string | null
+}
+
 export interface BankSoalDetail extends BankSoalItem {
+  in_use?: boolean
+  schedules: BankScheduleShare[]
   questions: Array<{
     id: string
     question_number: number
@@ -27,6 +39,13 @@ export interface BankSoalDetail extends BankSoalItem {
       is_correct: boolean
     }>
   }>
+}
+
+export interface QuestionUpsertPayload {
+  question_text: string
+  points: number
+  options: Array<{ option_key: string; option_text: string }>
+  answer_key: string
 }
 
 export interface ScheduleItem {
@@ -124,6 +143,33 @@ export const cbtService = {
     apiFetch<{ message: string }>(`/cbt/banks/${bankId}`, {
       method: 'DELETE',
     }),
+
+  updateBank: (bankId: string, payload: { title?: string; description?: string | null; duration_minutes?: number }) =>
+    apiFetch<BankSoalItem>(`/cbt/banks/${bankId}`, {
+      method: 'PUT',
+      body: JSON.stringify(payload),
+    }),
+
+  addQuestion: (bankId: string, payload: QuestionUpsertPayload) =>
+    apiFetch<BankSoalDetail['questions'][number]>(`/cbt/banks/${bankId}/questions`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  updateQuestion: (bankId: string, questionId: string, payload: QuestionUpsertPayload) =>
+    apiFetch<BankSoalDetail['questions'][number]>(
+      `/cbt/banks/${bankId}/questions/${questionId}`,
+      {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      }
+    ),
+
+  deleteQuestion: (bankId: string, questionId: string) =>
+    apiFetch<{ message: string }>(
+      `/cbt/banks/${bankId}/questions/${questionId}`,
+      { method: 'DELETE' }
+    ),
 
   downloadTemplate: async (category: 'akademik' | 'psikologi') => {
     const blob = await apiFetchBlob(`/cbt/banks/template/${category}`)

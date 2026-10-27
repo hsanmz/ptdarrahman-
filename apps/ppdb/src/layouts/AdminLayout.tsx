@@ -37,10 +37,10 @@ const navItems = [
     module: 'ppdb',
     minLevel: 'read',
     children: [
-      { label: 'Bank Soal Akademik', href: '/admin/bank-soal/akademik' },
-      { label: 'Bank Soal Psikologi', href: '/admin/bank-soal/psikologi' },
       { label: 'Preview LoA', href: '/admin/pengumuman' },
       { label: 'Rubrik', href: '/admin/rubrik' },
+      { label: 'Bank Soal Akademik', href: '/admin/bank-soal/akademik' },
+      { label: 'Bank Soal Psikologi', href: '/admin/bank-soal/psikologi' },
     ]
   },
   { label: 'Arsip Pendaftar', icon: Archive, href: '/admin/arsip', module: 'ppdb', minLevel: 'read' },

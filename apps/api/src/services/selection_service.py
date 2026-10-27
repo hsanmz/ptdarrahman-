@@ -1,5 +1,5 @@
 from datetime import date, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 from zoneinfo import ZoneInfo
 
@@ -67,7 +67,9 @@ def _notify_assessment_completed_once(db: Any, applicant: Any, stage_name: str) 
                 "assessment_stage_completed",
                 {
                     "nama_tahap": stage_name,
-                    "link_aplikasi": f"{settings.ppdb_frontend_url}/applicant/tes-seleksi",
+                    "link_aplikasi": (
+                        f"{settings.ppdb_frontend_url}" "/applicant/tes-seleksi"
+                    ),
                 },
             )
         ],
@@ -202,7 +204,8 @@ class SelectionService:
         self.repo.create_session(session)
         self.repo.db.commit()
 
-        # Otomatis cek dan jalankan stage progression / pengiriman jadwal bertahap dengan anti-ban delay
+        # Otomatis cek dan jalankan stage progression / pengiriman jadwal bertahap
+        # dengan anti-ban delay
         try:
             from src.services.selection_stage_service import SelectionStageService
 
@@ -217,136 +220,202 @@ class SelectionService:
     ) -> dict[str, Any]:
         from sqlalchemy import or_
 
+        from src.models.ppdb import PPDBApplicant
         from src.models.selection import SelectionResult
         from src.repositories.ppdb_repository import PPDBRepository
 
-        session = self.repo.get_session_by_id(session_id)
-        if not session:
-            raise HTTPException(status_code=404, detail="Sesi tidak ditemukan")
+        try:
+            session = self.repo.get_session_by_id(session_id)
+            if not session:
+                raise HTTPException(status_code=404, detail="Sesi tidak ditemukan")
 
-        # Cari pendaftar yang terdaftar pada sesi ini
-        query = self.repo.db.query(SelectionResult).filter(
-            or_(
-                SelectionResult.session_id == session_id,
-                SelectionResult.interview_session_id == session_id,
-                SelectionResult.interview_parent_session_id == session_id,
+            stype = (session.session_type or "tahfidz").lower()
+            is_interview = "wawancara" in stype or "interview" in stype
+            target_keyword = "wawancara" if is_interview else "tahfidz"
+
+            # Cari pendaftar yang terdaftar pada sesi ini
+            query = self.repo.db.query(SelectionResult).filter(
+                or_(
+                    SelectionResult.session_id == session_id,
+                    SelectionResult.interview_session_id == session_id,
+                    SelectionResult.interview_parent_session_id == session_id,
+                )
             )
-        )
-        if applicant_id:
-            s_res = query.filter(SelectionResult.applicant_id == applicant_id).first()
-            if not s_res:
-                s_res = self.repo.db.query(SelectionResult).filter(
+            s_res = None
+            if applicant_id:
+                s_res = query.filter(
                     SelectionResult.applicant_id == applicant_id
                 ).first()
-        else:
-            s_res = query.first()
+                if not s_res:
+                    s_res = (
+                        self.repo.db.query(SelectionResult)
+                        .filter(SelectionResult.applicant_id == applicant_id)
+                        .first()
+                    )
+                if not s_res:
+                    # Pastikan applicant ada di tabel pendaftar
+                    app_check = self.repo.get_applicant_by_id(applicant_id)
+                    if app_check:
+                        now = _now_wib()
+                        s_res = SelectionResult(
+                            id=str(uuid4()),
+                            applicant_id=applicant_id,
+                            session_id=session_id if not is_interview else None,
+                            interview_session_id=session_id if is_interview else None,
+                            current_stage=0,
+                            created_at=now,
+                            updated_at=now,
+                        )
+                        self.repo.db.add(s_res)
+                        self.repo.db.commit()
+                else:
+                    # Hubungkan ke sesi jika belum terhubung
+                    if is_interview and not s_res.interview_session_id:
+                        s_res.interview_session_id = session_id
+                        self.repo.db.commit()
+                    elif not is_interview and not s_res.session_id:
+                        s_res.session_id = session_id
+                        self.repo.db.commit()
+            else:
+                s_res = query.first()
+                if not s_res:
+                    # Cari calon santri di gelombang sesi ini jika belum ada yang
+                    # di-assign
+                    first_app = (
+                        self.repo.db.query(PPDBApplicant)
+                        .filter(
+                            PPDBApplicant.wave_id == session.wave_id,
+                            PPDBApplicant.status.in_(
+                                ["selection", "document_approved", "passed", "failed"]
+                            ),
+                            PPDBApplicant.deleted_at.is_(None),
+                        )
+                        .first()
+                    )
+                    if first_app:
+                        now = _now_wib()
+                        s_res = SelectionResult(
+                            id=str(uuid4()),
+                            applicant_id=first_app.id,
+                            session_id=session_id if not is_interview else None,
+                            interview_session_id=session_id if is_interview else None,
+                            current_stage=0,
+                            created_at=now,
+                            updated_at=now,
+                        )
+                        self.repo.db.add(s_res)
+                        self.repo.db.commit()
 
-        if not s_res or not s_res.applicant_id:
-            raise HTTPException(
-                status_code=400,
-                detail="Belum ada pendaftar yang terdaftar di sesi seleksi ini.",
+            if not s_res or not s_res.applicant_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Belum ada pendaftar yang terdaftar di sesi seleksi ini.",
+                )
+
+            ppdb_repo = PPDBRepository(self.repo.db)
+            applicant_detail = ppdb_repo.get_applicant_detail(s_res.applicant_id)
+            if not applicant_detail:
+                app_raw = self.repo.get_applicant_by_id(s_res.applicant_id)
+                if not app_raw:
+                    raise HTTPException(
+                        status_code=404, detail="Data pendaftar tidak ditemukan."
+                    )
+                applicant_detail = {
+                    c.name: getattr(app_raw, c.name) for c in app_raw.__table__.columns
+                }
+                applicant_detail["wave_name"] = "Gelombang Aktif"
+
+            # Dokumen pendaftar
+            raw_docs = ppdb_repo.get_applicant_documents(s_res.applicant_id) or []
+            serialized_docs = []
+            for doc in raw_docs:
+                if isinstance(doc, dict):
+                    doc_copy = dict(doc)
+                    for dk, dv in list(doc_copy.items()):
+                        if isinstance(dv, datetime | date):
+                            doc_copy[dk] = (
+                                dv.isoformat() if hasattr(dv, "isoformat") else str(dv)
+                            )
+                        elif hasattr(dv, "__str__") and type(dv).__name__ in (
+                            "Decimal",
+                            "UUID",
+                        ):
+                            doc_copy[dk] = str(dv)
+                    serialized_docs.append(doc_copy)
+            applicant_detail["documents"] = serialized_docs
+
+            # Nilai Tahfidz yang sudah ada
+            tahfidz_scores = []
+            scores_rows = self.repo.get_applicant_scores_with_details(
+                s_res.applicant_id
             )
+            for sc, c_name, cat_name in scores_rows:
+                if "tahfidz" in (cat_name or "").lower():
+                    tahfidz_scores.append(
+                        {
+                            "score": float(sc) if sc is not None else 0,
+                            "criteria_name": c_name,
+                            "category_name": cat_name,
+                        }
+                    )
 
-        ppdb_repo = PPDBRepository(self.repo.db)
-        applicant_detail = ppdb_repo.get_applicant_detail(s_res.applicant_id)
-        if not applicant_detail:
+            # Ambil rubrik standar sistem (auto-seeding Tahfidz & Wawancara)
+            all_categories = self.get_categories()
+            matched_categories = [
+                cat
+                for cat in all_categories
+                if target_keyword in (cat.get("name") or "").lower()
+            ]
+            if not matched_categories:
+                matched_categories = all_categories
+
+            existing_scores: dict[str, float] = {}
+            for sc, c_name, cat_name in scores_rows:
+                for m_cat in matched_categories:
+                    for cr in m_cat.get("criteria", []):
+                        if cr.get("name") == c_name and m_cat.get("name") == cat_name:
+                            existing_scores[cr["id"]] = (
+                                float(sc) if sc is not None else 0
+                            )
+
+            sess_dict = session.__dict__.copy()
+            sess_dict.pop("_sa_instance_state", None)
+            for sk, sv in list(sess_dict.items()):
+                if isinstance(sv, datetime | date):
+                    sess_dict[sk] = (
+                        sv.isoformat() if hasattr(sv, "isoformat") else str(sv)
+                    )
+                elif hasattr(sv, "__str__") and type(sv).__name__ in (
+                    "Decimal",
+                    "UUID",
+                ):
+                    sess_dict[sk] = str(sv)
+
+            # Format applicant dates & types safely for JSON
+            for k, v in list(applicant_detail.items()):
+                if isinstance(v, datetime | date):
+                    applicant_detail[k] = (
+                        v.isoformat() if hasattr(v, "isoformat") else str(v)
+                    )
+                elif hasattr(v, "__str__") and type(v).__name__ in ("Decimal", "UUID"):
+                    applicant_detail[k] = str(v)
+
+            return {
+                "session": sess_dict,
+                "applicant": applicant_detail,
+                "categories": matched_categories,
+                "existing_scores": existing_scores,
+                "evaluator_notes": s_res.notes or "",
+                "tahfidz_scores": tahfidz_scores,
+                "graduation_status": s_res.graduation_status,
+            }
+        except HTTPException:
+            raise
+        except Exception as exc:
+            self.repo.db.rollback()
             raise HTTPException(
-                status_code=404, detail="Data pendaftar tidak ditemukan."
+                status_code=500, detail=f"Gagal memuat evaluasi sesi: {str(exc)}"
             )
-
-        # Dokumen pendaftar
-        applicant_detail["documents"] = ppdb_repo.get_applicant_documents(
-            s_res.applicant_id
-        )
-
-        # Nilai Tahfidz yang sudah ada
-        tahfidz_scores = []
-        scores_rows = self.repo.get_applicant_scores_with_details(s_res.applicant_id)
-        for sc, c_name, cat_name in scores_rows:
-            if "tahfidz" in (cat_name or "").lower():
-                tahfidz_scores.append(
-                    {
-                        "score": sc,
-                        "criteria_name": c_name,
-                        "category_name": cat_name,
-                    }
-                )
-
-        # Ambil rubrik sesuai jenis sesi (Tahfidz atau Wawancara)
-        stype = (session.session_type or "tahfidz").lower()
-        target_keyword = (
-            "wawancara" if ("wawancara" in stype or "interview" in stype) else "tahfidz"
-        )
-
-        all_categories = list(self.repo.get_categories("global")) + list(
-            self.repo.get_categories(session.wave_id)
-        )
-        seen_cat_ids = set()
-        matched_categories = []
-
-        for cat in all_categories:
-            if cat.id in seen_cat_ids:
-                continue
-            seen_cat_ids.add(cat.id)
-            if target_keyword in (cat.name or "").lower():
-                crit_list = self.repo.get_criteria_by_category(cat.id)
-                matched_categories.append(
-                    {
-                        "id": cat.id,
-                        "name": cat.name,
-                        "criteria": [
-                            {
-                                "id": cr.id,
-                                "name": cr.name,
-                                "description": cr.description,
-                                "weight": cr.weight,
-                            }
-                            for cr in crit_list
-                        ],
-                    }
-                )
-
-        if not matched_categories:
-            for cat in all_categories:
-                if cat.id in seen_cat_ids:
-                    continue
-                seen_cat_ids.add(cat.id)
-                crit_list = self.repo.get_criteria_by_category(cat.id)
-                matched_categories.append(
-                    {
-                        "id": cat.id,
-                        "name": cat.name,
-                        "criteria": [
-                            {
-                                "id": cr.id,
-                                "name": cr.name,
-                                "description": cr.description,
-                                "weight": cr.weight,
-                            }
-                            for cr in crit_list
-                        ],
-                    }
-                )
-
-        existing_scores = {}
-        for sc, c_name, cat_name in scores_rows:
-            for m_cat in matched_categories:
-                for cr in m_cat["criteria"]:
-                    if cr["name"] == c_name and m_cat["name"] == cat_name:
-                        existing_scores[cr["id"]] = sc
-
-        sess_dict = session.__dict__.copy()
-        sess_dict.pop("_sa_instance_state", None)
-
-        return {
-            "session": sess_dict,
-            "applicant": applicant_detail,
-            "categories": matched_categories,
-            "existing_scores": existing_scores,
-            "evaluator_notes": s_res.notes or "",
-            "tahfidz_scores": tahfidz_scores,
-            "graduation_status": s_res.graduation_status,
-        }
 
     def update_session(self, session_id: str, body: SessionUpdate) -> dict[str, Any]:
         now = _now_wib()
@@ -411,7 +480,10 @@ class SelectionService:
                                     "jam_mulai": session.start_time or "-",
                                     "jam_selesai": session.end_time or "-",
                                     "lokasi_atau_link": location_or_link,
-                                    "link_aplikasi": f"{settings.ppdb_frontend_url}/applicant/tes-seleksi",
+                                    "link_aplikasi": (
+                                        f"{settings.ppdb_frontend_url}/applicant/tes-"
+                                        f"seleksi"
+                                    ),
                                 },
                             )
                         ],
@@ -459,7 +531,8 @@ class SelectionService:
         )
         existing_map = {c.name: c for c in existing}
 
-        # Jika ada kategori lama bernama "Wawancara", ubah menjadi "Wawancara Santri" jika belum ada
+        # Jika ada kategori lama bernama "Wawancara", ubah menjadi "Wawancara Santri"
+        # jika belum ada
         if "Wawancara" in existing_map and "Wawancara Santri" not in existing_map:
             w_cat = existing_map["Wawancara"]
             w_cat.name = "Wawancara Santri"
@@ -474,16 +547,40 @@ class SelectionService:
 
         default_criteria_seed = {
             "Tahfidz": [
-                ("Kelancaran Hafalan Al-Qur'an", 40.0, "Kelancaran hafalan surah & juz yang diujikan"),
-                ("Tajwid, Tartil & Makhorijul Huruf", 60.0, "Kaidah tajwid, makhraj, dan kefasihan tilawah"),
+                (
+                    "Kelancaran Hafalan Al-Qur'an",
+                    40.0,
+                    "Kelancaran hafalan surah & juz yang diujikan",
+                ),
+                (
+                    "Tajwid, Tartil & Makhorijul Huruf",
+                    60.0,
+                    "Kaidah tajwid, makhraj, dan kefasihan tilawah",
+                ),
             ],
             "Wawancara Santri": [
-                ("Motivasi Belajar & Adab Santri", 50.0, "Kemauan kuat menuntut ilmu dan kesantunan akhlak"),
-                ("Kemandirian & Kesiapan Mondok", 50.0, "Kesiapan tinggal mandiri di asrama pesantren"),
+                (
+                    "Motivasi Belajar & Adab Santri",
+                    50.0,
+                    "Kemauan kuat menuntut ilmu dan kesantunan akhlak",
+                ),
+                (
+                    "Kemandirian & Kesiapan Mondok",
+                    50.0,
+                    "Kesiapan tinggal mandiri di asrama pesantren",
+                ),
             ],
             "Wawancara Orang Tua": [
-                ("Komitmen Pembinaan & Kerjasama", 50.0, "Dukungan orang tua terhadap program pesantren"),
-                ("Dukungan Moral & Tata Tertib", 50.0, "Keselarasan visi pendidikan dan kepatuhan aturan"),
+                (
+                    "Komitmen Pembinaan & Kerjasama",
+                    50.0,
+                    "Dukungan orang tua terhadap program pesantren",
+                ),
+                (
+                    "Dukungan Moral & Tata Tertib",
+                    50.0,
+                    "Keselarasan visi pendidikan dan kepatuhan aturan",
+                ),
             ],
         }
 
@@ -658,10 +755,10 @@ class SelectionService:
         import math
 
         now = _now_wib()
-        wave_id = self._get_active_wave_id_or_400()
         app = self.repo.get_applicant_by_id(body.applicant_id)
         if not app:
             raise HTTPException(status_code=404, detail="Pendaftar tidak ditemukan")
+        wave_id = getattr(app, "wave_id", None) or self.repo.get_active_wave_id()
 
         # Catatan evaluasi per santri wajib diisi sebelum menyimpan nilai
         if not body.notes or not body.notes.strip():
@@ -672,7 +769,9 @@ class SelectionService:
 
         # Pastikan baris hasil ada dulu agar notes/skor tersimpan.
         self.repo.ensure_selection_result(body.applicant_id, now)
-        self.repo.update_selection_result_notes(body.applicant_id, body.notes.strip(), now)
+        self.repo.update_selection_result_notes(
+            body.applicant_id, body.notes.strip(), now
+        )
 
         for sc in body.scores:
             if not math.isfinite(sc.score) or sc.score < 0 or sc.score > 100:
@@ -724,10 +823,8 @@ class SelectionService:
                 )
                 cat_name = (cat.name or "").lower() if cat else ""
 
-                if cat_name:
-                    _notify_assessment_completed_once(
-                        self.repo.db, app, cat.name
-                    )
+                if cat is not None and cat_name:
+                    _notify_assessment_completed_once(self.repo.db, app, cat.name)
         except Exception:
             import logging
 
@@ -737,9 +834,7 @@ class SelectionService:
 
         return {"message": "Nilai berhasil disimpan"}
 
-    def save_results_bulk(
-        self, items: list[ApplicantScoreSave]
-    ) -> dict[str, Any]:
+    def save_results_bulk(self, items: list[ApplicantScoreSave]) -> dict[str, Any]:
         if not items:
             return {"message": "Tidak ada data nilai yang disimpan", "count": 0}
         for item in items:
@@ -804,7 +899,9 @@ class SelectionService:
                         "registration_result_passed",
                         {
                             "nama_peserta": app.full_name,
-                            "link_aplikasi": f"{settings.ppdb_frontend_url}/applicant/pengumuman",
+                            "link_aplikasi": (
+                                f"{settings.ppdb_frontend_url}" "/applicant/pengumuman"
+                            ),
                         },
                     ),
                 ],
@@ -845,7 +942,10 @@ class SelectionService:
                 if i_row:
                     interview_session = i_row.__dict__.copy()
                     interview_session.pop("_sa_instance_state", None)
-            if hasattr(s_res, "interview_parent_session_id") and s_res.interview_parent_session_id:
+            if (
+                hasattr(s_res, "interview_parent_session_id")
+                and s_res.interview_parent_session_id
+            ):
                 p_row = self.repo.get_session_by_id(s_res.interview_parent_session_id)
                 if p_row:
                     interview_parent_session = p_row.__dict__.copy()
@@ -895,10 +995,13 @@ class SelectionService:
         cbt_schedules = []
         try:
             from src.models.cbt import ExamSchedule
+
             cbt_rows = (
                 self.repo.db.query(ExamSchedule)
                 .filter(ExamSchedule.wave_id == app.wave_id)
-                .order_by(ExamSchedule.session_date.asc(), ExamSchedule.start_time.asc())
+                .order_by(
+                    ExamSchedule.session_date.asc(), ExamSchedule.start_time.asc()
+                )
                 .all()
             )
             for cs in cbt_rows:
@@ -911,89 +1014,144 @@ class SelectionService:
         # Gabungkan semua jadwal dan urutkan secara kronologis
         all_schedules = []
         for cs in cbt_schedules:
-            all_schedules.append({
-                "id": cs["id"],
-                "name": cs["name"],
-                "category": cs.get("category", "akademik"),
-                "type": "cbt",
-                "session_date": str(cs["session_date"]) if cs.get("session_date") else None,
-                "start_time": cs.get("start_time"),
-                "end_time": cs.get("end_time"),
-                "mode": cs.get("mode", "offline"),
-                "location": cs.get("location"),
-                "meeting_url": cs.get("meeting_url"),
-                "officer_name": cs.get("officer_name"),
-            })
+            all_schedules.append(
+                {
+                    "id": cs["id"],
+                    "name": cs["name"],
+                    "category": cs.get("category", "akademik"),
+                    "type": "cbt",
+                    "session_date": str(cs["session_date"])
+                    if cs.get("session_date")
+                    else None,
+                    "start_time": cs.get("start_time"),
+                    "end_time": cs.get("end_time"),
+                    "mode": cs.get("mode", "offline"),
+                    "location": cs.get("location"),
+                    "meeting_url": cs.get("meeting_url"),
+                    "officer_name": cs.get("officer_name"),
+                }
+            )
         if tahfidz_session:
-            all_schedules.append({
-                "id": tahfidz_session["id"],
-                "name": tahfidz_session["name"],
-                "category": "tahfidz",
-                "type": "tahfidz",
-                "session_date": str(tahfidz_session["session_date"]) if tahfidz_session.get("session_date") else None,
-                "start_time": tahfidz_session.get("start_time"),
-                "end_time": tahfidz_session.get("end_time"),
-                "mode": tahfidz_session.get("mode", "offline"),
-                "location": tahfidz_session.get("location"),
-                "meeting_url": tahfidz_session.get("meeting_url"),
-                "officer_name": tahfidz_session.get("officer_name"),
-            })
+            all_schedules.append(
+                {
+                    "id": tahfidz_session["id"],
+                    "name": tahfidz_session["name"],
+                    "category": "tahfidz",
+                    "type": "tahfidz",
+                    "session_date": str(tahfidz_session["session_date"])
+                    if tahfidz_session.get("session_date")
+                    else None,
+                    "start_time": tahfidz_session.get("start_time"),
+                    "end_time": tahfidz_session.get("end_time"),
+                    "mode": tahfidz_session.get("mode", "offline"),
+                    "location": tahfidz_session.get("location"),
+                    "meeting_url": tahfidz_session.get("meeting_url"),
+                    "officer_name": tahfidz_session.get("officer_name"),
+                }
+            )
         if interview_session:
-            all_schedules.append({
-                "id": interview_session["id"],
-                "name": interview_session["name"],
-                "category": "wawancara_santri",
-                "type": "interview",
-                "session_date": str(interview_session["session_date"]) if interview_session.get("session_date") else None,
-                "start_time": interview_session.get("start_time"),
-                "end_time": interview_session.get("end_time"),
-                "mode": interview_session.get("mode", "offline"),
-                "location": interview_session.get("location"),
-                "meeting_url": interview_session.get("meeting_url"),
-                "officer_name": interview_session.get("officer_name"),
-            })
+            all_schedules.append(
+                {
+                    "id": interview_session["id"],
+                    "name": interview_session["name"],
+                    "category": "wawancara_santri",
+                    "type": "interview",
+                    "session_date": str(interview_session["session_date"])
+                    if interview_session.get("session_date")
+                    else None,
+                    "start_time": interview_session.get("start_time"),
+                    "end_time": interview_session.get("end_time"),
+                    "mode": interview_session.get("mode", "offline"),
+                    "location": interview_session.get("location"),
+                    "meeting_url": interview_session.get("meeting_url"),
+                    "officer_name": interview_session.get("officer_name"),
+                }
+            )
         if interview_parent_session:
-            all_schedules.append({
-                "id": interview_parent_session["id"],
-                "name": interview_parent_session["name"],
-                "category": "wawancara_ortu",
-                "type": "interview_parent",
-                "session_date": str(interview_parent_session["session_date"]) if interview_parent_session.get("session_date") else None,
-                "start_time": interview_parent_session.get("start_time"),
-                "end_time": interview_parent_session.get("end_time"),
-                "mode": interview_parent_session.get("mode", "offline"),
-                "location": interview_parent_session.get("location"),
-                "meeting_url": interview_parent_session.get("meeting_url"),
-                "officer_name": interview_parent_session.get("officer_name"),
-            })
+            all_schedules.append(
+                {
+                    "id": interview_parent_session["id"],
+                    "name": interview_parent_session["name"],
+                    "category": "wawancara_ortu",
+                    "type": "interview_parent",
+                    "session_date": str(interview_parent_session["session_date"])
+                    if interview_parent_session.get("session_date")
+                    else None,
+                    "start_time": interview_parent_session.get("start_time"),
+                    "end_time": interview_parent_session.get("end_time"),
+                    "mode": interview_parent_session.get("mode", "offline"),
+                    "location": interview_parent_session.get("location"),
+                    "meeting_url": interview_parent_session.get("meeting_url"),
+                    "officer_name": interview_parent_session.get("officer_name"),
+                }
+            )
 
-        all_schedules.sort(key=lambda x: (x.get("session_date") or "9999-99-99", x.get("start_time") or "99:99"))
+        all_schedules.sort(
+            key=lambda x: (
+                x.get("session_date") or "9999-99-99",
+                x.get("start_time") or "99:99",
+            )
+        )
 
         today_iso = datetime.now(WIB).date().isoformat()
-        upcoming = [s for s in all_schedules if s.get("session_date") and s["session_date"] >= today_iso]
-        next_upcoming = upcoming[0] if upcoming else (all_schedules[0] if all_schedules else None)
+        upcoming = [
+            s
+            for s in all_schedules
+            if s.get("session_date") and s["session_date"] >= today_iso
+        ]
+        next_upcoming = (
+            upcoming[0] if upcoming else (all_schedules[0] if all_schedules else None)
+        )
         same_day_exams = (
-            [s for s in upcoming if s.get("session_date") == next_upcoming["session_date"]]
+            [
+                s
+                for s in upcoming
+                if s.get("session_date") == next_upcoming["session_date"]
+            ]
             if next_upcoming
             else []
         )
 
-        return {
-            "session": tahfidz_session or interview_session,
-            "tahfidz_session": tahfidz_session,
-            "interview_session": interview_session,
-            "interview_parent_session": interview_parent_session,
-            "cbt_schedules": cbt_schedules,
-            "all_schedules": all_schedules,
-            "next_upcoming_exam": next_upcoming,
-            "same_day_exams": same_day_exams,
-            "available_sessions": available,
-            "available_tahfidz_sessions": available_tahfidz,
-            "available_interview_sessions": available_interview,
-            "available_parent_interview_sessions": available_parent_interview,
-            "has_tahfidz_score": has_tahfidz,
-            "has_interview_score": has_interview,
-        }
+        def _sanitize(item: Any) -> Any:
+            if isinstance(item, dict):
+                return {
+                    k: (
+                        v.isoformat()
+                        if isinstance(v, datetime | date)
+                        else (
+                            str(v)
+                            if hasattr(v, "__str__")
+                            and type(v).__name__ in ("Decimal", "UUID")
+                            else _sanitize(v)
+                        )
+                    )
+                    for k, v in item.items()
+                }
+            if isinstance(item, list):
+                return [_sanitize(x) for x in item]
+            return item
+
+        return cast(
+            dict[str, Any],
+            _sanitize(
+                {
+                    "session": tahfidz_session or interview_session,
+                    "tahfidz_session": tahfidz_session,
+                    "interview_session": interview_session,
+                    "interview_parent_session": interview_parent_session,
+                    "cbt_schedules": cbt_schedules,
+                    "all_schedules": all_schedules,
+                    "next_upcoming_exam": next_upcoming,
+                    "same_day_exams": same_day_exams,
+                    "available_sessions": available,
+                    "available_tahfidz_sessions": available_tahfidz,
+                    "available_interview_sessions": available_interview,
+                    "available_parent_interview_sessions": available_parent_interview,
+                    "has_tahfidz_score": has_tahfidz,
+                    "has_interview_score": has_interview,
+                }
+            ),
+        )
 
     def applicant_book_session(self, user_id: str, session_id: str) -> dict[str, Any]:
         now = _now_wib()
@@ -1172,7 +1330,9 @@ class SelectionService:
                     "category": sched.category,
                     "status": att.status,
                     "score": att.score,
-                    "finished_at": att.finished_at.isoformat() if att.finished_at else None,
+                    "finished_at": att.finished_at.isoformat()
+                    if att.finished_at
+                    else None,
                 }
         except Exception:
             pass
@@ -1333,7 +1493,11 @@ class SelectionService:
             from src.models.cbt import ExamSchedule
             from src.modules.cbt.service import CBTService
 
-            target_exam = self.repo.db.query(ExamSchedule).filter(ExamSchedule.id == target_session_id).first()
+            target_exam = (
+                self.repo.db.query(ExamSchedule)
+                .filter(ExamSchedule.id == target_session_id)
+                .first()
+            )
             if target_exam:
                 return CBTService.move_candidate_schedule(
                     self.repo.db,
@@ -1367,14 +1531,18 @@ class SelectionService:
 
         # Kirim notifikasi WhatsApp perubahan jadwal
         try:
-            location_or_link = target_session.meeting_url or target_session.location or "-"
+            location_or_link = (
+                target_session.meeting_url or target_session.location or "-"
+            )
             send_notifications(
                 [
                     (
                         "session_confirmed",
                         {
                             "nama_ujian": f"{target_session.name} (Jadwal Baru)",
-                            "tanggal": str(target_session.session_date) if target_session.session_date else "-",
+                            "tanggal": str(target_session.session_date)
+                            if target_session.session_date
+                            else "-",
                             "jam_mulai": target_session.start_time or "-",
                             "jam_selesai": target_session.end_time or "-",
                             "lokasi_atau_link": location_or_link,
@@ -1388,7 +1556,8 @@ class SelectionService:
             pass
 
         return {
-            "message": f"Berhasil memindahkan jadwal {app.full_name} ke {target_session.name}",
+            "message": f"Berhasil memindahkan jadwal {app.full_name} ke "
+            "{target_session.name}",
             "session_id": target_session.id,
             "session_name": target_session.name,
         }

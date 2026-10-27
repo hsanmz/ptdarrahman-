@@ -1,11 +1,13 @@
 from datetime import date, datetime
 from typing import Literal
-from pydantic import BaseModel, Field
 
+from pydantic import BaseModel, ConfigDict, Field
 
 # ── Option & Question Schemas ─────────────────────────────────────────────
 
+
 class OptionAdmin(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: str | None = None
     option_key: str
     option_text: str
@@ -13,12 +15,14 @@ class OptionAdmin(BaseModel):
 
 
 class OptionPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: str
     option_key: str
     option_text: str
 
 
 class QuestionAdmin(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: str | None = None
     question_number: int
     question_text: str
@@ -27,6 +31,7 @@ class QuestionAdmin(BaseModel):
 
 
 class QuestionPublic(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: str
     question_number: int
     question_text: str
@@ -36,6 +41,7 @@ class QuestionPublic(BaseModel):
 
 # ── Bank Soal Schemas ─────────────────────────────────────────────────────
 
+
 class BankSoalCreate(BaseModel):
     category: Literal["akademik", "psikologi"]
     title: str = Field(..., min_length=3, max_length=255)
@@ -44,7 +50,26 @@ class BankSoalCreate(BaseModel):
     period_id: str | None = None
 
 
+class BankSoalUpdate(BaseModel):
+    title: str | None = Field(None, min_length=3, max_length=255)
+    description: str | None = None
+    duration_minutes: int | None = Field(None, ge=5, le=300)
+
+
+class BankOptionInput(BaseModel):
+    option_key: str = Field(..., pattern=r"^[A-E]$")
+    option_text: str = Field(..., min_length=1, max_length=1000)
+
+
+class QuestionUpsert(BaseModel):
+    question_text: str = Field(..., min_length=1, max_length=5000)
+    points: float = Field(default=1.0, gt=0)
+    options: list[BankOptionInput] = Field(..., min_length=4, max_length=5)
+    answer_key: str = Field(..., pattern=r"^[A-E]$")
+
+
 class BankSoalResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: str
     period_id: str
     category: Literal["akademik", "psikologi"]
@@ -59,20 +84,36 @@ class BankSoalResponse(BaseModel):
 
 
 class BankSoalDetailResponse(BankSoalResponse):
+    model_config = ConfigDict(from_attributes=True)
+    in_use: bool = False
+    schedules: list["BankScheduleShareItem"] = Field(default_factory=list)
     questions: list[QuestionAdmin] = Field(default_factory=list)
+
+
+class BankScheduleShareItem(BaseModel):
+    """Ringkasan jadwal ujian pemakai bank untuk keperluan bagikan akses ujian."""
+
+    id: str
+    name: str
+    batch_name: str | None = None
+    session_date: date
+    start_time: str
+    mode: str
+    access_token: str | None = None
 
 
 # ── Schedule Schemas ──────────────────────────────────────────────────────
 
+
 class ScheduleCreate(BaseModel):
     wave_id: str
-    bank_id: str
+    bank_id: str | None = None
     category: Literal["akademik", "psikologi"]
     name: str = Field(..., min_length=3, max_length=150)
     batch_name: str | None = None
     session_date: date
     start_time: str = Field(..., pattern=r"^\d{2}:\d{2}$")  # e.g. "08:00"
-    end_time: str = Field(..., pattern=r"^\d{2}:\d{2}$")    # e.g. "10:00"
+    end_time: str | None = None
     officer_name: str | None = None
     mode: Literal["offline", "online"] = "offline"
     location: str | None = None
@@ -95,6 +136,7 @@ class ScheduleUpdate(BaseModel):
 
 
 class ScheduleResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: str
     period_id: str
     wave_id: str
@@ -122,17 +164,14 @@ class ScheduleResponse(BaseModel):
 
 # ── Monitoring Room Schemas ───────────────────────────────────────────────
 
+
 class CandidateMonitoringItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     applicant_id: str
     registration_number: str | None = None
     full_name: str
-
-
-class RescheduleCandidatePayload(BaseModel):
-    target_schedule_id: str
-    reason: str | None = None
-    phone: str
-    status: Literal["not_started", "in_progress", "locked", "completed"]
+    phone: str | None = None
+    status: Literal["not_started", "in_progress", "locked", "completed"] = "not_started"
     started_at: datetime | None = None
     finished_at: datetime | None = None
     remaining_seconds: int | None = None
@@ -143,7 +182,13 @@ class RescheduleCandidatePayload(BaseModel):
     score: float | None = None
 
 
+class RescheduleCandidatePayload(BaseModel):
+    target_schedule_id: str
+    reason: str | None = None
+
+
 class ScheduleMonitoringResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     schedule: ScheduleResponse
     candidates: list[CandidateMonitoringItem]
     stats: dict[str, int]
@@ -151,12 +196,14 @@ class ScheduleMonitoringResponse(BaseModel):
 
 # ── Applicant CBT Engine Schemas ──────────────────────────────────────────
 
+
 class VerifyExamAccessRequest(BaseModel):
     password: str
     access_token: str
 
 
 class VerifyExamAccessResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     valid: bool
     applicant_id: str
     applicant_name: str
@@ -171,6 +218,7 @@ class VerifyExamAccessResponse(BaseModel):
 
 
 class ExamSheetResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     schedule_id: str
     exam_title: str
     category: str
@@ -188,6 +236,7 @@ class SaveAnswerRequest(BaseModel):
 
 
 class SaveAnswerResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     saved: bool
     question_id: str
     option_key: str
@@ -199,6 +248,7 @@ class ViolationReportRequest(BaseModel):
 
 
 class ViolationReportResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     locked: bool
     status: str
     violations_count: int
@@ -206,6 +256,7 @@ class ViolationReportResponse(BaseModel):
 
 
 class AttemptStatusResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     status: Literal["not_started", "in_progress", "locked", "completed"]
     remaining_seconds: int
     violations_count: int

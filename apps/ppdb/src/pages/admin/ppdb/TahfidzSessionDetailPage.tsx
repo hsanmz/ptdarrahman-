@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as api from '@/api/client'
 import { useToast } from '@/components/Toast'
 import { useCanPage } from '@/hooks/useCan'
+import { DocTrigger } from '@repo/ui'
 import {
   Card,
   Badge,
@@ -32,7 +33,6 @@ import {
   Video,
   User,
   Search,
-  Award,
   ExternalLink,
   Phone,
   Tag,
@@ -45,6 +45,22 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+const formatDateSafe = (d?: any) => {
+  if (!d) return '-'
+  try {
+    const dt = new Date(d)
+    if (isNaN(dt.getTime())) return String(d)
+    return dt.toLocaleDateString('id-ID', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+  } catch {
+    return String(d)
+  }
+}
 
 export default function TahfidzSessionDetailPage() {
   const { sessionId } = useParams<{ sessionId: string }>()
@@ -70,11 +86,12 @@ export default function TahfidzSessionDetailPage() {
     refetchInterval: 5000,
   })
 
+  const schedulesList = Array.isArray(sessionsRes?.data) ? sessionsRes.data : []
   const session = useMemo(() => {
-    return (sessionsRes?.data || []).find((s) => s.id === sessionId)
-  }, [sessionsRes, sessionId])
+    return schedulesList.find((s) => s.id === sessionId)
+  }, [schedulesList, sessionId])
 
-  const allSchedules = sessionsRes?.data || []
+  const allSchedules = schedulesList
 
   // 2. Fetch Categories & Criteria for Tahfidz Rubric
   const { data: categories = [] } = useQuery({
@@ -95,7 +112,7 @@ export default function TahfidzSessionDetailPage() {
   const [bulkData, setBulkData] = useState<Record<string, { scores: Record<string, number>; notes: string }>>({})
 
   // Initialize bulk data when session applicants load
-  const bookedApplicants: any[] = session?.booked_applicants || []
+  const bookedApplicants: any[] = Array.isArray(session?.booked_applicants) ? session.booked_applicants : []
 
   // Filtered applicants
   const filteredApplicants = useMemo(() => {
@@ -257,6 +274,7 @@ export default function TahfidzSessionDetailPage() {
 
         {/* Header CTAs */}
         <div className="flex items-center gap-2">
+          <DocTrigger docKey="ppdb-jadwal-tahfidz" variant="light" />
           {isFetching && (
             <span className="text-[11px] text-emerald-600 flex items-center gap-1">
               <RefreshCw className="h-3 w-3 animate-spin" /> Real-time
@@ -296,14 +314,7 @@ export default function TahfidzSessionDetailPage() {
           <div>
             <span className="text-[11px] text-muted-foreground block">Tanggal Pelaksanaan</span>
             <span className="text-xs font-semibold text-slate-800">
-              {session.session_date
-                ? new Date(session.session_date).toLocaleDateString('id-ID', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })
-                : '-'}
+              {formatDateSafe(session.session_date)}
             </span>
           </div>
         </div>
@@ -383,7 +394,7 @@ export default function TahfidzSessionDetailPage() {
             <div>
               <h2 className="text-base font-bold text-slate-900">Daftar Santri Peserta Seleksi</h2>
               <p className="text-xs text-muted-foreground">
-                Klik nama santri atau tombol nilai untuk mengisi lembar rubrik individual.
+                Klik baris santri untuk membuka lembar penilaian dan menginput nilai rubrik.
               </p>
             </div>
 
@@ -439,12 +450,10 @@ export default function TahfidzSessionDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50/70">
-                    <TableHead className="w-12 text-xs font-semibold">No</TableHead>
-                    <TableHead className="text-xs font-semibold">Nama Santri &amp; NISN</TableHead>
+                    <TableHead className="text-xs font-semibold">Nama Santri</TableHead>
                     <TableHead className="text-xs font-semibold">Kontak</TableHead>
-                    <TableHead className="text-xs font-semibold">Status Penilaian Tahfidz</TableHead>
+                    <TableHead className="text-xs font-semibold">Status Penilaian</TableHead>
                     <TableHead className="text-xs font-semibold">Catatan Evaluator</TableHead>
-                    <TableHead className="text-right text-xs font-semibold">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -453,13 +462,18 @@ export default function TahfidzSessionDetailPage() {
                     const score = app.tahfidz_score
 
                     return (
-                      <TableRow key={app.id || idx} className="hover:bg-slate-50/60 transition-colors">
-                        <TableCell className="text-xs font-mono text-muted-foreground">{idx + 1}</TableCell>
+                      <TableRow
+                        key={app.id || idx}
+                        onClick={() =>
+                          navigate(`/admin/sessions/tahfidz/evaluasi/${session.id}?applicant_id=${app.id}`)
+                        }
+                        className="cursor-pointer hover:bg-emerald-50/60 transition-colors group"
+                        title="Klik untuk membuka lembar penilaian"
+                      >
                         <TableCell>
-                          <div className="font-semibold text-xs text-slate-900">{app.full_name}</div>
-                          {app.nisn && (
-                            <div className="text-[11px] text-muted-foreground font-mono">NISN: {app.nisn}</div>
-                          )}
+                          <div className="font-semibold text-xs text-slate-900 group-hover:text-emerald-700 transition-colors">
+                            {app.full_name}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <span className="text-xs font-mono text-slate-600 inline-flex items-center gap-1">
@@ -477,41 +491,10 @@ export default function TahfidzSessionDetailPage() {
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="max-w-[200px]">
+                        <TableCell className="max-w-[280px]">
                           <span className="text-xs text-slate-600 truncate block">
                             {app.notes || '-'}
                           </span>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {canCrud && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-7 text-xs text-blue-600 border-blue-200 hover:bg-blue-50"
-                                onClick={() => {
-                                  setRescheduleApplicant({
-                                    applicant_id: app.id,
-                                    full_name: app.full_name,
-                                  })
-                                  setTargetSessionId('')
-                                  setRescheduleReason('')
-                                }}
-                              >
-                                Pindah Sesi
-                              </Button>
-                            )}
-                            <Button
-                              size="sm"
-                              className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white gap-1"
-                              onClick={() =>
-                                navigate(`/admin/sessions/tahfidz/evaluasi/${session.id}?applicant_id=${app.id}`)
-                              }
-                            >
-                              <Award className="h-3.5 w-3.5" />
-                              {isEval ? 'Lihat / Edit Nilai' : 'Input Nilai'}
-                            </Button>
-                          </div>
                         </TableCell>
                       </TableRow>
                     )

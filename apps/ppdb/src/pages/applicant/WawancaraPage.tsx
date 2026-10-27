@@ -22,9 +22,9 @@ import {
   FileText,
 } from 'lucide-react'
 
-const parseInterviewNotes = (raw?: string | null) => {
+const parseInterviewNotes = (raw?: any) => {
   if (!raw) return { santri: '', ortu: '', general: '' }
-  const text = raw.trim()
+  const text = String(raw).trim()
 
   const santriMatch =
     text.match(/(?:^|\n)\[(?:Wawancara Santri|Santri)\]:\s*([\s\S]*?)(?=(?:\n\[|$))/i) ||

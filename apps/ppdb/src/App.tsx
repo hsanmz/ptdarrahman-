@@ -44,6 +44,7 @@ import JadwalWawancaraPage from './pages/admin/ppdb/JadwalWawancaraPage'
 import WawancaraSessionDetailPage from './pages/admin/ppdb/WawancaraSessionDetailPage'
 import SessionEvaluationPage from './pages/admin/ppdb/SessionEvaluationPage'
 import BankSoalPage from './pages/admin/cbt/BankSoalPage'
+import BankSoalDetailPage from './pages/admin/cbt/BankSoalDetailPage'
 import JadwalUjianPage from './pages/admin/cbt/JadwalUjianPage'
 import PemantauanUjianPage from './pages/admin/cbt/PemantauanUjianPage'
 import CbtExamPage from './pages/cbt/CbtExamPage'
@@ -109,6 +110,7 @@ export default function App() {
               <Route path="rubrik" element={<SelectionPage />} />
               <Route path="bank-soal/akademik" element={<BankSoalPage category="akademik" title="Bank Soal Akademik" />} />
               <Route path="bank-soal/psikologi" element={<BankSoalPage category="psikologi" title="Bank Soal Psikologi" />} />
+              <Route path="bank-soal/detail/:bankId" element={<BankSoalDetailPage />} />
               <Route path="jadwal-seleksi/akademik" element={<JadwalUjianPage category="akademik" title="Seleksi Akademik (CBT)" />} />
               <Route path="jadwal-seleksi/psikologi" element={<JadwalUjianPage category="psikologi" title="Seleksi Psikologi (CBT)" />} />
               <Route path="jadwal-seleksi/tahfidz" element={<JadwalTahfidzPage />} />

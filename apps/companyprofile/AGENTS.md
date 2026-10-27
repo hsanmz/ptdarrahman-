@@ -3,7 +3,7 @@
 Main public website + admin dashboard for Pesantren Tahfidz Qur'an dan Digital Ar-Rahman.
 
 ## Stack
-- **Framework**: Next.js 16 (App Router)
+- **Framework**: Next.js 16 (App Router) + Turbopack
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS v4
 - **UI/Animation**: `lucide-react`, `framer-motion`, `gsap`
@@ -36,7 +36,7 @@ Main public website + admin dashboard for Pesantren Tahfidz Qur'an dan Digital A
 - **Route Group**: `app/(main)/` contains all public pages wrapped with Navbar and Footer.
 - **Layout**: Root `app/layout.tsx` is minimal (sets up `html`, `body`, fonts, and `Providers`).
 - **Error Pages**: Custom `error.tsx`, `not-found.tsx`, and `global-error.tsx`.
-- **Standar Naming (PTDARRAHMAN)**: Nama resmi lembaga utuh adalah `Pesantren Tahfidz Qur'an dan Digital Ar-Rahman` (atau `Arrahman`). Singkatan entitas resmi adalah `PTDARRAHMAN`. Dilarang keras menggunakan frasa `Yayasan Pesantren Ar-Rahman` atau `Pesantren Ar-Rahman` (tanpa lanjutan tahfidz).
+- **Standar Naming (PTDARRAHMAN)**: Nama resmi lembaga utuh adalah `Pesantren Tahfidz Qur'an dan Digital Ar-Rahman`. Singkatan entitas resmi adalah `PTDARRAHMAN`. Dilarang keras menggunakan frasa `Yayasan Pesantren Ar-Rahman` atau `Pesantren Ar-Rahman` (tanpa lanjutan tahfidz).
 - **Path Alias**: All imports use the `@/...` path alias (e.g., `@/app/...`).
 - **Menu Program (Navbar & Footer)**: Isi dropdown "Program" TIDAK boleh di-hardcode. `app/(main)/layout.tsx` mengambil `getProgramsCached()` lalu meneruskannya sebagai prop `programs` ke `<Navbar>`/`<Footer>`, yang merender `programMenuLinks()` (label = judul program, tautan = `/programs/{slug}`). Daftar bawaan di `app/lib/programs.ts` hanya dipakai sebagai cadangan saat API kosong/gagal. Tambah/ubah/hapus program di backoffice langsung mengubah menu (fetch di-cache 60 detik). Urutan menu & daftar program mengikuti kolom `order` (field "Urutan Tampilan" di tab Program, ASC) — migrasi `0044`; tanpa kolom itu urutannya mengikuti PK UUID (acak).
 - **Halaman Detail Program (`/programs/[slug]`)**: Hero menampilkan judul, tagline, breadcrumb, dan chip Durasi/Tingkat — keduanya hanya sekali di sini, jangan diulang di kolom isi. Sidebar memuat CTA ("Daftar Sekarang"/"Ajukan Pertanyaan") dan daftar "Program Lainnya" yang dibangun `siblingProgramLinks(programs, currentSlug)` (semua program selain yang dibuka; tanpa daftar cadangan bawaan supaya tidak menautkan halaman yang sedang dibuka). `page.tsx` mengambil daftar sekali via `getProgramsCached()` lalu memakai `fallbackPrograms()` bila CMS kosong/gagal. Kartu isi (Keunggulan/Kurikulum/Hasil) memakai `sm:grid-cols-2 xl:grid-cols-3` agar daftar 3 item rapi dalam satu baris di desktop, dan paragraf "Gambaran Program" dibatasi `max-w-prose`.
@@ -46,10 +46,10 @@ Main public website + admin dashboard for Pesantren Tahfidz Qur'an dan Digital A
 - **API Client**: Handled centrally in `app/lib/api.ts` with fallback mechanisms (`fetchWithFallback`).
 - **Public API**: Fetched via `GET /companyprofile/{table}`.
 - **Admin CRUD**: Managed via `POST/PUT/DELETE /companyprofile/{table}[/{id}]`.
-- **Auth Flow**: Login at `POST /companyprofile/auth/login`.
+- **Auth Flow**: Login at `POST /auth/login` (atau `/companyprofile/auth/login`).
   - **Cookie-Based Auth**: Tokens are stored in secure HTTP-only cookies (`access_token`, `refresh_token`), sent via `credentials: 'include'`.
   - Keys in `localStorage`: Only `admin_user` (JSON profile) is stored in localStorage. Tokens are NOT stored in localStorage.
-  - Token refresh logic is built into the API client (`tryRefresh` via `POST /companyprofile/auth/refresh`).
+  - Token refresh logic is built into the API client (`tryRefresh` via `POST /auth/refresh` atau `/companyprofile/auth/refresh`).
 - **Real-time**: `useSSE.ts` uses `EventSource` to subscribe to `/companyprofile/events` (Server-Side Events from FastAPI).
 
 ## Admin Dashboard

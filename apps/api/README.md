@@ -1,5 +1,5 @@
-﻿<div align="center">
-  <h1>âš™ï¸ Core API Backend</h1>
+<div align="center">
+  <h1>⚙️ Core API Backend</h1>
   <p><strong>Mesin Utama Penggerak Sistem Terpadu</strong></p>
 
   [![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
@@ -12,25 +12,27 @@
 
 Aplikasi ini adalah **backend utama** untuk seluruh ekosistem Pesantren Tahfidz Qur'an dan Digital Ar-Rahman. Menangani seluruh transaksi dan logika bisnis untuk Company Profile, PPDB, dan Superadmin.
 
-## ðŸš€ Peran & Tanggung Jawab (Fitur Inti)
+## 🚀 Peran & Tanggung Jawab (Fitur Inti)
 
-- ðŸ” **Otorisasi Terpusat & Keamanan:** Sistem RBAC (Role-Based Access Control) berbasis HTTP-only Cookie JWT untuk Pendaftar, Admin PPDB, Penguji/Pewawancara, dan Superadmin.
-- ðŸ›¡ï¸ **Pelacakan Sesi & Keamanan Multi-Perangkat:** Deteksi metadata login (browser, OS, device, IP) dengan kemampuan pemantauan sesi aktif dan pemutusan sesi jarak jauh (*remote session revocation*).
-- ðŸ” **Pencarian Global Terpadu (`/search/global`):** Pencarian modular cepat lintas pendaftar, berita, program, fasilitas, staf, akun pengguna, dan log aktivitas audit sesuai level RBAC.
-- ðŸš¦ **Transaksi PPDB & Gelombang (Atomik):** Mengatur validasi periode tunggal, alokasi gelombang otomatis, kuota pendaftaran, dan pembatalan otomatis invoice pending saat kuota terpenuhi.
-- ðŸ‘¤ **Profil Mandiri Pendaftar (`/ppdb/applicants/me`):** Pembacaan dan pembaruan mandiri data pendaftar dan kuesioner kesehatan dengan penguncian otomatis pasca-kelulusan.
-- ðŸ’³ **Integrasi Payment Gateway Pakasir API v2:**
-  - Pembuatan QRIS dinamis untuk pembayaran formulir dan pembayaran Tahap 2 (DP & cicilan).
+- 🔐 **Otorisasi Terpusat & Keamanan:** Sistem RBAC (Role-Based Access Control) berbasis HTTP-only Cookie JWT untuk Pendaftar, Admin PPDB, Penguji/Pewawancara, dan Superadmin.
+- 🛡️ **Pelacakan Sesi & Keamanan Multi-Perangkat:** Deteksi metadata login (browser, OS, device, IP) dengan kemampuan pemantauan sesi aktif dan pemutusan sesi jarak jauh (*remote session revocation*).
+- 🔍 **Pencarian Global Terpadu (`/search/global`):** Pencarian modular cepat lintas pendaftar, berita, program, fasilitas, staf, akun pengguna, dan log aktivitas audit sesuai level RBAC.
+- 🚦 **Transaksi PPDB & Gelombang (Atomik):** Mengatur validasi periode tunggal, alokasi gelombang otomatis, master komponen biaya periode, diskonasi gelombang, kuota pembayaran formulir, dan pembatalan otomatis invoice pending saat kuota terpenuhi.
+- 💻 **Modul CBT Mandiri & Anti-Cheating:** Bank Soal Akademik & Psikologi per periode, penjadwalan ujian CBT massal per batch/kloter dengan cutoff pendaftaran H-1, anti-cheating tab switch > 5 detik, autosave instan jawaban, dan live monitoring pengawas dengan tombol unfreeze peserta.
+- 👤 **Profil Mandiri Pendaftar (`/ppdb/applicants/me`):** Pembacaan dan pembaruan mandiri data pendaftar dan kuesioner kesehatan dengan penguncian otomatis (`is_locked = true`) pasca-penandatanganan LoA resmi.
+- 💳 **Integrasi Payment Gateway Pakasir API v2:**
+  - Pembuatan QRIS dinamis untuk pembayaran formulir pendaftaran.
   - Webhook 1 Pintu terverifikasi dengan header `X-Secret` dan idempotency guard.
   - Penerbitan kuitansi resmi bertanda tangan digital (HMAC signed token) untuk verifikasi publik (`/payment/public-receipt/{id}`).
-  - Background scheduler untuk pengingat jatuh tempo cicilan (H-3) via WhatsApp.
-  - Penerbitan LoA resmi beserta fitur tanda tangan digital orang tua.
-  - Pencarian arsip dossier lintas periode/gelombang dan ekspor bundle ZIP (biodata, PDF ringkasan, berkas lampiran) dengan catatan audit IP address.
-- ðŸ“¡ **Message Broker:** Memicu *event* Redis (notifikasi akun, kuota habis, konfirmasi sesi, pengingat hari Senin) yang dieksekusi oleh microservice `apps/whatsapp`.
+  - Background scheduler untuk pengingat pembayaran Senin, pengingat submit dokumen H+3, dan pengingat seleksi H-2, H-1, 1 jam sebelum ujian via WhatsApp.
+- 📜 **Penerbitan LoA Digital & Arsip Dossier:**
+  - Penerbitan LoA resmi beserta alur tanda tangan digital orang tua yang menuntaskan alur pendaftaran santri.
+  - Pencarian arsip dossier lintas periode/gelombang dan ekspor bundle ZIP (biodata, berkas lampiran) dengan catatan audit IP address.
+- 📡 **Message Broker:** Memicu *event* Redis (notifikasi akun, pembayaran sukses, pengingat dokumen H+3, konfirmasi jadwal sesi, pengingat hari Senin, reminder ujian) yang dieksekusi oleh microservice `apps/whatsapp`.
 
-## ðŸ“¦ Menjalankan secara Lokal (Non-Docker)
+## 📦 Menjalankan secara Lokal (Non-Docker)
 
-Sangat disarankan menjalankan API ini menggunakan Docker. Namun, untuk sekadar *local debugging*:
+Sangat disarankan menjalankan API ini menggunakan Docker atau skrip `./setup.sh docker`. Namun, untuk sekadar *local debugging*:
 
 ```bash
 cd apps/api
@@ -49,9 +51,9 @@ uvicorn src.main:app --reload --port 8000
 
 > **Informasi Port:**
 > - Saat dijalankan secara lokal manual (non-Docker), backend FastAPI berjalan di `http://localhost:8000`.
-> - Saat dijalankan via Docker Compose, port container dipetakan ke host di `http://localhost:8080`.
+> - Saat dijalankan via Docker Compose, port container dipetakan ke host di `http://localhost:8080`. Dokumentasi interaktif Scalar tersedia di `/scalar`.
 
-## ðŸ³ Deployment (Sangat Disarankan)
+## 🐳 Deployment (Sangat Disarankan)
 
 Kami merekomendasikan Docker WSL2 dengan dukungan mode NAT untuk *name resolution* yang andal.
 
@@ -60,10 +62,10 @@ Kami merekomendasikan Docker WSL2 dengan dukungan mode NAT untuk *name resolutio
 docker compose up -d --build api
 ```
 
-## ðŸ“š Bacaan Lebih Lanjut
-- ðŸ¤– [**Panduan Arsitektur Backend (AGENTS.md)**](AGENTS.md) â€” Struktur layer (Router, Service, Repository), model database, dan konvensi coding backend.
-- ðŸ“– [**Dokumen Requirements Global**](../../docs/REQUIREMENTS.md) â€” Aturan bisnis periode, kuota, rubrik, dan formulir kesehatan.
-- ðŸ³ [**Panduan Docker Setup**](../../docs/DOCKER_SETUP.md) â€” Konfigurasi runbook Docker WSL2.
+## 📚 Bacaan Lebih Lanjut
+- 🤖 [**Panduan Arsitektur Backend (AGENTS.md)**](AGENTS.md) — Struktur layer (Router, Service, Repository), model database, modul CBT, dan konvensi coding backend.
+- 📖 [**Dokumen Requirements Global**](../../docs/REQUIREMENTS.md) — Aturan bisnis periode, kuota, rubrik, dan formulir kesehatan.
+- 🐳 [**Panduan Docker Setup**](../../docs/DOCKER_SETUP.md) — Konfigurasi runbook Docker WSL2.
 
 ---
-â¬…ï¸ [Kembali ke Halaman Utama](../../README.md)
+⬅️ [Kembali ke Halaman Utama](../../README.md)

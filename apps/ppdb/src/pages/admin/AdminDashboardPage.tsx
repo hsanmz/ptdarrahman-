@@ -186,6 +186,7 @@ export default function AdminDashboardPage() {
       <PageHeaderCard
         title="Dashboard Admin"
         description="Ringkasan operasional PPDB pada gelombang yang aktif."
+        docKey="ppdb-dashboard"
         loading={loading}
         action={
           !loading ? (
@@ -264,7 +265,7 @@ export default function AdminDashboardPage() {
         </Card>
       </div>
 
-      
+
       <Card className="rounded-2xl border-slate-100 bg-white p-4 sm:p-5 shadow-sm">
         <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>

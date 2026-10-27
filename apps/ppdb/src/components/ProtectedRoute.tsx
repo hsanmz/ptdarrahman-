@@ -22,7 +22,13 @@ export default function ProtectedRoute({
   }
 
   if (!user) {
-    return <Navigate to="/auth/login" replace />
+    return (
+      <Navigate
+        to="/auth/login"
+        replace
+        state={{ from: location.pathname + location.search }}
+      />
+    )
   }
 
   const userIsAdmin = isAdmin()

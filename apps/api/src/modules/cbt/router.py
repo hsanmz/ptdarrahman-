@@ -17,7 +17,7 @@ from fastapi import (
     UploadFile,
     status,
 )
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from src.core.database import get_db
@@ -27,12 +27,16 @@ from src.core.dependencies import (
     require_ppdb_read,
 )
 from src.models.auth import User
+from src.models.cbt import ExamSchedule
 from src.modules.cbt.schemas import (
+    BankScheduleShareItem,
     BankSoalDetailResponse,
     BankSoalResponse,
+    BankSoalUpdate,
     ExamSheetResponse,
-    QuestionAdmin,
     OptionAdmin,
+    QuestionAdmin,
+    QuestionUpsert,
     RescheduleCandidatePayload,
     SaveAnswerRequest,
     SaveAnswerResponse,
@@ -53,6 +57,7 @@ router = APIRouter()
 # ═══════════════════════════════════════════════════════════════════════════
 # ADMIN: BANK SOAL
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 @router.get("/banks/template/{category}", summary="Download Template CSV Soal")
 def download_template(category: str):
@@ -91,6 +96,33 @@ def list_bank_soal(
 )
 def get_bank_soal_detail(bank_id: str, db: Session = Depends(get_db)):
     bank = CBTService.get_bank_soal_detail(db, bank_id)
+    used_count = (
+        db.execute(
+            select(func.count(ExamSchedule.id)).where(ExamSchedule.bank_id == bank_id)
+        ).scalar()
+        or 0
+    )
+    schedules_rows = (
+        db.execute(
+            select(ExamSchedule)
+            .where(ExamSchedule.bank_id == bank_id)
+            .order_by(ExamSchedule.session_date.asc(), ExamSchedule.start_time.asc())
+        )
+        .scalars()
+        .all()
+    )
+    schedules_data = [
+        BankScheduleShareItem(
+            id=s.id,
+            name=s.name,
+            batch_name=s.batch_name,
+            session_date=s.session_date,
+            start_time=s.start_time,
+            mode=s.mode,
+            access_token=s.access_token,
+        )
+        for s in schedules_rows
+    ]
     questions_data = []
     for q in bank.questions:
         options_data = [
@@ -121,8 +153,10 @@ def get_bank_soal_detail(bank_id: str, db: Session = Depends(get_db)):
         total_questions=bank.total_questions,
         total_points=bank.total_points,
         is_active=bank.is_active,
+        in_use=used_count > 0,
         created_at=bank.created_at,
         updated_at=bank.updated_at,
+        schedules=schedules_data,
         questions=questions_data,
     )
 
@@ -136,17 +170,30 @@ def get_bank_soal_detail(bank_id: str, db: Session = Depends(get_db)):
 async def import_bank_soal(
     title: str = Form(..., min_length=3),
     category: str = Form(..., pattern=r"^(akademik|psikologi)$"),
-    duration_minutes: int = Form(default=60),
+    duration_minutes: int = Form(default=60, ge=5, le=300),
     description: str | None = Form(None),
-    file: UploadFile = File(...),
+    file: UploadFile | None = File(None),
+    source_url: str | None = Form(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    content = await file.read()
-    if not content:
+    if file and file.filename:
+        content = await file.read()
+        filename = file.filename or "soal.csv"
+        if not content:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="File yang diunggah kosong.",
+            )
+    elif source_url and source_url.strip():
+        content, filename = CBTService.fetch_questions_from_url(source_url)
+    else:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="File yang diunggah kosong.",
+            detail=(
+                "Sumber soal tidak ada. Harap unggah file (.csv / .json) "
+                "atau tempel tautan publikasi CSV Google Sheets."
+            ),
         )
     user_id = (
         current_user.get("id")
@@ -160,7 +207,7 @@ async def import_bank_soal(
         duration_minutes=duration_minutes,
         description=description,
         file_content=content,
-        filename=file.filename or "soal.csv",
+        filename=filename,
         user_id=user_id,
     )
     return bank
@@ -176,9 +223,91 @@ def delete_bank_soal(bank_id: str, db: Session = Depends(get_db)):
     return {"message": "Bank Soal berhasil dihapus."}
 
 
+@router.put(
+    "/banks/{bank_id}",
+    response_model=BankSoalResponse,
+    summary="Update Data Bank Soal (Judul, Deskripsi, Durasi)",
+    dependencies=[Depends(require_ppdb_admin)],
+)
+def update_bank_soal(
+    bank_id: str, payload: BankSoalUpdate, db: Session = Depends(get_db)
+):
+    return CBTService.update_bank_soal(db, bank_id, payload)
+
+
+@router.post(
+    "/banks/{bank_id}/questions",
+    response_model=QuestionAdmin,
+    summary="Tambah Butir Soal Baru ke Bank Soal",
+    dependencies=[Depends(require_ppdb_admin)],
+)
+def add_bank_question(
+    bank_id: str, payload: QuestionUpsert, db: Session = Depends(get_db)
+):
+    question = CBTService.add_question(db, bank_id, payload)
+    options_data = [
+        OptionAdmin(
+            id=opt.id,
+            option_key=opt.option_key,
+            option_text=opt.option_text,
+            is_correct=opt.is_correct,
+        )
+        for opt in question.options
+    ]
+    return QuestionAdmin(
+        id=question.id,
+        question_number=question.question_number,
+        question_text=question.question_text,
+        points=question.points,
+        options=options_data,
+    )
+
+
+@router.put(
+    "/banks/{bank_id}/questions/{question_id}",
+    response_model=QuestionAdmin,
+    summary="Update Butir Soal (Teks, Poin, Opsi, Kunci Jawaban)",
+    dependencies=[Depends(require_ppdb_admin)],
+)
+def update_bank_question(
+    bank_id: str,
+    question_id: str,
+    payload: QuestionUpsert,
+    db: Session = Depends(get_db),
+):
+    question = CBTService.update_question(db, bank_id, question_id, payload)
+    options_data = [
+        OptionAdmin(
+            id=opt.id,
+            option_key=opt.option_key,
+            option_text=opt.option_text,
+            is_correct=opt.is_correct,
+        )
+        for opt in question.options
+    ]
+    return QuestionAdmin(
+        id=question.id,
+        question_number=question.question_number,
+        question_text=question.question_text,
+        points=question.points,
+        options=options_data,
+    )
+
+
+@router.delete(
+    "/banks/{bank_id}/questions/{question_id}",
+    summary="Hapus Butir Soal dari Bank Soal",
+    dependencies=[Depends(require_ppdb_admin)],
+)
+def delete_bank_question(bank_id: str, question_id: str, db: Session = Depends(get_db)):
+    CBTService.delete_question(db, bank_id, question_id)
+    return {"message": "Soal berhasil dihapus dari Bank Soal."}
+
+
 # ═══════════════════════════════════════════════════════════════════════════
 # ADMIN: JADWAL UJIAN & PEMANTAUAN (MONITORING)
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 @router.get(
     "/schedules",
@@ -194,10 +323,11 @@ def list_schedules(
     is_applicant = current_user.get("user_type") == "applicant"
     if is_applicant:
         from src.models.ppdb import PPDBApplicant
+
         app_record = db.execute(
             select(PPDBApplicant).where(
                 PPDBApplicant.user_id == current_user.get("id"),
-                PPDBApplicant.deleted_at == None,
+                PPDBApplicant.deleted_at.is_(None),
             )
         ).scalar_one_or_none()
         target_wave = app_record.wave_id if app_record else wave_id
@@ -212,9 +342,13 @@ def list_schedules(
 
     # Admin access check
     user_perms = current_user.get("permissions") or {}
-    if current_user.get("user_type") != "superadmin" and not current_user.get("is_superadmin"):
+    if current_user.get("user_type") != "superadmin" and not current_user.get(
+        "is_superadmin"
+    ):
         if user_perms.get("ppdb", "none") == "none":
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN, detail="Access denied"
+            )
 
     return CBTService.list_schedules(db, category=category, wave_id=wave_id)
 
@@ -284,7 +418,8 @@ def unfreeze_candidate(
     attempt = CBTService.unfreeze_candidate(db, schedule_id, applicant_id)
     return {
         "success": True,
-        "message": "Kunci peserta berhasil dibuka. Peserta dapat login kembali untuk melanjutkan ujian.",
+        "message": "Kunci peserta berhasil dibuka. Peserta dapat login kembali untuk "
+        "melanjutkan ujian.",
         "status": attempt.status,
     }
 
@@ -312,6 +447,7 @@ def move_candidate_schedule(
 # ═══════════════════════════════════════════════════════════════════════════
 # APPLICANT: CBT ENGINE (ANTI-CURANG & AUTOSAVE)
 # ═══════════════════════════════════════════════════════════════════════════
+
 
 @router.post(
     "/verify-access/{schedule_id}",

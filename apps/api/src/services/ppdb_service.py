@@ -5,7 +5,7 @@ import os
 import random
 import string
 import uuid
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -19,8 +19,8 @@ from src.models.ppdb import (
     PPDBApplicant,
     PPDBPaymentTransaction,
     PPDBPeriod,
-
     PPDBPeriodFeeItem,
+    PPDBStage2Bill,
     PPDBWave,
     PPDBWaveFeeDiscount,
     PPDBWaveFeeItem,
@@ -33,9 +33,9 @@ from src.modules.ppdb.schemas import (
     PeriodCreate,
     PeriodFeeItemCreate,
     PeriodFeeItemUpdate,
-    WaveFeeDiscountUpdate,
     PeriodUpdate,
     WaveCreate,
+    WaveFeeDiscountUpdate,
     WaveFeeItemCreate,
     WaveFeeItemUpdate,
     WaveUpdate,
@@ -48,10 +48,8 @@ WIB = ZoneInfo("Asia/Jakarta")
 logger = logging.getLogger("ptdarrahman.ppdb")
 
 # ── Dokumen persyaratan seragam ─────────────────────────────────────────────
-# Seluruh pendaftar mengunggah daftar berkas wajib yang sama:
-# Berkas wajib dasar (NISN, KK, Akta Kelahiran, Pas Foto)
-# ditambah KTP Orang Tua/Wali dan 4 Rapor Terakhir.
-BASE_DOCUMENTS = [
+# Seluruh pendaftar mengunggah daftar berkas wajib yang sama.
+BASE_DOCUMENTS: list[dict[str, Any]] = [
     {
         "name": "NISN",
         "description": "Kartu atau bukti cetak NISN resmi.",
@@ -83,27 +81,28 @@ BASE_DOCUMENTS = [
         "category": "wajib",
     },
     {
-        "name": "Rapor Semester 1",
-        "description": "Scan/foto rapor semester ke-1 dari 4 semester terakhir.",
+        "name": "Rapor Terakhir",
+        "description": "Scan/foto rapor terakhir (semester terakhir) dari sekolah "
+        "asal.",
         "required": True,
         "category": "wajib",
     },
     {
-        "name": "Rapor Semester 2",
-        "description": "Scan/foto rapor semester ke-2 dari 4 semester terakhir.",
+        "name": "Surat Keterangan Sehat",
+        "description": "Surat keterangan sehat dari dokter/puskesmas.",
         "required": True,
         "category": "wajib",
     },
     {
-        "name": "Rapor Semester 3",
-        "description": "Scan/foto rapor semester ke-3 dari 4 semester terakhir.",
+        "name": "Surat Berkelakuan Baik",
+        "description": "Surat keterangan berkelakuan baik dari sekolah asal.",
         "required": True,
         "category": "wajib",
     },
     {
-        "name": "Rapor Semester 4",
-        "description": "Scan/foto rapor semester ke-4 dari 4 semester terakhir.",
-        "required": True,
+        "name": "Sertifikat Penghargaan (jika ada)",
+        "description": "Sertifikat prestasi/penghargaan (opsional).",
+        "required": False,
         "category": "wajib",
     },
 ]
@@ -160,9 +159,7 @@ class PPDBService:
 
         # map to dict
         p_dict = {c.name: getattr(period, c.name) for c in period.__table__.columns}
-        p_dict["waves"] = [
-            {c.name: getattr(w, c.name) for c in w.__table__.columns} for w in waves
-        ]
+        p_dict["waves"] = waves
         return p_dict
 
     def create_period(self, body: PeriodCreate):
@@ -517,9 +514,13 @@ class PPDBService:
                         "description": item.description,
                         "order_index": item.order_index,
                         "discount_type": d.discount_type if d else None,
-                        "discount_value": int(d.discount_value) if d and d.discount_value else 0,
+                        "discount_value": int(d.discount_value)
+                        if d and d.discount_value
+                        else 0,
                         "early_discount_type": d.early_discount_type if d else None,
-                        "early_discount_value": int(d.early_discount_value) if d and d.early_discount_value else 0,
+                        "early_discount_value": int(d.early_discount_value)
+                        if d and d.early_discount_value
+                        else 0,
                         "is_period_item": True,
                         "has_bills": False,
                     }
@@ -620,9 +621,22 @@ class PPDBService:
                 status_code=404,
                 detail="Komponen biaya periode tidak ditemukan",
             )
-        discount = self.repository.save_wave_fee_discount(
-            wave_id, fee_item_id, body.model_dump()
-        )
+        now = datetime.now(WIB)
+        discount = self.repository.get_wave_fee_discount(wave_id, fee_item_id)
+        if discount is None:
+            discount = PPDBWaveFeeDiscount(
+                id=str(uuid.uuid4()),
+                wave_id=wave_id,
+                fee_item_id=fee_item_id,
+                created_at=now,
+                updated_at=now,
+            )
+        discount.discount_type = body.discount_type
+        discount.discount_value = body.discount_value
+        discount.early_discount_type = body.early_discount_type
+        discount.early_discount_value = body.early_discount_value
+        discount.updated_at = now
+        discount = self.repository.save_wave_fee_discount(discount)
         return {c.name: getattr(discount, c.name) for c in discount.__table__.columns}
 
     def delete_wave_fee_item(self, wave_id: str, item_id: str):
@@ -889,7 +903,8 @@ class PPDBService:
                             "username": user.username,
                             "nama_peserta": user.full_name,
                             "password": raw_password,
-                            "nama_sekolah": "Pesantren Tahfidz Qur'an dan Digital Ar-Rahman",
+                            "nama_sekolah": "Pesantren Tahfidz Qur'an dan Digital "
+                            "Ar-Rahman",
                             "link_login": f"{settings.ppdb_frontend_url}/auth/login",
                             "tanggal_tutup_gelombang": tanggal_tutup,
                         },
@@ -1252,7 +1267,8 @@ class PPDBService:
                             "username": user.username,
                             "nama_peserta": user.full_name,
                             "password": raw_password,
-                            "nama_sekolah": "Pesantren Tahfidz Qur'an dan Digital Ar-Rahman",
+                            "nama_sekolah": "Pesantren Tahfidz Qur'an dan Digital "
+                            "Ar-Rahman",
                             "link_login": f"{settings.ppdb_frontend_url}/auth/login",
                             "tanggal_tutup_gelombang": tanggal_tutup,
                         },
@@ -1455,7 +1471,8 @@ class PPDBService:
                 missing_reports_str = ", ".join(missing_reports)
                 note = (
                     deferred_note
-                    or f"Komitmen berkas menyusul saat daftar ulang: {missing_reports_str}"
+                    or "Komitmen berkas menyusul saat daftar ulang: "
+                    f"{missing_reports_str}"
                 )
                 applicant.rejection_reason = f"[BERKAS MENYUSUL]: {note}"
             else:
@@ -1485,7 +1502,9 @@ class PPDBService:
                     "documents_submitted",
                     applicant.user_id,
                     {
-                        "link_aplikasi": f"{settings.ppdb_frontend_url}/applicant/dokumen",
+                        "link_aplikasi": (
+                            f"{settings.ppdb_frontend_url}" "/applicant/dokumen"
+                        ),
                     },
                 )
             except Exception:
@@ -1552,7 +1571,9 @@ class PPDBService:
                             (
                                 "document_approved",
                                 {
-                                    "link_aplikasi": f"{settings.ppdb_frontend_url}/dashboard",
+                                    "link_aplikasi": (
+                                        f"{settings.ppdb_frontend_url}" "/dashboard"
+                                    ),
                                 },
                             )
                         ],
@@ -1738,6 +1759,12 @@ class PPDBService:
             selection_score_gaps(self.repository.db, app_obj) if app_obj else []
         )
 
+        for k, v in list(applicant.items()):
+            if isinstance(v, datetime | date):
+                applicant[k] = v.isoformat() if hasattr(v, "isoformat") else str(v)
+            elif hasattr(v, "__str__") and type(v).__name__ in ("Decimal", "UUID"):
+                applicant[k] = str(v)
+
         return {
             "applicant": applicant,
             "categories": list(categories_map.values()),
@@ -1750,14 +1777,20 @@ class PPDBService:
             "issued_at": datetime.now(WIB).isoformat(),
         }
 
-    def _calculate_loa_fee_items(self, wave: Any, applicant: dict[str, Any]) -> list[dict[str, Any]]:
+    def _calculate_loa_fee_items(
+        self, wave: Any, applicant: dict[str, Any]
+    ) -> list[dict[str, Any]]:
         wave_id = wave.id if wave else None
         period_id = wave.period_id if wave else applicant.get("period_id")
-        period_items = self.repository.get_period_fee_items(period_id) if period_id else []
+        period_items = (
+            self.repository.get_period_fee_items(period_id) if period_id else []
+        )
         if period_items:
             discounts = {
                 d.fee_item_id: d
-                for d in (self.repository.get_wave_fee_discounts(wave_id) if wave_id else [])
+                for d in (
+                    self.repository.get_wave_fee_discounts(wave_id) if wave_id else []
+                )
             }
             fee_items = []
             for item in period_items:
@@ -1772,11 +1805,15 @@ class PPDBService:
                     and wave.early_discount_quota
                 ):
                     if d.early_discount_type == "percent":
-                        discount_amount = int(item.nominal * (d.early_discount_value / 100))
+                        discount_amount = int(
+                            item.nominal * (d.early_discount_value / 100)
+                        )
                         discount_desc = f"Diskon Early Bird {d.early_discount_value}%"
                     else:
                         discount_amount = int(d.early_discount_value)
-                        discount_desc = f"Diskon Early Bird Rp {d.early_discount_value:,}"
+                        discount_desc = (
+                            f"Diskon Early Bird Rp {d.early_discount_value:,}"
+                        )
                 elif d and d.discount_type and d.discount_value:
                     if d.discount_type == "percent":
                         discount_amount = int(item.nominal * (d.discount_value / 100))
@@ -1794,7 +1831,8 @@ class PPDBService:
                         "standard_nominal": int(item.nominal),
                         "discount_nominal": discount_amount,
                         "discount_description": discount_desc,
-                        "description": item.description or "Biaya komponen pendidikan resmi PPDB.",
+                        "description": item.description
+                        or "Biaya komponen pendidikan resmi PPDB.",
                     }
                 )
             return fee_items
@@ -1819,7 +1857,8 @@ class PPDBService:
             {
                 "name": "Biaya Seragam, Kitab & Modul Digital",
                 "nominal": 2500000,
-                "description": "4 setel seragam santri, paket kitab, dan modul digital.",
+                "description": "4 setel seragam santri, paket kitab, dan modul "
+                "digital.",
             },
         ]
 
@@ -1992,8 +2031,10 @@ class PPDBService:
             or "Orang Tua / Wali",
             "loa_signature_data": applicant.get("loa_signature_data"),
             "loa_signature_token": applicant.get("loa_signature_token"),
-            "payment_method": "Transfer Bank / Rekening Resmi PTDARRAHMAN (Di Luar Aplikasi)",
-            "payment_channel": "Kantor Bendahara Pesantren & Rekening Resmi PTDARRAHMAN",
+            "payment_method": "Transfer Bank / Rekening Resmi PTDARRAHMAN (Di Luar "
+            "Aplikasi)",
+            "payment_channel": "Kantor Bendahara Pesantren & Rekening Resmi "
+            "PTDARRAHMAN",
             "va_bank": "Bank Syariah Indonesia (BSI)",
             "va_number": "Nomor Rekening Resmi PTDARRAHMAN (Hubungi Panitia)",
             "whatsapp_group_link": wa_group_link,
@@ -2008,6 +2049,8 @@ class PPDBService:
         }
 
     def sign_applicant_loa(self, applicant_id: str, body: Any) -> dict[str, Any]:
+        from src.core.config import settings
+
         app = self.repository.db.get(PPDBApplicant, applicant_id)
         if not app:
             raise HTTPException(status_code=404, detail="Pendaftar tidak ditemukan")
@@ -2045,7 +2088,9 @@ class PPDBService:
                     "loa_signed",
                     app.user_id,
                     {
-                        "link_aplikasi": f"{settings.ppdb_frontend_url}/applicant/pengumuman",
+                        "link_aplikasi": (
+                            f"{settings.ppdb_frontend_url}" "/applicant/pengumuman"
+                        ),
                     },
                 )
             except Exception:
@@ -2231,11 +2276,12 @@ class PPDBService:
             .order_by(PPDBPaymentTransaction.created_at.desc())
             .all()
         )
-        stage2_bills: list[dict] = [] #
-        _dummy = ( type('X', (), {'all': staticmethod(list)})()
-#
-        #
-        #
+        stage2_bills: list[PPDBStage2Bill] = []  #
+        _dummy = (
+            type("X", (), {"all": staticmethod(list)})()
+            #
+            #
+            #
             .all()
         )
 

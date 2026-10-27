@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useMutation } from '@tanstack/react-query'
 import { cbtService, type ExamSheet, type QuestionPublic } from '@/services/cbtService'
+import { API_BASE } from '@/api/client'
 import { useToast } from '@/components/Toast'
 import {
   Card,
@@ -108,13 +109,14 @@ export default function CbtExamPage() {
       try {
         const res = await cbtService.getAttemptStatus(scheduleId)
         if (res.status === 'in_progress') {
-          // Unfrozen by admin!
-          toast('success', 'Kunci ujian telah dibuka oleh Pengawas! Memuat kembali lembar soal...')
-          const sheet = await cbtService.getExamSheet(scheduleId)
-          setExamSheet(sheet)
-          setAnswers(sheet.saved_answers || {})
-          setRemainingSeconds(sheet.remaining_seconds)
-          setStage('EXAM')
+          // Akses telah dibuka oleh Pengawas. Peserta wajib konfirmasi ulang
+          // (password + PIN) di gerbang — server mereset ujian: mulai dari
+          // soal pertama tanpa jawaban sebelumnya.
+          toast('success', 'Akses ujian dibuka Pengawas! Silakan konfirmasi ulang password dan PIN — ujian dimulai ulang dari awal.')
+          setExamSheet(null)
+          setAnswers({})
+          setCurrentQuestionIndex(0)
+          setStage('GATE')
         } else if (res.status === 'completed') {
           setStage('COMPLETED')
         }
@@ -204,14 +206,35 @@ export default function CbtExamPage() {
       }
     }
 
+    // Tab ditutup / halaman ditutup / refresh saat ujian: lapor pelanggaran
+    // best-effort via keepalive agar server mengunci attempt (anti-cheat ketat).
+    const handlePageHide = () => {
+      if (!isExamActiveRef.current || !scheduleId) return
+      try {
+        void fetch(`${API_BASE}/cbt/violation/${scheduleId}`, {
+          method: 'POST',
+          credentials: 'include',
+          keepalive: true,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ reason: 'leave_tab_close_or_refresh' }),
+        }).catch(() => {
+          // best-effort
+        })
+      } catch {
+        // ignore
+      }
+    }
+
     window.addEventListener('blur', handleWindowLeave)
     window.addEventListener('focus', handleWindowReturn)
     document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('pagehide', handlePageHide)
 
     return () => {
       window.removeEventListener('blur', handleWindowLeave)
       window.removeEventListener('focus', handleWindowReturn)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('pagehide', handlePageHide)
       if (blurInterval) clearInterval(blurInterval)
     }
   }, [stage, triggerViolation])
@@ -417,7 +440,7 @@ export default function CbtExamPage() {
               <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
                 <li>Angkat tangan dan lapor langsung ke <strong>Pengawas Ujian</strong> di ruangan.</li>
                 <li>Pengawas akan memeriksa dan menekan tombol <strong>Buka Kunci (Unfreeze)</strong> dari sistem pemantauan.</li>
-                <li>Halaman ini akan otomatis membuka kembali lembar soal setelah diizinkan pengawas.</li>
+                <li>Setelah diizinkan, gerbang <strong>Konfirmasi Kehadiran</strong> akan muncul kembali — isi password dan PIN, lalu ujian dimulai ulang dari soal pertama (jawaban sebelumnya tidak dipertahankan).</li>
               </ol>
             </div>
 
@@ -430,7 +453,7 @@ export default function CbtExamPage() {
             </div>
 
             <p className="text-[11px] text-muted-foreground">
-              Tenang, seluruh jawaban yang telah Anda pilih sebelumnya <strong>100% tersimpan aman</strong> di server kami.
+              Sesi direset otomatis oleh sistem agar ujian tetap adil bagi semua. Seluruh pelanggaran terekam pada laporan pemantauan.
             </p>
           </CardContent>
         </Card>

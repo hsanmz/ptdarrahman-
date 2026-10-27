@@ -47,11 +47,15 @@ class PPDBRepository:
                 self.db.query(PPDBWave).filter(PPDBWave.period_id == p.id).count()
             )
             fee_count = (
-                self.db.query(PPDBPeriodFeeItem).filter(PPDBPeriodFeeItem.period_id == p.id).count()
+                self.db.query(PPDBPeriodFeeItem)
+                .filter(PPDBPeriodFeeItem.period_id == p.id)
+                .count()
             )
+            waves = self.get_waves_by_period(p.id)
             d = {c.name: getattr(p, c.name) for c in p.__table__.columns}
             d["wave_count"] = wave_count
             d["fee_count"] = fee_count
+            d["waves"] = waves
             result.append(d)
 
         return result, total
@@ -199,6 +203,15 @@ class PPDBRepository:
             result.append(d)
         return result
 
+    def get_waves(self, period_id: str | None = None) -> list[PPDBWave]:
+        query = self.db.query(PPDBWave)
+        if period_id:
+            query = query.filter(PPDBWave.period_id == period_id)
+        return cast(
+            list[PPDBWave],
+            query.order_by(PPDBWave.wave_number.asc()).all(),
+        )
+
     def get_wave_by_id(self, wave_id: str) -> PPDBWave | None:
         return cast(
             PPDBWave | None,
@@ -212,9 +225,7 @@ class PPDBRepository:
         return cast(
             PPDBWave | None,
             self.db.query(PPDBWave)
-            .filter(
-                PPDBWave.period_id == active_period.id, PPDBWave.status == "active"
-            )
+            .filter(PPDBWave.period_id == active_period.id, PPDBWave.status == "active")
             .first(),
         )
 
@@ -431,17 +442,30 @@ class PPDBRepository:
             query = query.filter(PPDBApplicant.payment_status == payment_status)
 
         total = query.count()
-        if sort == "fifo_unverified" or status in ("document_uploaded", "document_uploaded_pending"):
+        if sort == "fifo_unverified" or status in (
+            "document_uploaded",
+            "document_uploaded_pending",
+        ):
             # FIFO untuk yang belum verifikasi: yang upload lebih dulu di atas (ASC)
             rows = (
                 query.order_by(
                     case(
-                        (PPDBApplicant.status.in_(["document_uploaded", "document_uploaded_pending"]), 0),
+                        (
+                            PPDBApplicant.status.in_(
+                                ["document_uploaded", "document_uploaded_pending"]
+                            ),
+                            0,
+                        ),
                         (PPDBApplicant.status == "document_rejected", 1),
                         else_=2,
                     ),
                     case(
-                        (PPDBApplicant.status.in_(["document_uploaded", "document_uploaded_pending"]), PPDBApplicant.updated_at),
+                        (
+                            PPDBApplicant.status.in_(
+                                ["document_uploaded", "document_uploaded_pending"]
+                            ),
+                            PPDBApplicant.updated_at,
+                        ),
                         else_=None,
                     ).asc(),
                     PPDBApplicant.updated_at.desc(),

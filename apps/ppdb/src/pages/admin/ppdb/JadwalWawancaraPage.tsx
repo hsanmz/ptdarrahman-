@@ -22,6 +22,12 @@ import {
   Textarea,
   EmptyState,
   Label,
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
 } from '@/components/ui'
 import {
   MessageSquare,
@@ -44,14 +50,35 @@ import {
   Loader2,
   HeartHandshake,
   ArrowRight,
+  LayoutGrid,
+  List,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+
+const formatDateSafe = (d?: any, opts?: Intl.DateTimeFormatOptions) => {
+  if (!d) return '-'
+  try {
+    const dt = new Date(d)
+    if (isNaN(dt.getTime())) return String(d)
+    return dt.toLocaleDateString('id-ID', opts || {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    })
+  } catch {
+    return String(d)
+  }
+}
 
 export default function JadwalWawancaraPage() {
   const navigate = useNavigate()
   const { toast } = useToast()
   const queryClient = useQueryClient()
   const { canCrud } = useCanPage('sessions')
+
+  // View Mode: 'card' vs 'list'
+  const [viewMode, setViewMode] = useState<'card' | 'list'>('card')
 
   // Selected Wave Filter
   const [selectedWaveId, setSelectedWaveId] = useState<string>('')
@@ -83,7 +110,11 @@ export default function JadwalWawancaraPage() {
     queryKey: ['selection-sessions', 'interview'],
     queryFn: () => api.apiFetch<{ data: any[] }>('/selection/sessions?type=interview'),
   })
-  const schedules: any[] = sessionsRes?.data || []
+  const schedules: any[] = Array.isArray(sessionsRes?.data)
+    ? sessionsRes.data
+    : Array.isArray(sessionsRes)
+      ? sessionsRes
+      : []
 
   // Form State
   const [form, setForm] = useState({
@@ -92,7 +123,7 @@ export default function JadwalWawancaraPage() {
     name: 'Wawancara Terpadu Sesi 1',
     session_date: '',
     start_time: '09:00',
-    end_time: '12:00',
+    end_time: 'Selesai',
     mode: 'offline' as 'offline' | 'online',
     officer_name: '',
     location: 'Kampus PTDARRAHMAN',
@@ -121,6 +152,7 @@ export default function JadwalWawancaraPage() {
     mutationFn: async () => {
       const payload = {
         ...form,
+        end_time: 'Selesai',
         session_type: 'interview',
         quota: 0, // Massal / global gelombang
       }
@@ -201,7 +233,7 @@ export default function JadwalWawancaraPage() {
       name: 'Wawancara Terpadu Sesi 1',
       session_date: defaultDate,
       start_time: '09:00',
-      end_time: '12:00',
+      end_time: 'Selesai',
       mode: 'offline',
       officer_name: '',
       location: 'Kampus PTDARRAHMAN',
@@ -219,7 +251,7 @@ export default function JadwalWawancaraPage() {
       name: s.name || '',
       session_date: s.session_date ? s.session_date.split('T')[0] : '',
       start_time: s.start_time || '09:00',
-      end_time: s.end_time || '12:00',
+      end_time: 'Selesai',
       mode: s.mode || 'offline',
       officer_name: s.officer_name || '',
       location: s.location || '',
@@ -253,6 +285,7 @@ export default function JadwalWawancaraPage() {
       <PageHeaderCard
         title="Jadwal Wawancara"
         description="Jadwal pelaksanaan wawancara terpadu calon santri dan orang tua/wali per gelombang & batch dalam satu waktu bersamaan. Penginputan penilaian mencakup evaluasi santri dan komitmen orang tua."
+        docKey="ppdb-jadwal-wawancara"
         action={
           canCrud ? (
             <Button
@@ -267,7 +300,7 @@ export default function JadwalWawancaraPage() {
         }
       />
 
-      {/* Wave Filter & Search */}
+      {/* Wave Filter & Search / View Switch */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         {waves.length > 0 && (
           <div className="flex items-center gap-2">
@@ -298,14 +331,51 @@ export default function JadwalWawancaraPage() {
           </div>
         )}
 
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
-          <Input
-            placeholder="Cari jadwal / pewawancara..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-8 text-xs h-8"
-          />
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+            <Button
+              type="button"
+              variant={viewMode === 'card' ? 'default' : 'ghost'}
+              size="sm"
+              className={cn(
+                'h-7 px-2.5 text-xs',
+                viewMode === 'card'
+                  ? 'bg-white text-slate-900 shadow-xs hover:bg-white'
+                  : 'text-slate-600 hover:text-slate-900'
+              )}
+              onClick={() => setViewMode('card')}
+              title="Tampilan Card"
+            >
+              <LayoutGrid className="h-3.5 w-3.5 mr-1 text-slate-700" />
+              Card
+            </Button>
+            <Button
+              type="button"
+              variant={viewMode === 'list' ? 'default' : 'ghost'}
+              size="sm"
+              className={cn(
+                'h-7 px-2.5 text-xs',
+                viewMode === 'list'
+                  ? 'bg-white text-slate-900 shadow-xs hover:bg-white'
+                  : 'text-slate-600 hover:text-slate-900'
+              )}
+              onClick={() => setViewMode('list')}
+              title="Tampilan Tabel"
+            >
+              <List className="h-3.5 w-3.5 mr-1 text-slate-700" />
+              List
+            </Button>
+          </div>
+
+          <div className="relative flex-1 sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              placeholder="Cari jadwal / pewawancara..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 text-xs h-8"
+            />
+          </div>
         </div>
       </div>
 
@@ -331,6 +401,93 @@ export default function JadwalWawancaraPage() {
             }
           />
         </Card>
+      ) : viewMode === 'list' ? (
+        <Card className="border border-slate-200/90 shadow-sm rounded-2xl overflow-hidden bg-white">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50/70">
+                  <TableHead className="text-xs font-semibold">Nama Jadwal</TableHead>
+                  <TableHead className="text-xs font-semibold">Kloter / Batch</TableHead>
+                  <TableHead className="text-xs font-semibold">Gelombang</TableHead>
+                  <TableHead className="text-xs font-semibold">Tanggal &amp; Waktu</TableHead>
+                  <TableHead className="text-xs font-semibold">Pewawancara</TableHead>
+                  <TableHead className="text-xs font-semibold">Mode / Lokasi</TableHead>
+                  <TableHead className="text-xs font-semibold text-center">Peserta</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredSchedules.map((s) => {
+                  const bookedList: any[] = s.booked_applicants || []
+                  const evaluatedCount = s.evaluated_count || 0
+                  const totalApplicants = bookedList.length
+
+                  return (
+                    <TableRow
+                      key={s.id}
+                      onClick={() => navigate(`/admin/jadwal-seleksi/wawancara/${s.id}`)}
+                      className="cursor-pointer hover:bg-blue-50/60 transition-colors group"
+                      title="Klik untuk membuka ruang wawancara"
+                    >
+                      <TableCell>
+                        <div className="font-semibold text-xs text-slate-900 group-hover:text-blue-700 transition-colors">
+                          {s.name}
+                        </div>
+                        {s.description && (
+                          <div className="text-[11px] text-muted-foreground line-clamp-1">
+                            {s.description}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-[10px] font-semibold bg-blue-50 text-blue-700 border-blue-200">
+                          {s.batch_name || '-'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-[10px] bg-slate-50 text-slate-700 border-slate-200">
+                          {s.wave_name || '-'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs text-slate-800 font-medium">
+                          {formatDateSafe(s.session_date)}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground font-mono">
+                          {s.start_time || '09:00'} WIB - Selesai
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs text-slate-800 font-medium">
+                          {s.officer_name || '-'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {s.mode === 'online' ? (
+                          <Badge variant="secondary" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 gap-1">
+                            <Video className="w-2.5 h-2.5" /> Online
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 gap-1">
+                            <MapPin className="w-2.5 h-2.5" /> {s.location || 'Offline'}
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-center">
+                        <span className="text-xs font-semibold text-slate-800">
+                          {totalApplicants}
+                        </span>
+                        <span className="text-[11px] text-muted-foreground font-mono ml-1">
+                          ({evaluatedCount} dinilai)
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  )
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
           {filteredSchedules.map((s) => {
@@ -342,7 +499,8 @@ export default function JadwalWawancaraPage() {
             return (
               <Card
                 key={s.id}
-                className="border border-border/80 shadow-xs hover:shadow-md transition-all rounded-2xl overflow-hidden flex flex-col justify-between"
+                onClick={() => navigate(`/admin/jadwal-seleksi/wawancara/${s.id}`)}
+                className="border border-border/80 shadow-xs hover:shadow-md transition-all rounded-2xl overflow-hidden flex flex-col justify-between cursor-pointer group"
               >
                 <div>
                   {/* Top Bar Indicator */}
@@ -411,20 +569,13 @@ export default function JadwalWawancaraPage() {
                       <div className="flex items-center gap-2">
                         <Calendar className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                         <span>
-                          {s.session_date
-                            ? new Date(s.session_date).toLocaleDateString('id-ID', {
-                                weekday: 'short',
-                                day: 'numeric',
-                                month: 'short',
-                                year: 'numeric',
-                              })
-                            : '-'}
+                          {formatDateSafe(s.session_date)}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="w-3.5 h-3.5 text-blue-600 shrink-0" />
                         <span>
-                          {s.start_time || '09:00'} - {s.end_time || '12:00'} WIB
+                          {s.start_time || '09:00'} WIB - Selesai
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -565,7 +716,7 @@ export default function JadwalWawancaraPage() {
                 {/* Card Footer: Action Buttons */}
                 <div className="border-t border-slate-100 bg-slate-50/50 p-3.5 flex items-center justify-between gap-2 flex-wrap">
                   <div className="text-[11px] text-muted-foreground">
-                    Dibuat {s.created_at ? new Date(s.created_at).toLocaleDateString('id-ID') : '-'}
+                    Dibuat {formatDateSafe(s.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}
                   </div>
 
                   <div className="flex items-center gap-2">
@@ -613,8 +764,8 @@ export default function JadwalWawancaraPage() {
         open={sessionModal !== null}
         onOpenChange={(open) => !open && setSessionModal(null)}
       >
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0 overflow-hidden rounded-2xl">
+          <DialogHeader className="p-5 border-b bg-slate-50/60 shrink-0">
             <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
               <MessageSquare className="h-5 w-5 text-blue-600" />
               {sessionModal === 'create'
@@ -626,7 +777,7 @@ export default function JadwalWawancaraPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="overflow-y-auto flex-1 p-5 space-y-4">
             {/* Gelombang */}
             <div>
               <Label className="text-xs font-semibold text-slate-700 block mb-1">
@@ -672,8 +823,8 @@ export default function JadwalWawancaraPage() {
               </div>
             </div>
 
-            {/* Tanggal & Waktu */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Tanggal & Waktu Mulai */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className="text-xs font-semibold text-slate-700 block mb-1">
                   Tanggal Pelaksanaan <span className="text-red-500">*</span>
@@ -687,25 +838,19 @@ export default function JadwalWawancaraPage() {
               </div>
               <div>
                 <Label className="text-xs font-semibold text-slate-700 block mb-1">
-                  Jam Mulai <span className="text-red-500">*</span>
+                  Jam Mulai (WIB) <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  type="time"
-                  value={form.start_time}
-                  onChange={(e) => setForm({ ...form, start_time: e.target.value })}
-                  className="text-xs h-9"
-                />
-              </div>
-              <div>
-                <Label className="text-xs font-semibold text-slate-700 block mb-1">
-                  Jam Selesai <span className="text-red-500">*</span>
-                </Label>
-                <Input
-                  type="time"
-                  value={form.end_time}
-                  onChange={(e) => setForm({ ...form, end_time: e.target.value })}
-                  className="text-xs h-9"
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="time"
+                    value={form.start_time}
+                    onChange={(e) => setForm({ ...form, start_time: e.target.value })}
+                    className="text-xs h-9"
+                  />
+                  <span className="text-xs font-medium text-slate-500 whitespace-nowrap">
+                    s/d Selesai
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -800,7 +945,7 @@ export default function JadwalWawancaraPage() {
             </div>
           </div>
 
-          <DialogFooter className="flex justify-end gap-2">
+          <DialogFooter className="p-4 border-t bg-slate-50/60 shrink-0 flex justify-end gap-2">
             <Button
               variant="outline"
               size="sm"

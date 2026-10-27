@@ -10,15 +10,17 @@ Handles:
 import csv
 import io
 import json
+import logging
 import random
 import string
 from datetime import datetime
 from typing import Any
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 import bcrypt
 from fastapi import HTTPException, status
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from src.models.auth import User
@@ -33,13 +35,12 @@ from src.models.cbt import (
 from src.models.ppdb import NotificationLog, PPDBApplicant, PPDBPeriod, PPDBWave
 from src.models.selection import SelectionResult
 from src.modules.cbt.schemas import (
-    BankSoalCreate,
+    BankSoalUpdate,
     CandidateMonitoringItem,
     ExamSheetResponse,
-    QuestionAdmin,
-    QuestionPublic,
-    OptionAdmin,
     OptionPublic,
+    QuestionPublic,
+    QuestionUpsert,
     SaveAnswerRequest,
     ScheduleCreate,
     ScheduleMonitoringResponse,
@@ -47,9 +48,13 @@ from src.modules.cbt.schemas import (
     ScheduleUpdate,
 )
 
+# Batas keamanan import bank soal (production-safety caps)
+MAX_IMPORT_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
+MAX_IMPORT_QUESTIONS = 500
+ALLOWED_IMPORT_HOSTS = ("docs.google.com",)
+
 
 class CBTService:
-
     # ── 1. Bank Soal & File Import ────────────────────────────────────────
 
     @staticmethod
@@ -64,39 +69,45 @@ class CBTService:
         cat_name = "Tes Akademik" if category == "akademik" else "Tes Psikologi"
         output = io.StringIO()
         writer = csv.writer(output, delimiter=",")
-        writer.writerow([
-            "No",
-            "Pertanyaan",
-            "Pilihan A",
-            "Pilihan B",
-            "Pilihan C",
-            "Pilihan D",
-            "Pilihan E",
-            "Kunci Jawaban",
-            "Poin",
-        ])
-        writer.writerow([
-            1,
-            f"Contoh soal 1 untuk {cat_name}: Berapakah hasil dari 15 x 4?",
-            "40",
-            "50",
-            "60",
-            "70",
-            "80",
-            "C",
-            10,
-        ])
-        writer.writerow([
-            2,
-            f"Contoh soal 2 untuk {cat_name}: Ibukota negara Indonesia adalah...",
-            "Surabaya",
-            "Nusantara",
-            "Bandung",
-            "Medan",
-            "Semarang",
-            "B",
-            10,
-        ])
+        writer.writerow(
+            [
+                "No",
+                "Pertanyaan",
+                "Pilihan A",
+                "Pilihan B",
+                "Pilihan C",
+                "Pilihan D",
+                "Pilihan E",
+                "Kunci Jawaban",
+                "Poin",
+            ]
+        )
+        writer.writerow(
+            [
+                1,
+                f"Contoh soal 1 untuk {cat_name}: Berapakah hasil dari 15 x 4?",
+                "40",
+                "50",
+                "60",
+                "70",
+                "80",
+                "C",
+                10,
+            ]
+        )
+        writer.writerow(
+            [
+                2,
+                f"Contoh soal 2 untuk {cat_name}: Ibukota negara Indonesia adalah...",
+                "Surabaya",
+                "Nusantara",
+                "Bandung",
+                "Medan",
+                "Semarang",
+                "B",
+                10,
+            ]
+        )
         return output.getvalue()
 
     @staticmethod
@@ -107,6 +118,25 @@ class CBTService:
         """
         lower_name = filename.lower()
         questions: list[dict] = []
+
+        if len(file_content) > MAX_IMPORT_FILE_SIZE:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Ukuran file terlalu besar (maksimal 5 MB). Pecah bank soal "
+                    "menjadi beberapa file yang lebih kecil."
+                ),
+            )
+        if lower_name.endswith((".xlsx", ".xls")):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "File Microsoft Excel (.xlsx) belum didukung langsung. "
+                    "Simpan ulang dari Excel sebagai 'CSV UTF-8', atau publikasikan "
+                    "Google Sheets sebagai CSV "
+                    "lalu tempel tautannya pada opsi 'Tautan Google Sheets'."
+                ),
+            )
 
         if lower_name.endswith(".json"):
             try:
@@ -123,23 +153,35 @@ class CBTService:
                 )
 
             for idx, item in enumerate(data, start=1):
-                q_text = str(item.get("question_text") or item.get("soal") or "").strip()
+                q_text = str(
+                    item.get("question_text") or item.get("soal") or ""
+                ).strip()
                 if not q_text:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Validasi Gagal pada Soal #{idx}: Teks pertanyaan tidak boleh kosong.",
+                        detail=(
+                            f"Validasi Gagal pada Soal #{idx}: Teks pertanyaan tidak "
+                            f"boleh kosong."
+                        ),
                     )
                 raw_opts = item.get("options") or item.get("pilihan") or []
-                if not isinstance(raw_opts, (list, dict)):
+                if not isinstance(raw_opts, list | dict):
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Validasi Gagal pada Soal #{idx}: Format pilihan jawaban tidak valid (harus berupa pilihan ganda).",
+                        detail=(
+                            f"Validasi Gagal pada Soal #{idx}: Format pilihan jawaban "
+                            f"tidak valid (harus berupa pilihan ganda)."
+                        ),
                     )
 
                 options_map = {}
                 if isinstance(raw_opts, list):
                     for opt in raw_opts:
-                        k = str(opt.get("key") or opt.get("option_key") or "").strip().upper()
+                        k = (
+                            str(opt.get("key") or opt.get("option_key") or "")
+                            .strip()
+                            .upper()
+                        )
                         v = str(opt.get("text") or opt.get("option_text") or "").strip()
                         if k and v:
                             options_map[k] = v
@@ -154,14 +196,28 @@ class CBTService:
                     if not options_map.get(req_key):
                         raise HTTPException(
                             status_code=status.HTTP_400_BAD_REQUEST,
-                            detail=f"Validasi Gagal pada Soal #{idx}: Pilihan {req_key} kosong. Soal wajib berupa Pilihan Ganda minimal A-D.",
+                            detail=(
+                                f"Validasi Gagal pada Soal #{idx}: Pilihan {req_key} "
+                                f"kosong. Soal wajib berupa Pilihan Ganda minimal A-D."
+                            ),
                         )
 
-                answer_key = str(item.get("answer_key") or item.get("kunci") or "").strip().upper()
-                if answer_key not in ["A", "B", "C", "D", "E"] or answer_key not in options_map:
+                answer_key = (
+                    str(item.get("answer_key") or item.get("kunci") or "")
+                    .strip()
+                    .upper()
+                )
+                if (
+                    answer_key not in ["A", "B", "C", "D", "E"]
+                    or answer_key not in options_map
+                ):
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Validasi Gagal pada Soal #{idx}: Kunci jawaban '{answer_key}' tidak valid atau tidak cocok dengan opsi yang ada.",
+                        detail=(
+                            f"Validasi Gagal pada Soal #{idx}: Kunci jawaban "
+                            f"'{answer_key}' tidak valid atau tidak cocok dengan opsi "
+                            f"yang ada."
+                        ),
                     )
 
                 try:
@@ -171,13 +227,15 @@ class CBTService:
                 except (ValueError, TypeError):
                     pts = 1.0
 
-                questions.append({
-                    "question_number": idx,
-                    "question_text": q_text,
-                    "points": pts,
-                    "options": options_map,
-                    "answer_key": answer_key,
-                })
+                questions.append(
+                    {
+                        "question_number": idx,
+                        "question_text": q_text,
+                        "points": pts,
+                        "options": options_map,
+                        "answer_key": answer_key,
+                    }
+                )
 
         else:
             # Assume CSV / Text Delimited
@@ -189,7 +247,10 @@ class CBTService:
                 except Exception as e:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Gagal membaca teks file: {str(e)}. Pastikan file berformat CSV / UTF-8.",
+                        detail=(
+                            f"Gagal membaca teks file: {str(e)}. Pastikan file "
+                            f"berformat CSV / UTF-8."
+                        ),
                     )
 
             lines = decoded_text.splitlines()
@@ -200,7 +261,6 @@ class CBTService:
                 )
 
             # Auto-detect delimiter
-            sample = "\n".join(lines[:5])
             delimiter = ","
             if ";" in lines[0] and lines[0].count(";") > lines[0].count(","):
                 delimiter = ";"
@@ -243,7 +303,8 @@ class CBTService:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail=(
-                        f"Format kolom CSV tidak sesuai. Kolom wajib tidak ditemukan: {', '.join(missing)}. "
+                        f"Format kolom CSV tidak sesuai. Kolom wajib tidak ditemukan: "
+                        f"{', '.join(missing)}. "
                         "Silakan gunakan Template Resmi (.csv) yang disediakan."
                     ),
                 )
@@ -265,7 +326,10 @@ class CBTService:
                 if not q_text:
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail=f"Validasi Gagal pada Baris {line_no}: Teks pertanyaan kosong.",
+                        detail=(
+                            f"Validasi Gagal pada Baris {line_no}: Teks pertanyaan "
+                            f"kosong."
+                        ),
                     )
 
                 # Validate Options A, B, C, D
@@ -282,20 +346,27 @@ class CBTService:
                         raise HTTPException(
                             status_code=status.HTTP_400_BAD_REQUEST,
                             detail=(
-                                f"Validasi Gagal pada Baris {line_no}: Pilihan {req_key} kosong. "
-                                "Seluruh soal wajib berupa Pilihan Ganda (Single Choice) minimal opsi A s/d D."
+                                f"Validasi Gagal pada Baris {line_no}: Pilihan "
+                                f"{req_key} kosong. "
+                                "Seluruh soal wajib berupa Pilihan Ganda (Single "
+                                "Choice) minimal opsi A s/d D."
                             ),
                         )
 
                 # Validate Answer Key
                 k_idx = col_map["key"]
-                answer_key = (row[k_idx].strip().upper() if k_idx < len(row) else "")
-                if answer_key not in ["A", "B", "C", "D", "E"] or answer_key not in options_map:
+                answer_key = row[k_idx].strip().upper() if k_idx < len(row) else ""
+                if (
+                    answer_key not in ["A", "B", "C", "D", "E"]
+                    or answer_key not in options_map
+                ):
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=(
-                            f"Validasi Gagal pada Baris {line_no}: Kunci jawaban '{answer_key}' tidak valid "
-                            "atau tidak cocok dengan pilihan jawaban yang tersedia. Kunci wajib salah satu dari A, B, C, D, atau E."
+                            f"Validasi Gagal pada Baris {line_no}: Kunci jawaban "
+                            f"'{answer_key}' tidak valid "
+                            "atau tidak cocok dengan pilihan jawaban yang tersedia. "
+                            "Kunci wajib salah satu dari A, B, C, D, atau E."
                         ),
                     )
 
@@ -312,36 +383,198 @@ class CBTService:
                     except ValueError:
                         pts = 1.0
 
-                questions.append({
-                    "question_number": len(questions) + 1,
-                    "question_text": q_text,
-                    "points": pts,
-                    "options": options_map,
-                    "answer_key": answer_key,
-                })
+                questions.append(
+                    {
+                        "question_number": len(questions) + 1,
+                        "question_text": q_text,
+                        "points": pts,
+                        "options": options_map,
+                        "answer_key": answer_key,
+                    }
+                )
 
         if not questions:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Tidak ada soal valid yang ditemukan dalam file.",
             )
+        if len(questions) > MAX_IMPORT_QUESTIONS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Jumlah soal pada file mencapai {len(questions)}, melebihi batas "
+                    f"maksimal "
+                    f"{MAX_IMPORT_QUESTIONS} soal per bank. Pecah menjadi beberapa "
+                    f"bank soal."
+                ),
+            )
 
         return questions
 
     @staticmethod
+    def fetch_questions_from_url(url: str) -> tuple[bytes, str]:
+        """
+        Mengunduh CSV butir soal dari tautan Google Sheets yang dipublikasikan
+        ('Publish to web' / link export CSV). Hanya domain Google yang diizinkan
+        sebagai sumber (pencegahan SSRF), dengan timeout dan batas ukuran.
+        Google Forms tidak dapat dibaca sistem dan ditolak dengan panduan alternatif.
+        """
+        from urllib.parse import parse_qs, urlencode, urlsplit
+
+        import httpx
+
+        raw_url = (url or "").strip()
+        if not raw_url:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Tautan sumber soal kosong.",
+            )
+        if not raw_url.startswith(("http://", "https://")):
+            raw_url = f"https://{raw_url}"
+
+        parts = urlsplit(raw_url)
+        host = parts.netloc.lower().split("@")[-1].split(":")[0]
+        if parts.scheme != "https" or host not in ALLOWED_IMPORT_HOSTS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Tautan tidak didukung. Tempel tautan publikasi CSV dari Google "
+                    "Sheets "
+                    "(https://docs.google.com/spreadsheets/...). Google Forms tidak "
+                    "dapat dibaca "
+                    "sistem; salin butir soal ke Google Sheets terlebih dahulu, "
+                    "publikasikan sebagai CSV, "
+                    "lalu tempel tautannya di sini."
+                ),
+            )
+
+        if "/forms/" in parts.path:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Tautan Google Forms tidak dapat dibaca sebagai bank soal. "
+                    "Salin butir soal dan pilihannya ke Google Sheets dengan format "
+                    "template "
+                    "(kolom: No, Pertanyaan, Pilihan A-E, Kunci Jawaban, Poin), "
+                    "publikasikan sebagai CSV, "
+                    "lalu tempel tautan hasil publikasinya di sini."
+                ),
+            )
+
+        if "/document/" in parts.path or "/presentation/" in parts.path:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Gunakan tautan Google Sheets yang dipublikasikan sebagai CSV. "
+                    "Google Docs dan Slides tidak berformat tabel soal."
+                ),
+            )
+
+        if "/spreadsheets/" not in parts.path:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Tautan ini bukan tautan Google Sheets. Contoh tautan yang "
+                    "didukung: "
+                    "'https://docs.google.com/spreadsheets/d/.../pub?output=csv' atau "
+                    "tautan 'Publikasikan ke Web' lainnya."
+                ),
+            )
+
+        query = {k: v[-1] for k, v in parse_qs(parts.query).items()}
+        fetch_url: str
+
+        if "/pub" in parts.path:
+            # Link 'Publikasikan ke Web' (pub / pubhtml): paksa format CSV
+            query["output"] = "csv"
+            norm_path = parts.path.split("/pub")[0] + "/pub"
+            fetch_url = f"https://docs.google.com{norm_path}?{urlencode(query)}"
+        elif "/export" in parts.path:
+            # Link export langsung: paksa format CSV
+            query["format"] = "csv"
+            norm_path = parts.path.split("/export")[0] + "/export"
+            fetch_url = f"https://docs.google.com{norm_path}?{urlencode(query)}"
+        else:
+            # Link /edit atau /view: konversi ke link export CSV
+            sheet_path = parts.path.split("/edit")[0].rstrip("/")
+            gid = query.get("gid")
+            if gid is None and parts.fragment:
+                gid = parse_qs(parts.fragment).get("gid", [None])[-1]
+            fetch_url = (
+                f"https://docs.google.com{sheet_path}/export?format=csv&gid={gid or 0}"
+            )
+
+        chunks: list[bytes] = []
+        total_fetched = 0
+        try:
+            with httpx.Client(timeout=15.0, follow_redirects=True) as client:
+                with client.stream("GET", fetch_url) as resp:
+                    if resp.status_code != 200:
+                        raise HTTPException(
+                            status_code=status.HTTP_400_BAD_REQUEST,
+                            detail=(
+                                f"Gagal mengunduh soal dari tautan (HTTP "
+                                f"{resp.status_code}). "
+                                "Pastikan sheet dipublikasikan untuk publik agar bisa "
+                                "dibaca sistem."
+                            ),
+                        )
+                    for chunk in resp.iter_bytes():
+                        total_fetched += len(chunk)
+                        if total_fetched > MAX_IMPORT_FILE_SIZE:
+                            raise HTTPException(
+                                status_code=status.HTTP_400_BAD_REQUEST,
+                                detail=(
+                                    "File soal dari tautan terlalu besar (maksimal 5 "
+                                    "MB)."
+                                ),
+                            )
+                        chunks.append(chunk)
+        except httpx.HTTPError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Gagal mengakses tautan ({exc.__class__.__name__}). "
+                    "Periksa kembali tautan publikasi CSV dan koneksi server."
+                ),
+            )
+
+        content = b"".join(chunks)
+        head = content[:512].lstrip().lower()
+        if head.startswith(b"<!doctype html") or head.startswith(b"<html"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Tautan tersebut bukan CSV publik (sistem menerima halaman HTML). "
+                    "Saat mempublikasikan, pilih format 'CSV'. Gunakan menu: "
+                    "File > Bagikan > Publikasikan ke Web, lalu pilih sheet dan format "
+                    "CSV."
+                ),
+            )
+
+        return content, "soal_google_sheets.csv"
+
+    @staticmethod
     def get_active_period(db: Session) -> PPDBPeriod:
-        period = db.execute(
-            select(PPDBPeriod).where(PPDBPeriod.status == "active")
-        ).scalar_one_or_none()
+        from src.repositories.ppdb_scope import (
+            get_active_period as get_scope_active_period,
+        )
+
+        period = get_scope_active_period(db)
         if not period:
             # Fallback to latest period
-            period = db.execute(
-                select(PPDBPeriod).order_by(PPDBPeriod.created_at.desc())
-            ).scalars().first()
+            period = (
+                db.execute(select(PPDBPeriod).order_by(PPDBPeriod.created_at.desc()))
+                .scalars()
+                .first()
+            )
         if not period:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Belum ada Periode PPDB yang aktif di sistem. Harap aktifkan periode terlebih dahulu.",
+                detail=(
+                    "Belum ada Periode PPDB yang aktif di sistem. Harap aktifkan "
+                    "periode terlebih dahulu."
+                ),
             )
         return period
 
@@ -393,7 +626,7 @@ class CBTService:
             db.add(question)
 
             for opt_key, opt_text in q_data["options"].items():
-                is_correct = (opt_key == q_data["answer_key"])
+                is_correct = opt_key == q_data["answer_key"]
                 option = ExamOption(
                     id=str(uuid4()),
                     question_id=q_id,
@@ -410,15 +643,20 @@ class CBTService:
     @classmethod
     def list_bank_soal(cls, db: Session, category: str) -> list[ExamBank]:
         period = cls.get_active_period(db)
-        return db.execute(
-            select(ExamBank)
-            .where(ExamBank.period_id == period.id, ExamBank.category == category)
-            .order_by(ExamBank.created_at.desc())
-        ).scalars().all()
+        rows: list[ExamBank] = (
+            db.execute(
+                select(ExamBank)
+                .where(ExamBank.period_id == period.id, ExamBank.category == category)
+                .order_by(ExamBank.created_at.desc())
+            )
+            .scalars()
+            .all()
+        )
+        return rows
 
     @classmethod
     def get_bank_soal_detail(cls, db: Session, bank_id: str) -> ExamBank:
-        bank = db.execute(
+        bank: ExamBank | None = db.execute(
             select(ExamBank).where(ExamBank.id == bank_id)
         ).scalar_one_or_none()
         if not bank:
@@ -432,15 +670,263 @@ class CBTService:
     def delete_bank_soal(cls, db: Session, bank_id: str) -> None:
         bank = cls.get_bank_soal_detail(db, bank_id)
         # Check if used in any schedule
-        used_schedules = db.execute(
-            select(ExamSchedule.id).where(ExamSchedule.bank_id == bank_id)
-        ).scalars().first()
+        used_schedules = (
+            db.execute(select(ExamSchedule.id).where(ExamSchedule.bank_id == bank_id))
+            .scalars()
+            .first()
+        )
         if used_schedules:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Bank Soal ini tidak dapat dihapus karena sudah digunakan oleh Jadwal Ujian.",
+                detail=(
+                    "Bank Soal ini tidak dapat dihapus karena sudah digunakan oleh "
+                    "Jadwal Ujian."
+                ),
             )
         db.delete(bank)
+        db.commit()
+
+    @staticmethod
+    def _assert_bank_not_in_use(db: Session, bank_id: str) -> None:
+        """Bank yang sudah dipakai jadwal ujian dikunci untuk menjaga integritas nilai "
+        "peserta."""
+        used = (
+            db.execute(select(ExamSchedule.id).where(ExamSchedule.bank_id == bank_id))
+            .scalars()
+            .first()
+        )
+        if used:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Bank Soal ini sudah dipakai pada Jadwal Ujian sehingga data dan "
+                    "butir "
+                    "soalnya dikunci. Hapus jadwal yang memakainya terlebih dahulu, "
+                    "atau buat "
+                    "Bank Soal baru untuk revisi."
+                ),
+            )
+
+    @staticmethod
+    def _normalize_question_options(options: list, answer_key: str) -> dict[str, str]:
+        """Validasi opsi soal A-E dan kunci jawaban; return map key -> text."""
+        if len(options) < 4 or len(options) > 5:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "Soal wajib memiliki 4 atau 5 pilihan jawaban (A sampai D atau A "
+                    "sampai E)."
+                ),
+            )
+        options_map: dict[str, str] = {}
+        for opt in options:
+            key = opt.option_key.strip().upper()
+            text = opt.option_text.strip()
+            if key not in ["A", "B", "C", "D", "E"]:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Kunci pilihan '{key}' tidak valid. Gunakan A, B, C, D, atau "
+                        f"E."
+                    ),
+                )
+            if key in options_map:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Pilihan {key} didefinisikan lebih dari sekali.",
+                )
+            if not text:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Teks pilihan {key} tidak boleh kosong.",
+                )
+            options_map[key] = text
+
+        for req_key in ["A", "B", "C", "D"]:
+            if req_key not in options_map:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=(
+                        f"Pilihan {req_key} kosong. Soal wajib berupa Pilihan Ganda "
+                        f"minimal A sampai D."
+                    ),
+                )
+
+        if answer_key not in options_map:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Kunci jawaban '{answer_key}' tidak cocok dengan pilihan jawaban "
+                    f"yang tersedia."
+                ),
+            )
+        return options_map
+
+    @staticmethod
+    def _recompute_bank_totals(db: Session, bank_id: str) -> tuple[int, float]:
+        rows = db.execute(
+            select(ExamQuestion.question_number, ExamQuestion.points).where(
+                ExamQuestion.bank_id == bank_id
+            )
+        ).all()
+        return len(rows), float(sum(r[1] for r in rows))
+
+    @classmethod
+    def _renumber_questions(cls, db: Session, bank_id: str) -> None:
+        questions = (
+            db.execute(
+                select(ExamQuestion)
+                .where(ExamQuestion.bank_id == bank_id)
+                .order_by(ExamQuestion.question_number.asc())
+            )
+            .scalars()
+            .all()
+        )
+        for idx, question in enumerate(questions, start=1):
+            if question.question_number != idx:
+                question.question_number = idx
+
+    @classmethod
+    def update_bank_soal(
+        cls, db: Session, bank_id: str, payload: BankSoalUpdate
+    ) -> ExamBank:
+        bank = cls.get_bank_soal_detail(db, bank_id)
+        cls._assert_bank_not_in_use(db, bank_id)
+
+        changes = payload.model_dump(exclude_unset=True)
+        for field, value in changes.items():
+            if value is None:
+                continue
+            if isinstance(value, str):
+                value = value.strip()
+                if field == "description" and value == "":
+                    bank.description = None
+                    continue
+            setattr(bank, field, value)
+        bank.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(bank)
+        return bank
+
+    @classmethod
+    def _write_question(
+        cls,
+        db: Session,
+        bank: ExamBank,
+        question: ExamQuestion | None,
+        payload: QuestionUpsert,
+        question_number: int,
+    ) -> ExamQuestion:
+        options_map = cls._normalize_question_options(
+            payload.options, payload.answer_key.strip().upper()
+        )
+
+        if question is None:
+            question = ExamQuestion(
+                id=str(uuid4()),
+                bank_id=bank.id,
+                question_number=question_number,
+                created_at=datetime.utcnow(),
+            )
+            db.add(question)
+
+        question.question_text = payload.question_text.strip()
+        question.points = float(payload.points)
+
+        # Options direbuild penuh setiap save agar sinkron dengan kunci jawaban
+        question.options.clear()
+        db.flush()
+        for opt_key, opt_text in options_map.items():
+            db.add(
+                ExamOption(
+                    id=str(uuid4()),
+                    question_id=question.id,
+                    option_key=opt_key,
+                    option_text=opt_text,
+                    is_correct=(opt_key == payload.answer_key.strip().upper()),
+                )
+            )
+
+        total_q, total_pts = cls._recompute_bank_totals(db, bank.id)
+        bank.total_questions = total_q
+        bank.total_points = total_pts
+        bank.updated_at = datetime.utcnow()
+        db.commit()
+        db.refresh(question)
+        return question
+
+    @classmethod
+    def add_question(
+        cls, db: Session, bank_id: str, payload: QuestionUpsert
+    ) -> ExamQuestion:
+        bank = cls.get_bank_soal_detail(db, bank_id)
+        cls._assert_bank_not_in_use(db, bank_id)
+        if bank.total_questions >= MAX_IMPORT_QUESTIONS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    f"Bank Soal sudah mencapai batas maksimal {MAX_IMPORT_QUESTIONS} "
+                    f"soal. "
+                    "Pecah menjadi beberapa bank soal."
+                ),
+            )
+        max_number = (
+            db.execute(
+                select(func.max(ExamQuestion.question_number)).where(
+                    ExamQuestion.bank_id == bank_id
+                )
+            ).scalar()
+            or 0
+        )
+        return cls._write_question(
+            db, bank, question=None, payload=payload, question_number=max_number + 1
+        )
+
+    @classmethod
+    def update_question(
+        cls, db: Session, bank_id: str, question_id: str, payload: QuestionUpsert
+    ) -> ExamQuestion:
+        bank = cls.get_bank_soal_detail(db, bank_id)
+        cls._assert_bank_not_in_use(db, bank_id)
+        question = db.execute(
+            select(ExamQuestion).where(
+                ExamQuestion.id == question_id, ExamQuestion.bank_id == bank_id
+            )
+        ).scalar_one_or_none()
+        if not question:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Soal tidak ditemukan pada Bank Soal ini.",
+            )
+        return cls._write_question(
+            db,
+            bank,
+            question=question,
+            payload=payload,
+            question_number=question.question_number,
+        )
+
+    @classmethod
+    def delete_question(cls, db: Session, bank_id: str, question_id: str) -> None:
+        bank = cls.get_bank_soal_detail(db, bank_id)
+        cls._assert_bank_not_in_use(db, bank_id)
+        question = db.execute(
+            select(ExamQuestion).where(
+                ExamQuestion.id == question_id, ExamQuestion.bank_id == bank_id
+            )
+        ).scalar_one_or_none()
+        if not question:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Soal tidak ditemukan pada Bank Soal ini.",
+            )
+        db.delete(question)
+        db.flush()
+        cls._renumber_questions(db, bank_id)
+        total_q, total_pts = cls._recompute_bank_totals(db, bank_id)
+        bank.total_questions = total_q
+        bank.total_points = total_pts
+        bank.updated_at = datetime.utcnow()
         db.commit()
 
     # ── 2. Jadwal Ujian & Monitoring ──────────────────────────────────────
@@ -459,17 +945,35 @@ class CBTService:
                 detail="Gelombang tidak ditemukan.",
             )
 
-        # Verify bank exists
-        bank = db.execute(
-            select(ExamBank).where(
-                ExamBank.id == payload.bank_id,
-                ExamBank.category == payload.category,
+        # Verify or auto-select single bank for this category
+        if payload.bank_id:
+            bank = db.execute(
+                select(ExamBank).where(
+                    ExamBank.id == payload.bank_id,
+                    ExamBank.category == payload.category,
+                )
+            ).scalar_one_or_none()
+        else:
+            bank = (
+                db.execute(
+                    select(ExamBank)
+                    .where(
+                        ExamBank.category == payload.category,
+                        ExamBank.period_id == period.id,
+                    )
+                    .order_by(ExamBank.created_at.desc())
+                )
+                .scalars()
+                .first()
             )
-        ).scalar_one_or_none()
+
         if not bank:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail="Bank Soal yang dipilih tidak sesuai dengan kategori ujian.",
+                detail=(
+                    f"Bank Soal untuk kategori {payload.category} belum dibuat. Buat "
+                    f"Bank Soal terlebih dahulu di menu Konfigurasi."
+                ),
             )
 
         access_token = cls.generate_access_token(payload.category)
@@ -479,13 +983,13 @@ class CBTService:
             id=schedule_id,
             period_id=period.id,
             wave_id=payload.wave_id,
-            bank_id=payload.bank_id,
+            bank_id=bank.id,
             category=payload.category,
             name=payload.name.strip(),
             batch_name=payload.batch_name.strip() if payload.batch_name else None,
             session_date=payload.session_date,
             start_time=payload.start_time,
-            end_time=payload.end_time,
+            end_time=(payload.end_time.strip() if payload.end_time else "Selesai"),
             officer_name=payload.officer_name.strip() if payload.officer_name else None,
             mode=payload.mode,
             location=payload.location.strip() if payload.location else None,
@@ -500,7 +1004,8 @@ class CBTService:
         db.commit()
         db.refresh(schedule)
 
-        # Otomatis cek dan jalankan stage progression / pengiriman jadwal bertahap dengan anti-ban delay
+        # Otomatis cek dan jalankan stage progression / pengiriman jadwal bertahap
+        # dengan anti-ban delay
         try:
             from src.services.selection_stage_service import SelectionStageService
 
@@ -516,10 +1021,14 @@ class CBTService:
     ) -> list[ScheduleResponse]:
         period = cls.get_active_period(db)
         query = (
-            select(ExamSchedule, PPDBWave.name, ExamBank.title, ExamBank.duration_minutes)
-            .join(PPDBWave, PPDBWave.id == ExamSchedule.wave_id)
-            .join(ExamBank, ExamBank.id == ExamSchedule.bank_id)
-            .where(ExamSchedule.period_id == period.id, ExamSchedule.category == category)
+            select(
+                ExamSchedule, PPDBWave.name, ExamBank.title, ExamBank.duration_minutes
+            )
+            .outerjoin(PPDBWave, PPDBWave.id == ExamSchedule.wave_id)
+            .outerjoin(ExamBank, ExamBank.id == ExamSchedule.bank_id)
+            .where(
+                ExamSchedule.period_id == period.id, ExamSchedule.category == category
+            )
             .order_by(ExamSchedule.session_date.desc(), ExamSchedule.start_time.asc())
         )
         if wave_id:
@@ -529,18 +1038,28 @@ class CBTService:
         results = []
         for sched, wave_name, bank_title, duration in rows:
             # Count eligible applicants
-            eligible_count = db.execute(
-                select(func.count(PPDBApplicant.id)).where(
-                    PPDBApplicant.wave_id == sched.wave_id,
-                    PPDBApplicant.status.in_(["document_approved", "selection", "passed", "failed"]),
-                    PPDBApplicant.deleted_at == None,
-                )
-            ).scalar() or 0
+            eligible_count = (
+                db.execute(
+                    select(func.count(PPDBApplicant.id)).where(
+                        PPDBApplicant.wave_id == sched.wave_id,
+                        PPDBApplicant.status.in_(
+                            ["document_approved", "selection", "passed", "failed"]
+                        ),
+                        PPDBApplicant.deleted_at.is_(None),
+                    )
+                ).scalar()
+                or 0
+            )
 
             # Count attempts
-            attempt_count = db.execute(
-                select(func.count(ExamAttempt.id)).where(ExamAttempt.schedule_id == sched.id)
-            ).scalar() or 0
+            attempt_count = (
+                db.execute(
+                    select(func.count(ExamAttempt.id)).where(
+                        ExamAttempt.schedule_id == sched.id
+                    )
+                ).scalar()
+                or 0
+            )
 
             results.append(
                 ScheduleResponse(
@@ -574,9 +1093,11 @@ class CBTService:
     @classmethod
     def get_schedule_detail(cls, db: Session, schedule_id: str) -> ScheduleResponse:
         row = db.execute(
-            select(ExamSchedule, PPDBWave.name, ExamBank.title, ExamBank.duration_minutes)
-            .join(PPDBWave, PPDBWave.id == ExamSchedule.wave_id)
-            .join(ExamBank, ExamBank.id == ExamSchedule.bank_id)
+            select(
+                ExamSchedule, PPDBWave.name, ExamBank.title, ExamBank.duration_minutes
+            )
+            .outerjoin(PPDBWave, PPDBWave.id == ExamSchedule.wave_id)
+            .outerjoin(ExamBank, ExamBank.id == ExamSchedule.bank_id)
             .where(ExamSchedule.id == schedule_id)
         ).first()
         if not row:
@@ -586,17 +1107,27 @@ class CBTService:
             )
         sched, wave_name, bank_title, duration = row
 
-        eligible_count = db.execute(
-            select(func.count(PPDBApplicant.id)).where(
-                PPDBApplicant.wave_id == sched.wave_id,
-                PPDBApplicant.status.in_(["document_approved", "selection", "passed", "failed"]),
-                PPDBApplicant.deleted_at == None,
-            )
-        ).scalar() or 0
+        eligible_count = (
+            db.execute(
+                select(func.count(PPDBApplicant.id)).where(
+                    PPDBApplicant.wave_id == sched.wave_id,
+                    PPDBApplicant.status.in_(
+                        ["document_approved", "selection", "passed", "failed"]
+                    ),
+                    PPDBApplicant.deleted_at.is_(None),
+                )
+            ).scalar()
+            or 0
+        )
 
-        attempt_count = db.execute(
-            select(func.count(ExamAttempt.id)).where(ExamAttempt.schedule_id == sched.id)
-        ).scalar() or 0
+        attempt_count = (
+            db.execute(
+                select(func.count(ExamAttempt.id)).where(
+                    ExamAttempt.schedule_id == sched.id
+                )
+            ).scalar()
+            or 0
+        )
 
         return ScheduleResponse(
             id=sched.id,
@@ -628,7 +1159,7 @@ class CBTService:
     def update_schedule(
         cls, db: Session, schedule_id: str, payload: ScheduleUpdate
     ) -> ExamSchedule:
-        schedule = db.execute(
+        schedule: ExamSchedule | None = db.execute(
             select(ExamSchedule).where(ExamSchedule.id == schedule_id)
         ).scalar_one_or_none()
         if not schedule:
@@ -655,9 +1186,7 @@ class CBTService:
         db.commit()
         db.refresh(schedule)
 
-        updated_schedule = tuple(
-            getattr(schedule, field) for field in tracked_fields
-        )
+        updated_schedule = tuple(getattr(schedule, field) for field in tracked_fields)
         if original_schedule != updated_schedule:
             recipients_query = select(PPDBApplicant).where(
                 PPDBApplicant.wave_id == schedule.wave_id,
@@ -670,9 +1199,7 @@ class CBTService:
                 recipients_query = recipients_query.join(
                     SelectionResult,
                     SelectionResult.applicant_id == PPDBApplicant.id,
-                ).where(
-                    SelectionResult.batch_name == schedule.batch_name
-                )
+                ).where(SelectionResult.batch_name == schedule.batch_name)
             recipients = db.execute(recipients_query).scalars().all()
 
             from src.core.config import settings
@@ -692,12 +1219,16 @@ class CBTService:
                             (
                                 "session_confirmed",
                                 {
-                                    "nama_ujian": f"{schedule.name} (Jadwal Diperbarui)",
+                                    "nama_ujian": f"{schedule.name} (Jadwal "
+                                    "Diperbarui)",
                                     "tanggal": str(schedule.session_date),
                                     "jam_mulai": schedule.start_time,
                                     "jam_selesai": schedule.end_time,
                                     "lokasi_atau_link": location_or_link,
-                                    "link_aplikasi": f"{settings.ppdb_frontend_url}/applicant/tes-seleksi",
+                                    "link_aplikasi": (
+                                        f"{settings.ppdb_frontend_url}/applicant/tes-"
+                                        f"seleksi"
+                                    ),
                                 },
                             )
                         ],
@@ -725,25 +1256,37 @@ class CBTService:
         db.commit()
 
     @classmethod
-    def get_monitoring_data(cls, db: Session, schedule_id: str) -> ScheduleMonitoringResponse:
+    def get_monitoring_data(
+        cls, db: Session, schedule_id: str
+    ) -> ScheduleMonitoringResponse:
         schedule_detail = cls.get_schedule_detail(db, schedule_id)
         bank = cls.get_bank_soal_detail(db, schedule_detail.bank_id)
 
         # Get all eligible applicants in wave
-        applicants = db.execute(
-            select(PPDBApplicant)
-            .where(
-                PPDBApplicant.wave_id == schedule_detail.wave_id,
-                PPDBApplicant.status.in_(["document_approved", "selection", "passed", "failed"]),
-                PPDBApplicant.deleted_at == None,
+        applicants = (
+            db.execute(
+                select(PPDBApplicant)
+                .where(
+                    PPDBApplicant.wave_id == schedule_detail.wave_id,
+                    PPDBApplicant.status.in_(
+                        ["document_approved", "selection", "passed", "failed"]
+                    ),
+                    PPDBApplicant.deleted_at.is_(None),
+                )
+                .order_by(PPDBApplicant.full_name.asc())
             )
-            .order_by(PPDBApplicant.full_name.asc())
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
 
         # Get all attempts for this schedule
-        attempts = db.execute(
-            select(ExamAttempt).where(ExamAttempt.schedule_id == schedule_id)
-        ).scalars().all()
+        attempts = (
+            db.execute(
+                select(ExamAttempt).where(ExamAttempt.schedule_id == schedule_id)
+            )
+            .scalars()
+            .all()
+        )
         attempt_map = {att.applicant_id: att for att in attempts}
 
         candidate_items: list[CandidateMonitoringItem] = []
@@ -806,7 +1349,7 @@ class CBTService:
     def unfreeze_candidate(
         cls, db: Session, schedule_id: str, applicant_id: str
     ) -> ExamAttempt:
-        attempt = db.execute(
+        attempt: ExamAttempt | None = db.execute(
             select(ExamAttempt).where(
                 ExamAttempt.schedule_id == schedule_id,
                 ExamAttempt.applicant_id == applicant_id,
@@ -822,10 +1365,30 @@ class CBTService:
         if attempt.status != "locked":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Peserta tidak dalam status Terkunci (Status saat ini: {attempt.status}).",
+                detail=(
+                    f"Peserta tidak dalam status Terkunci (Status saat ini: "
+                    f"{attempt.status})."
+                ),
             )
 
+        # Unfreeze = pemberian akses ulang oleh pengawas. Ujian direset total:
+        # jawaban sebelumnya dihapus, waktu kembali penuh — peserta wajib
+        # konfirmasi ulang (password + PIN) dan mengerjakan dari soal pertama.
+        schedule: ExamSchedule | None = db.execute(
+            select(ExamSchedule).where(ExamSchedule.id == schedule_id)
+        ).scalar_one_or_none()
+        if not schedule:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Jadwal ujian tidak ditemukan.",
+            )
+        bank = cls.get_bank_soal_detail(db, schedule.bank_id)
+
+        db.execute(delete(ExamAnswer).where(ExamAnswer.attempt_id == attempt.id))
         attempt.status = "in_progress"
+        attempt.remaining_seconds = bank.duration_minutes * 60
+        attempt.answers_count = 0
+        attempt.score = None
         attempt.updated_at = datetime.utcnow()
         db.commit()
         db.refresh(attempt)
@@ -884,7 +1447,10 @@ class CBTService:
             if attempt.status == "completed":
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Peserta sudah menyelesaikan ujian pada sesi ini, tidak dapat dipindahkan.",
+                    detail=(
+                        "Peserta sudah menyelesaikan ujian pada sesi ini, tidak dapat "
+                        "dipindahkan."
+                    ),
                 )
             attempt.schedule_id = target_schedule_id
             attempt.status = "not_started"
@@ -933,7 +1499,8 @@ class CBTService:
             pass
 
         return {
-            "message": f"Berhasil memindahkan peserta {applicant.full_name} ke {target_sched.name}",
+            "message": f"Berhasil memindahkan peserta {applicant.full_name} ke "
+            "{target_sched.name}",
             "target_schedule_id": target_sched.id,
             "target_schedule_name": target_sched.name,
         }
@@ -948,21 +1515,33 @@ class CBTService:
 
     @classmethod
     def verify_applicant_access(
-        cls, db: Session, user: User | dict, schedule_id: str, password: str, access_token: str
+        cls,
+        db: Session,
+        user: User | dict,
+        schedule_id: str,
+        password: str,
+        access_token: str,
     ) -> dict:
         user_id = cls._extract_user_id(user)
         # 1. Fetch User ORM to reliably check password_hash
-        user_obj = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
+        user_obj = db.execute(
+            select(User).where(User.id == user_id)
+        ).scalar_one_or_none()
         if not user_obj or not user_obj.password_hash:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Akun pengguna tidak valid.",
             )
 
-        if not bcrypt.checkpw(password.encode("utf-8"), user_obj.password_hash.encode("utf-8")):
+        if not bcrypt.checkpw(
+            password.encode("utf-8"), user_obj.password_hash.encode("utf-8")
+        ):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Password akun PPDB salah. Harap masukkan password login akun Anda.",
+                detail=(
+                    "Password akun PPDB salah. Harap masukkan password login akun "
+                    "Anda."
+                ),
             )
 
         # 2. Verify Schedule & Access Token
@@ -970,14 +1549,17 @@ class CBTService:
         if schedule_detail.access_token.strip().upper() != access_token.strip().upper():
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Token/PIN Sesi Ujian tidak valid. Silakan tanyakan PIN yang benar ke Pengawas Ujian.",
+                detail=(
+                    "Token/PIN Sesi Ujian tidak valid. Silakan tanyakan PIN yang benar "
+                    "ke Pengawas Ujian."
+                ),
             )
 
         # 3. Verify Applicant belongs to Wave and is approved
         applicant = db.execute(
             select(PPDBApplicant).where(
                 PPDBApplicant.user_id == user_id,
-                PPDBApplicant.deleted_at == None,
+                PPDBApplicant.deleted_at.is_(None),
             )
         ).scalar_one_or_none()
         if not applicant:
@@ -992,10 +1574,18 @@ class CBTService:
                 detail="Anda tidak terdaftar di gelombang pelaksanaan ujian ini.",
             )
 
-        if applicant.status not in ["document_approved", "selection", "passed", "failed"]:
+        if applicant.status not in [
+            "document_approved",
+            "selection",
+            "passed",
+            "failed",
+        ]:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="Anda belum menyelesaikan tahap Verifikasi Berkas. Hanya pendaftar yang berkasnya sudah disetujui yang dapat mengikuti ujian.",
+                detail=(
+                    "Anda belum menyelesaikan tahap Verifikasi Berkas. Hanya pendaftar "
+                    "yang berkasnya sudah disetujui yang dapat mengikuti ujian."
+                ),
             )
 
         # Check existing attempt
@@ -1006,10 +1596,52 @@ class CBTService:
             )
         ).scalar_one_or_none()
 
+        # 4. Enforcement jadwal (WIB): peserta baru wajib masuk dalam jendela sesi.
+        # Peserta yang ujiannya sudah berjalan tetap boleh masuk kembali (timer
+        # persisten).
+        if attempt is None:
+            tz = ZoneInfo("Asia/Jakarta")
+            try:
+                start_dt = datetime.strptime(
+                    f"{schedule_detail.session_date} {schedule_detail.start_time}",
+                    "%Y-%m-%d %H:%M",
+                ).replace(tzinfo=tz)
+                end_dt = datetime.strptime(
+                    f"{schedule_detail.session_date} {schedule_detail.end_time}",
+                    "%Y-%m-%d %H:%M",
+                ).replace(tzinfo=tz)
+            except ValueError:
+                start_dt = None
+                end_dt = None
+            if start_dt and end_dt:
+                now_wib = datetime.now(tz)
+                if now_wib < start_dt:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=(
+                            "Ujian belum dibuka. Sesi mulai pada "
+                            f"{schedule_detail.session_date.strftime('%d %b %Y')} "
+                            f"pukul {schedule_detail.start_time} WIB."
+                        ),
+                    )
+                if now_wib > end_dt:
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=(
+                            "Sesi ujian ini telah berakhir "
+                            f"(ditutup pukul {schedule_detail.end_time} WIB). "
+                            "Hubungi Pengawas Ujian untuk bantuan rescheduling."
+                        ),
+                    )
+
         bank = cls.get_bank_soal_detail(db, schedule_detail.bank_id)
 
         current_status = attempt.status if attempt else "not_started"
-        remaining = attempt.remaining_seconds if (attempt and attempt.remaining_seconds is not None) else (bank.duration_minutes * 60)
+        remaining = (
+            attempt.remaining_seconds
+            if (attempt and attempt.remaining_seconds is not None)
+            else (bank.duration_minutes * 60)
+        )
         answers_count = attempt.answers_count if attempt else 0
 
         return {
@@ -1027,12 +1659,14 @@ class CBTService:
         }
 
     @classmethod
-    def get_exam_sheet(cls, db: Session, user: User | dict, schedule_id: str) -> ExamSheetResponse:
+    def get_exam_sheet(
+        cls, db: Session, user: User | dict, schedule_id: str
+    ) -> ExamSheetResponse:
         user_id = cls._extract_user_id(user)
         applicant = db.execute(
             select(PPDBApplicant).where(
                 PPDBApplicant.user_id == user_id,
-                PPDBApplicant.deleted_at == None,
+                PPDBApplicant.deleted_at.is_(None),
             )
         ).scalar_one_or_none()
         if not applicant:
@@ -1082,7 +1716,10 @@ class CBTService:
             if attempt.status == "locked":
                 raise HTTPException(
                     status_code=status.HTTP_423_LOCKED,
-                    detail="Ujian Anda sedang TERKUNCI karena terdeteksi meninggalkan layar ujian. Hubungi Pengawas untuk membuka kunci akun Anda.",
+                    detail=(
+                        "Ujian Anda sedang TERKUNCI karena terdeteksi meninggalkan "
+                        "layar ujian. Hubungi Pengawas untuk membuka kunci akun Anda."
+                    ),
                 )
             if attempt.status == "completed":
                 raise HTTPException(
@@ -1096,19 +1733,27 @@ class CBTService:
                 db.refresh(attempt)
 
         # Load questions without is_correct
-        questions_db = db.execute(
-            select(ExamQuestion)
-            .where(ExamQuestion.bank_id == bank.id)
-            .order_by(ExamQuestion.question_number.asc())
-        ).scalars().all()
+        questions_db = (
+            db.execute(
+                select(ExamQuestion)
+                .where(ExamQuestion.bank_id == bank.id)
+                .order_by(ExamQuestion.question_number.asc())
+            )
+            .scalars()
+            .all()
+        )
 
         public_questions: list[QuestionPublic] = []
         for q in questions_db:
-            opts_db = db.execute(
-                select(ExamOption)
-                .where(ExamOption.question_id == q.id)
-                .order_by(ExamOption.option_key.asc())
-            ).scalars().all()
+            opts_db = (
+                db.execute(
+                    select(ExamOption)
+                    .where(ExamOption.question_id == q.id)
+                    .order_by(ExamOption.option_key.asc())
+                )
+                .scalars()
+                .all()
+            )
             public_questions.append(
                 QuestionPublic(
                     id=q.id,
@@ -1127,10 +1772,14 @@ class CBTService:
             )
 
         # Load existing answers
-        saved_answers_db = db.execute(
-            select(ExamAnswer).where(ExamAnswer.attempt_id == attempt.id)
-        ).scalars().all()
-        saved_map = {ans.question_id: (ans.option_key or "") for ans in saved_answers_db}
+        saved_answers_db = (
+            db.execute(select(ExamAnswer).where(ExamAnswer.attempt_id == attempt.id))
+            .scalars()
+            .all()
+        )
+        saved_map = {
+            ans.question_id: (ans.option_key or "") for ans in saved_answers_db
+        }
 
         return ExamSheetResponse(
             schedule_id=schedule_id,
@@ -1145,13 +1794,17 @@ class CBTService:
 
     @classmethod
     def save_answer(
-        cls, db: Session, user: User | dict, schedule_id: str, payload: SaveAnswerRequest
+        cls,
+        db: Session,
+        user: User | dict,
+        schedule_id: str,
+        payload: SaveAnswerRequest,
     ) -> dict:
         user_id = cls._extract_user_id(user)
         applicant = db.execute(
             select(PPDBApplicant).where(
                 PPDBApplicant.user_id == user_id,
-                PPDBApplicant.deleted_at == None,
+                PPDBApplicant.deleted_at.is_(None),
             )
         ).scalar_one_or_none()
         if not applicant:
@@ -1169,7 +1822,10 @@ class CBTService:
         if attempt.status == "locked":
             raise HTTPException(
                 status_code=423,
-                detail="Ujian terkunci. Anda tidak dapat mengirim jawaban sampai pengawas membuka kunci Anda.",
+                detail=(
+                    "Ujian terkunci. Anda tidak dapat mengirim jawaban sampai pengawas "
+                    "membuka kunci Anda."
+                ),
             )
         if attempt.status == "completed":
             raise HTTPException(status_code=400, detail="Ujian sudah selesai.")
@@ -1220,9 +1876,14 @@ class CBTService:
             db.add(new_answer)
 
         # Update answers_count on attempt
-        total_answers = db.execute(
-            select(func.count(ExamAnswer.id)).where(ExamAnswer.attempt_id == attempt.id)
-        ).scalar() or 0
+        total_answers = (
+            db.execute(
+                select(func.count(ExamAnswer.id)).where(
+                    ExamAnswer.attempt_id == attempt.id
+                )
+            ).scalar()
+            or 0
+        )
         if not existing_answer:
             total_answers += 1
         attempt.answers_count = total_answers
@@ -1238,12 +1899,21 @@ class CBTService:
         }
 
     @classmethod
-    def record_violation(cls, db: Session, user: User | dict, schedule_id: str) -> dict:
+    def record_violation(
+        cls,
+        db: Session,
+        user: User | dict,
+        schedule_id: str,
+        reason: str = "tab_switch_or_blur",
+    ) -> dict:
+        logging.getLogger("ptdarrahman.cbt").warning(
+            "CBT violation schedule=%s reason=%s", schedule_id, reason
+        )
         user_id = cls._extract_user_id(user)
         applicant = db.execute(
             select(PPDBApplicant).where(
                 PPDBApplicant.user_id == user_id,
-                PPDBApplicant.deleted_at == None,
+                PPDBApplicant.deleted_at.is_(None),
             )
         ).scalar_one_or_none()
         if not applicant:
@@ -1259,7 +1929,12 @@ class CBTService:
         if not attempt:
             raise HTTPException(status_code=404, detail="Sesi ujian tidak ditemukan.")
         if attempt.status == "completed":
-            return {"locked": False, "status": "completed", "violations_count": attempt.violations_count, "message": "Ujian sudah selesai."}
+            return {
+                "locked": False,
+                "status": "completed",
+                "violations_count": attempt.violations_count,
+                "message": "Ujian sudah selesai.",
+            }
 
         # Lock attempt and increment violations
         attempt.status = "locked"
@@ -1273,11 +1948,15 @@ class CBTService:
             "locked": True,
             "status": "locked",
             "violations_count": attempt.violations_count,
-            "message": "Ujian Anda telah dikunci oleh sistem karena terdeteksi meninggalkan layar ujian lebih dari 5 detik. Hubungi pengawas untuk membuka kunci akun Anda.",
+            "message": "Ujian Anda telah dikunci oleh sistem karena terdeteksi "
+            "meninggalkan layar ujian lebih dari 5 detik. Hubungi pengawas untuk "
+            "membuka kunci akun Anda.",
         }
 
     @classmethod
-    def update_timer(cls, db: Session, user: User | dict, schedule_id: str, remaining_seconds: int) -> dict:
+    def update_timer(
+        cls, db: Session, user: User | dict, schedule_id: str, remaining_seconds: int
+    ) -> dict:
         user_id = cls._extract_user_id(user)
         applicant = db.execute(
             select(PPDBApplicant).where(PPDBApplicant.user_id == user_id)
@@ -1305,7 +1984,7 @@ class CBTService:
         applicant = db.execute(
             select(PPDBApplicant).where(
                 PPDBApplicant.user_id == user_id,
-                PPDBApplicant.deleted_at == None,
+                PPDBApplicant.deleted_at.is_(None),
             )
         ).scalar_one_or_none()
         if not applicant:
@@ -1332,9 +2011,11 @@ class CBTService:
         was_completed = attempt.status == "completed"
 
         # Calculate score
-        answers = db.execute(
-            select(ExamAnswer).where(ExamAnswer.attempt_id == attempt.id)
-        ).scalars().all()
+        answers = (
+            db.execute(select(ExamAnswer).where(ExamAnswer.attempt_id == attempt.id))
+            .scalars()
+            .all()
+        )
 
         total_earned = sum(ans.score_awarded for ans in answers if ans.is_correct)
         max_points = bank.total_points if bank.total_points > 0 else 100.0
@@ -1355,7 +2036,10 @@ class CBTService:
             select(SelectionResult).where(SelectionResult.applicant_id == applicant.id)
         ).scalar_one_or_none()
 
-        note_entry = f"Nilai Tes {schedule.category.title()}: {final_percentage} (Selesai pada {now.strftime('%d-%m-%Y %H:%M')})"
+        note_entry = (
+            f"Nilai Tes {schedule.category.title()}: {final_percentage} (Selesai pada "
+            f"{now.strftime('%d-%m-%Y %H:%M')})"
+        )
         if sel_result:
             if schedule.category == "akademik":
                 sel_result.score = final_percentage  # Primary CBT score
@@ -1395,8 +2079,12 @@ class CBTService:
                             (
                                 "assessment_stage_completed",
                                 {
-                                    "nama_tahap": f"{schedule.name} ({schedule.category.title()})",
-                                    "link_aplikasi": f"{settings.ppdb_frontend_url}/applicant/tes-seleksi",
+                                    "nama_tahap": f"{schedule.name} "
+                                    "({schedule.category.title()})",
+                                    "link_aplikasi": (
+                                        f"{settings.ppdb_frontend_url}/applicant/tes-"
+                                        f"seleksi"
+                                    ),
                                 },
                             )
                         ],
@@ -1418,7 +2106,9 @@ class CBTService:
         }
 
     @classmethod
-    def get_attempt_status(cls, db: Session, user: User | dict, schedule_id: str) -> dict:
+    def get_attempt_status(
+        cls, db: Session, user: User | dict, schedule_id: str
+    ) -> dict:
         user_id = cls._extract_user_id(user)
         applicant = db.execute(
             select(PPDBApplicant).where(PPDBApplicant.user_id == user_id)

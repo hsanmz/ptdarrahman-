@@ -6,7 +6,9 @@ from pydantic import AnyHttpUrl, BaseModel, Field, field_validator, model_valida
 
 class SessionFields(BaseModel):
     name: str = Field(min_length=1, max_length=100)
-    session_type: str = Field(default="tahfidz")  # "tahfidz", "interview", "wawancara", "interview_santri", "interview_ortu"
+    session_type: str = Field(
+        default="tahfidz"
+    )  # "tahfidz", "interview", "wawancara", "interview_santri", "interview_ortu"
     wave_id: str | None = None
     batch_name: str | None = Field(default=None, max_length=50)
     session_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
@@ -21,11 +23,17 @@ class SessionFields(BaseModel):
 
     @model_validator(mode="after")
     def validate_delivery_details(self):
-        if self.end_time:
-            start = datetime.strptime(self.start_time, "%H:%M").time()
-            end = datetime.strptime(self.end_time, "%H:%M").time()
-            if end <= start:
-                raise ValueError("Jam selesai harus setelah jam mulai")
+        if self.end_time and self.end_time != "Selesai":
+            try:
+                start = datetime.strptime(self.start_time, "%H:%M").time()
+                end = datetime.strptime(self.end_time, "%H:%M").time()
+                if end <= start:
+                    raise ValueError("Jam selesai harus setelah jam mulai")
+            except ValueError as e:
+                if "Jam selesai harus setelah jam mulai" in str(e):
+                    raise
+                # Jika string non-HH:MM (misal "Selesai"), lewati validasi jam
+                pass
         if self.mode == "online" and not self.meeting_url:
             raise ValueError("Tautan Zoom wajib diisi untuk sesi online")
         if self.mode == "offline" and not (self.location and self.location.strip()):

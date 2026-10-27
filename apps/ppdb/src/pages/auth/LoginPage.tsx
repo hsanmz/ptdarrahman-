@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { BookOpenCheck, MonitorSmartphone, HeartHandshake } from 'lucide-react'
 import { API_BASE } from '@/api/client'
@@ -52,6 +52,11 @@ function translateLoginError(message: string): string {
 export default function LoginPage() {
   const { login, user } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Halaman tujuan setelah login: state.from (mis. /exam/:id) bila ada, else dashboard
+  const nextDest =
+    ((location.state as { from?: string } | null)?.from || '').trim()
 
   const [loginSuccess, setLoginSuccess] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
@@ -63,7 +68,7 @@ export default function LoginPage() {
   useEffect(() => {
     if (!user) return
     const isApplicantUser = user.user_type === 'applicant'
-    const dest = isApplicantUser ? '/applicant' : '/admin/dashboard'
+    const dest = nextDest || (isApplicantUser ? '/applicant' : '/admin/dashboard')
 
     if (loginSuccess) {
       const timer = setTimeout(() => navigate(dest, { replace: true }), 500)
@@ -71,7 +76,7 @@ export default function LoginPage() {
     } else {
       navigate(dest, { replace: true })
     }
-  }, [loginSuccess, user, navigate])
+  }, [loginSuccess, user, nextDest, navigate])
 
   if (user && !loginSuccess) {
     return null

@@ -27,7 +27,7 @@ The application is a Single Page Application (SPA) with the following routes:
   - `*`: 404 Not Found page.
 
 ## Authentication & Access Control
-- **Token Management:** Handled in `src/api/client.ts`. Auth is **httpOnly-cookie based** (`credentials: 'include'`); only the authenticated user object is stored in `localStorage` under key `sa_user` (via `getStoredUser`/`setStoredUser`). There are **no** `sa_token`/`sa_refresh` keys in localStorage. Automatic token refresh is implemented on HTTP 401 errors using `/companyprofile/auth/refresh`.
+- **Token Management:** Handled in `src/api/client.ts`. Auth is **httpOnly-cookie based** (`credentials: 'include'`); only the authenticated user object is stored in `localStorage` under key `sa_user` (via `getStoredUser`/`setStoredUser`). There are **no** `sa_token`/`sa_refresh` keys in localStorage. Automatic token refresh is implemented on HTTP 401 errors using `/auth/refresh` (or `/companyprofile/auth/refresh`).
 - **Authorization Guard:** Checked by `src/components/ProtectedRoute.tsx`.
   - The panel is **STRICTLY** for superadmin users.
   - Access is granted **only** if `user.user_type === 'superadmin'` or `user.is_superadmin === true`. Any other user attempting to access protected routes will be forcibly redirected to `/auth/login`.
@@ -38,7 +38,7 @@ The application is a Single Page Application (SPA) with the following routes:
 - The `apiFetch` wrapper handles automatic token refresh logic (cookie-based; no manual token injection happens — every request sends `credentials: 'include'`).
 - **Base URL:** Defined via the `VITE_API_URL` environment variable (defaults to `http://localhost:8000` or `http://localhost:8080`).
 - **Endpoints Interacted With:**
-  - **Auth & Sessions:** `/companyprofile/auth/login`, `/companyprofile/auth/me`, `/companyprofile/auth/refresh`, `/companyprofile/auth/logout`, `/companyprofile/auth/sessions`.
+  - **Auth & Sessions:** `/auth/login`, `/auth/me`, `/auth/refresh`, `/auth/logout`, `/auth/sessions`, `/auth/sessions/others`.
   - **Search:** `/search/global` (Unified global search).
   - **Users:** `/users` (CRUD).
   - **Roles & Permissions:** `/roles` (CRUD), `/modules`, `/users/:id/page-permissions`.
@@ -54,7 +54,7 @@ The application is a Single Page Application (SPA) with the following routes:
 ## Product Rules (from root AGENTS.md + docs/REQUIREMENTS.md)
 - **UI/UX Design System:** Rujuk ke [**DESIGN.md**](../../DESIGN.md) untuk pedoman warna, tipografi, token, dan komponen shell Superadmin (`@repo/ui`).
 - **System Design:** Rujuk ke [**README.md**](../../README.md) untuk arsitektur teknis lengkap dan RBAC matrix.
-- **No education-level selection.** This system has no list of jenjang (`SMP`, `SMK`, ...) and no jenjang picker anywhere.
+- **No education-level selection & no registration path.** This system has no list of jenjang (`SMP`, `SMK`, ...) and no jenjang/jalur picker anywhere.
 - **Health form replaces Medcheck.** Applicants self-fill the health identification form during registration (10 questions + attestation). It is stored as sensitive data viewable only in detailed admin dossiers.
 - **Standar Naming (PTDARRAHMAN):** Gunakan selalu `PTDARRAHMAN` untuk branding panel, title browser, dan sebutan entitas. Nama resmi penuh adalah `Pesantren Tahfidz Qur'an dan Digital Ar-Rahman`. Dilarang keras menggunakan `Yayasan Pesantren Ar-Rahman` atau `Pesantren Ar-Rahman`.
 - **Superadmin Boundary:** Superadmin manages user accounts, roles, permissions, WhatsApp connection, and platform activity logs. Day-to-day PPDB registration, document review, exam scoring, and LoA issuance are managed in the PPDB Backoffice (`apps/ppdb`), not in this panel.

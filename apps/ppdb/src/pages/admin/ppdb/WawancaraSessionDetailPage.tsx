@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import * as api from '@/api/client'
 import { useToast } from '@/components/Toast'
 import { useCanPage } from '@/hooks/useCan'
+import { DocTrigger } from '@repo/ui'
 import {
   Card,
   Badge,
@@ -46,6 +47,22 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
+const formatDateSafe = (d?: any) => {
+  if (!d) return '-'
+  try {
+    const dt = new Date(d)
+    if (isNaN(dt.getTime())) return String(d)
+    return dt.toLocaleDateString('id-ID', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    })
+  } catch {
+    return String(d)
+  }
+}
+
 export default function WawancaraSessionDetailPage() {
   const { sessionId } = useParams<{ sessionId: string }>()
   const navigate = useNavigate()
@@ -71,11 +88,12 @@ export default function WawancaraSessionDetailPage() {
     refetchInterval: 5000,
   })
 
+  const schedulesList = Array.isArray(sessionsRes?.data) ? sessionsRes.data : []
   const session = useMemo(() => {
-    return (sessionsRes?.data || []).find((s) => s.id === sessionId)
-  }, [sessionsRes, sessionId])
+    return schedulesList.find((s) => s.id === sessionId)
+  }, [schedulesList, sessionId])
 
-  const allSchedules = sessionsRes?.data || []
+  const allSchedules = schedulesList
 
   // 2. Fetch Categories & Criteria for Interview Rubric
   const { data: categories = [] } = useQuery({
@@ -108,7 +126,7 @@ export default function WawancaraSessionDetailPage() {
     Record<string, { scores: Record<string, number>; notes: string }>
   >({})
 
-  const bookedApplicants: any[] = session?.booked_applicants || []
+  const bookedApplicants: any[] = Array.isArray(session?.booked_applicants) ? session.booked_applicants : []
 
   // Filtered applicants
   const filteredApplicants = useMemo(() => {
@@ -272,6 +290,7 @@ export default function WawancaraSessionDetailPage() {
 
         {/* Header CTAs */}
         <div className="flex items-center gap-2">
+          <DocTrigger docKey="ppdb-jadwal-wawancara" variant="light" />
           {isFetching && (
             <span className="text-[11px] text-blue-600 flex items-center gap-1">
               <RefreshCw className="h-3 w-3 animate-spin" /> Real-time
@@ -311,14 +330,7 @@ export default function WawancaraSessionDetailPage() {
           <div>
             <span className="text-[11px] text-muted-foreground block">Tanggal Pelaksanaan</span>
             <span className="text-xs font-semibold text-slate-800">
-              {session.session_date
-                ? new Date(session.session_date).toLocaleDateString('id-ID', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
-                  })
-                : '-'}
+              {formatDateSafe(session.session_date)}
             </span>
           </div>
         </div>
@@ -458,12 +470,10 @@ export default function WawancaraSessionDetailPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50/70">
-                    <TableHead className="w-10 text-xs font-semibold">No</TableHead>
-                    <TableHead className="text-xs font-semibold">Calon Santri &amp; NISN</TableHead>
+                    <TableHead className="text-xs font-semibold">Nama Santri</TableHead>
                     <TableHead className="text-xs font-semibold">Orang Tua / Wali &amp; Kontak</TableHead>
                     <TableHead className="text-xs font-semibold text-center">Wawancara Santri</TableHead>
                     <TableHead className="text-xs font-semibold text-center">Wawancara Orang Tua</TableHead>
-                    <TableHead className="text-right text-xs font-semibold">Aksi Evaluasi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -474,13 +484,18 @@ export default function WawancaraSessionDetailPage() {
                     const ortuScore = app.ortu_score
 
                     return (
-                      <TableRow key={app.id || idx} className="hover:bg-slate-50/60 transition-colors">
-                        <TableCell className="text-xs font-mono text-muted-foreground">{idx + 1}</TableCell>
+                      <TableRow
+                        key={app.id || idx}
+                        onClick={() =>
+                          navigate(`/admin/sessions/wawancara/evaluasi/${session.id}?applicant_id=${app.id}`)
+                        }
+                        className="cursor-pointer hover:bg-blue-50/60 transition-colors group"
+                        title="Klik untuk membuka lembar penilaian wawancara"
+                      >
                         <TableCell>
-                          <div className="font-semibold text-xs text-slate-900">{app.full_name}</div>
-                          {app.nisn && (
-                            <div className="text-[11px] text-muted-foreground font-mono">NISN: {app.nisn}</div>
-                          )}
+                          <div className="font-semibold text-xs text-slate-900 group-hover:text-blue-700 transition-colors">
+                            {app.full_name}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="text-xs font-medium text-slate-800">{app.parent_name || 'Orang Tua/Wali'}</div>
@@ -509,49 +524,6 @@ export default function WawancaraSessionDetailPage() {
                               Belum Dinilai
                             </Badge>
                           )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
-                            {canCrud && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-7 text-[11px] text-slate-600 border-slate-200 hover:bg-slate-50"
-                                onClick={() => {
-                                  setRescheduleApplicant({
-                                    applicant_id: app.id,
-                                    full_name: app.full_name,
-                                  })
-                                  setTargetSessionId('')
-                                  setRescheduleReason('')
-                                }}
-                              >
-                                Pindah Sesi
-                              </Button>
-                            )}
-                            <Button
-                              size="sm"
-                              className="h-7 text-[11px] bg-blue-600 hover:bg-blue-700 text-white gap-1"
-                              onClick={() =>
-                                navigate(
-                                  `/admin/sessions/wawancara/evaluasi/${session.id}?applicant_id=${app.id}&mode=santri`
-                                )
-                              }
-                            >
-                              <User className="h-3 w-3" /> Nilai Santri
-                            </Button>
-                            <Button
-                              size="sm"
-                              className="h-7 text-[11px] bg-amber-600 hover:bg-amber-700 text-white gap-1"
-                              onClick={() =>
-                                navigate(
-                                  `/admin/sessions/wawancara/evaluasi/${session.id}?applicant_id=${app.id}&mode=ortu`
-                                )
-                              }
-                            >
-                              <HeartHandshake className="h-3 w-3" /> Nilai Ortu
-                            </Button>
-                          </div>
                         </TableCell>
                       </TableRow>
                     )

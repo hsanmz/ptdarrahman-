@@ -2,7 +2,6 @@ from collections.abc import Sequence
 from datetime import date, datetime
 from typing import Any, cast
 from uuid import uuid4
-from zoneinfo import ZoneInfo
 
 from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.orm import Session
@@ -87,7 +86,23 @@ class SelectionRepository:
             .where(SelectionSession.wave_id.in_(wave_ids))
         )
         if session_type:
-            stmt = stmt.where(SelectionSession.session_type == session_type)
+            st = session_type.lower()
+            if st in ("interview", "wawancara"):
+                stmt = stmt.where(
+                    or_(
+                        SelectionSession.session_type == "interview",
+                        SelectionSession.session_type == "wawancara",
+                    )
+                )
+            elif st in ("tahfidz", "tahfiz"):
+                stmt = stmt.where(
+                    or_(
+                        SelectionSession.session_type == "tahfidz",
+                        SelectionSession.session_type == "tahfiz",
+                    )
+                )
+            else:
+                stmt = stmt.where(SelectionSession.session_type == session_type)
         stmt = stmt.order_by(
             SelectionSession.session_date.asc(), SelectionSession.start_time.asc()
         )
@@ -154,10 +169,17 @@ class SelectionRepository:
                 session_bookings.setdefault(res.session_id, []).append(app_dict)
                 applicant_ids_booked.add(app_id)
             if hasattr(res, "interview_session_id") and res.interview_session_id:
-                session_bookings.setdefault(res.interview_session_id, []).append(app_dict)
+                session_bookings.setdefault(res.interview_session_id, []).append(
+                    app_dict
+                )
                 applicant_ids_booked.add(app_id)
-            if hasattr(res, "interview_parent_session_id") and res.interview_parent_session_id:
-                session_bookings.setdefault(res.interview_parent_session_id, []).append(app_dict)
+            if (
+                hasattr(res, "interview_parent_session_id")
+                and res.interview_parent_session_id
+            ):
+                session_bookings.setdefault(res.interview_parent_session_id, []).append(
+                    app_dict
+                )
                 applicant_ids_booked.add(app_id)
 
         # Cek apakah pendaftar sudah dinilai untuk kategori sesi terkait
@@ -225,28 +247,48 @@ class SelectionRepository:
             booked_apps = session_bookings.get(s_row.id, [])
             for a in booked_apps:
                 a_id = a["id"]
-                a["is_tahfidz_evaluated"] = evaluated_map.get((a_id, "tahfidz"), (False, None))[0]
-                a["tahfidz_score"] = evaluated_map.get((a_id, "tahfidz"), (False, None))[1]
-                a["is_santri_evaluated"] = evaluated_map.get((a_id, "interview_santri"), (False, None))[0]
-                a["santri_score"] = evaluated_map.get((a_id, "interview_santri"), (False, None))[1]
-                a["is_ortu_evaluated"] = evaluated_map.get((a_id, "interview_ortu"), (False, None))[0]
-                a["ortu_score"] = evaluated_map.get((a_id, "interview_ortu"), (False, None))[1]
+                a["is_tahfidz_evaluated"] = evaluated_map.get(
+                    (a_id, "tahfidz"), (False, None)
+                )[0]
+                a["tahfidz_score"] = evaluated_map.get(
+                    (a_id, "tahfidz"), (False, None)
+                )[1]
+                a["is_santri_evaluated"] = evaluated_map.get(
+                    (a_id, "interview_santri"), (False, None)
+                )[0]
+                a["santri_score"] = evaluated_map.get(
+                    (a_id, "interview_santri"), (False, None)
+                )[1]
+                a["is_ortu_evaluated"] = evaluated_map.get(
+                    (a_id, "interview_ortu"), (False, None)
+                )[0]
+                a["ortu_score"] = evaluated_map.get(
+                    (a_id, "interview_ortu"), (False, None)
+                )[1]
 
             d["booked_count"] = len(booked_apps)
             d["booked_applicants"] = booked_apps
             d["booked_applicant"] = booked_apps[0] if booked_apps else None
-            
+
             evaluated_count = sum(
-                1 for a in booked_apps if evaluated_map.get((a["id"], stype_key), (False, None))[0]
+                1
+                for a in booked_apps
+                if evaluated_map.get((a["id"], stype_key), (False, None))[0]
             )
             d["evaluated_count"] = evaluated_count
-            d["is_evaluated"] = (evaluated_count == len(booked_apps)) if booked_apps else False
+            d["is_evaluated"] = (
+                (evaluated_count == len(booked_apps)) if booked_apps else False
+            )
             d["evaluated_score"] = (
                 evaluated_map.get((booked_apps[0]["id"], stype_key), (False, None))[1]
                 if booked_apps
                 else None
             )
-            d["status_color"] = "green" if d["is_evaluated"] and booked_apps else ("yellow" if booked_apps else "red")
+            d["status_color"] = (
+                "green"
+                if d["is_evaluated"] and booked_apps
+                else ("yellow" if booked_apps else "red")
+            )
 
             results.append(d)
 
@@ -302,16 +344,23 @@ class SelectionRepository:
     def get_applicants_in_session(
         self, session_id: str, session_type: str = "tahfidz"
     ) -> Sequence[PPDBApplicant]:
-        session_column = (
-            SelectionResult.interview_session_id
-            if session_type.lower() in ("interview", "wawancara")
-            else SelectionResult.session_id
-        )
-        stmt = (
-            select(PPDBApplicant)
-            .join(SelectionResult, SelectionResult.applicant_id == PPDBApplicant.id)
-            .where(session_column == session_id)
-        )
+        if session_type.lower() in ("interview", "wawancara"):
+            stmt = (
+                select(PPDBApplicant)
+                .join(SelectionResult, SelectionResult.applicant_id == PPDBApplicant.id)
+                .where(
+                    or_(
+                        SelectionResult.interview_session_id == session_id,
+                        SelectionResult.interview_parent_session_id == session_id,
+                    )
+                )
+            )
+        else:
+            stmt = (
+                select(PPDBApplicant)
+                .join(SelectionResult, SelectionResult.applicant_id == PPDBApplicant.id)
+                .where(SelectionResult.session_id == session_id)
+            )
         return cast(Sequence[PPDBApplicant], self.db.scalars(stmt).all())
 
     def get_categories(self, wave_id: str) -> Sequence[SelectionCategory]:

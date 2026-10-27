@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { cbtService, type CandidateMonitoring } from '@/services/cbtService'
 import { useToast } from '@/components/Toast'
+import { DocTrigger } from '@repo/ui'
 import {
   Card,
   CardContent,
@@ -59,7 +60,7 @@ export default function PemantauanUjianPage() {
   })
 
   const schedule = monitoringData?.schedule
-  const candidates = monitoringData?.candidates || []
+  const candidates = Array.isArray(monitoringData?.candidates) ? monitoringData.candidates : []
   const stats = monitoringData?.stats || {
     total: 0,
     not_started: 0,
@@ -109,7 +110,7 @@ export default function PemantauanUjianPage() {
       const candidate = candidates.find((c) => c.applicant_id === applicantId)
       toast(
         'success',
-        `Kunci ujian berhasil dibuka untuk ${candidate?.full_name || 'peserta'}. Peserta dapat melanjutkan ujian!`
+        `Akses ${candidate?.full_name || 'peserta'} dibuka. Ujian peserta direset: mulai dari soal pertama, wajib konfirmasi ulang password + PIN.`
       )
       queryClient.invalidateQueries({ queryKey: ['cbt-monitoring', scheduleId] })
     },
@@ -165,12 +166,15 @@ export default function PemantauanUjianPage() {
           Kembali ke Daftar Jadwal Seleksi
         </Button>
 
-        <div className="flex items-center gap-2">
-          <span className="flex h-2.5 w-2.5 relative">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-          </span>
-          <span className="text-xs font-semibold text-emerald-700">Pemantauan Real-time Aktif</span>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="flex h-2.5 w-2.5 relative">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+            </span>
+            <span className="text-xs font-semibold text-emerald-700">Pemantauan Real-time Aktif</span>
+          </div>
+          <DocTrigger docKey="ppdb-cbt-monitoring" variant="light" />
         </div>
       </div>
 

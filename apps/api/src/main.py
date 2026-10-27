@@ -187,10 +187,47 @@ async def lifespan(app: FastAPI):
 
     # Ensure tables for newly declared models exist
     try:
+        import sqlalchemy as sa
+
         from src.core.database import get_engine
         from src.models.base import Base
 
-        Base.metadata.create_all(bind=get_engine())
+        engine = get_engine()
+        Base.metadata.create_all(bind=engine)
+
+        with engine.connect() as conn:
+            insp = sa.inspect(conn)
+            table_names = insp.get_table_names()
+            if "ppdb_exam_schedules" in table_names:
+                cols = [c["name"] for c in insp.get_columns("ppdb_exam_schedules")]
+                if "batch_name" not in cols:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE ppdb_exam_schedules ADD COLUMN batch_name "
+                            "VARCHAR(50) NULL"
+                        )
+                    )
+                    conn.commit()
+            if "selection_sessions" in table_names:
+                cols = [c["name"] for c in insp.get_columns("selection_sessions")]
+                if "batch_name" not in cols:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE selection_sessions ADD COLUMN batch_name "
+                            "VARCHAR(50) NULL"
+                        )
+                    )
+                    conn.commit()
+            if "selection_results" in table_names:
+                cols = [c["name"] for c in insp.get_columns("selection_results")]
+                if "interview_parent_session_id" not in cols:
+                    conn.execute(
+                        sa.text(
+                            "ALTER TABLE selection_results ADD COLUMN "
+                            "interview_parent_session_id VARCHAR(36) NULL"
+                        )
+                    )
+                    conn.commit()
     except Exception as exc:
         logger.warning("Auto-create tables skipped or failed: %s", exc)
 
