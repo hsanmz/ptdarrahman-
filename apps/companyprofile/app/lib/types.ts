@@ -81,6 +81,27 @@ export interface Staff {
   content: StaffContent | null
 }
 
+export interface LeadershipContent {
+  name?: string
+  position?: string
+}
+
+/** Baris CMS `leadership_members` — struktur organisasi khusus halaman About. */
+export interface LeadershipMember {
+  id: string
+  /** Kunci kelompok organisasi, contoh: 'yayasan' | 'islamic-center'. */
+  board: string
+  order?: number
+  content: LeadershipContent | null
+}
+
+/** Kelompok pengurus siap render per lembaga (hasil grouping di app/data/leadership.ts). */
+export interface LeadershipBoard {
+  board: string
+  title: string
+  members: Array<{ name: string; position: string }>
+}
+
 export interface Achievement {
   id: string
   year: number

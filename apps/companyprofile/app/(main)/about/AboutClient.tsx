@@ -1,14 +1,13 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 import PageHeader from '@/app/components/layout/PageHeader'
-import SectionTitle from '@/app/components/ui/SectionTitle'
-import AboutProgramCarousel from '@/app/components/sections/AboutProgramCarousel'
 import FlowArt, { FlowSection } from '@/app/components/ui/story-scroll'
+import StoryScrollytelling from './_components/StoryScrollytelling'
+import LeadershipBoards from './_components/LeadershipBoards'
 
 import { useScrollReveal } from '@/app/hooks/useScrollAnimations'
-import type { Staff } from '@/app/lib/types'
+import type { LeadershipBoard } from '@/app/lib/types'
 import { Shield, Target, BookOpen, Cpu, Globe, Heart, Award, ArrowRight } from 'lucide-react'
 import { useRef, useEffect } from 'react'
 import { resolvePortalUrl } from '@repo/ui'
@@ -50,7 +49,7 @@ const studentValues = [
   },
 ]
 
-export default function AboutClient({ staff }: { staff: Staff[] }) {
+export default function AboutClient({ leadership }: { leadership: LeadershipBoard[] }) {
   const sectionRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
@@ -58,8 +57,6 @@ export default function AboutClient({ staff }: { staff: Staff[] }) {
   }, [])
 
   useScrollReveal(sectionRef, { start: 'top 80%', stagger: 0.1 })
-
-  const leaders = staff.filter((s) => s.role === 'leader')
 
   return (
     <>
@@ -69,35 +66,8 @@ export default function AboutClient({ staff }: { staff: Staff[] }) {
         badge="KISAH KAMI"
       />
 
-      {/* Story Section */}
-      <section className="py-16 sm:py-20 md:py-28 bg-[var(--bg)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="grid lg:grid-cols-2 gap-8 md:gap-12 lg:gap-16 items-center">
-            <div>
-              <SectionTitle
-                badge="SEJAK 2021"
-                title="Warisan Keunggulan Quran & Digital"
-              />
-              <div className="space-y-4 text-[var(--text-secondary)] leading-relaxed">
-                <p>{'Terletak di kawasan strategis Rukan Hexa Green Kalimalang, PTDARRAHMAN lahir dari visi untuk menciptakan generasi pemimpin yang tidak hanya kuat dalam nilai-nilai Al-Quran tetapi juga unggul dalam inovasi digital.'}</p>
-                <p>{'Selama 5 tahun terakhir, kami telah berkembang dari kelompok belajar tahfidz kecil menjadi pesantren komprehensif dari tingkat SMP hingga SMA (program terpadu 6 tahun), dengan fasilitas canggih dan kurikulum kelas dunia yang mengintegrasikan hafalan Al-Quran dengan coding, AI, robotik, dan pengembangan kepemimpinan.'}</p>
-              </div>
-            </div>
-            <div className="relative">
-              <div className="aspect-[4/5] rounded-2xl overflow-hidden shadow-lg relative">
-                <Image src="https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=2070&auto=format&fit=crop" alt="Arrahman Boarding School" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" priority />
-              </div>
-              <div className="absolute -bottom-4 sm:-bottom-6 -left-4 sm:-left-6 bg-[var(--accent)] text-white rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg">
-                <div className="font-[var(--font-display)] text-2xl sm:text-3xl font-bold">5+</div>
-                <div className="text-xs sm:text-sm font-medium opacity-80">{'Tahun Keunggulan'}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Program Carousel: auto-scroll ala PulseFit */}
-      <AboutProgramCarousel />
+      {/* Story: sticky-scroll storytelling — visual kiri menempel, cerita PTD mengalir */}
+      <StoryScrollytelling />
 
       {/* Story Scroll Program Unggulan & Core Info */}
       <FlowArt aria-label="Tentang Kami">
@@ -105,34 +75,30 @@ export default function AboutClient({ staff }: { staff: Staff[] }) {
         <FlowSection aria-label="Program Unggulan" style={{ backgroundColor: '#F7F5F0', color: '#1A1A1A' }}>
           <div className="absolute inset-0 bg-pattern-dots opacity-[0.04]" />
 
-          <div className="relative z-10 flex flex-col h-full">
-            <p className="text-sm md:text-base font-bold uppercase tracking-[0.2em] text-[var(--accent)] pt-2 shrink-0">01 — Program Unggulan</p>
-            <hr className="my-4 border-none border-t border-[var(--border-strong)] shrink-0" />
+          <div className="relative z-10">
+            <p className="text-sm md:text-base font-bold uppercase tracking-[0.2em] text-[var(--accent)]">01 — Program Unggulan</p>
+            <hr className="my-4 border-none border-t border-[var(--border-strong)]" />
 
-            <div className="flex-1 flex flex-col justify-center">
-              <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-[var(--text)] mb-6">
-                Tahfidz
-                <br />
-                <span className="text-[var(--accent-gold)]">& Digital</span>
-              </h1>
-              <p className="max-w-[48ch] text-lg md:text-xl lg:text-2xl font-light leading-relaxed text-[var(--text-secondary)]">
-                Perpaduan hafalan Al-Quran dengan kompetensi teknologi, bahasa, dan kepemimpinan — <strong className="font-semibold text-[var(--text)]">membentuk santri unggul sejak hari pertama.</strong>
-              </p>
-            </div>
-
-            <hr className="my-4 border-none border-t border-[var(--border-strong)] shrink-0 opacity-0" />
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight text-[var(--text)] mb-6">
+              Tahfidz
+              <br />
+              <span className="text-[var(--accent-gold)]">& Digital</span>
+            </h1>
+            <p className="max-w-[48ch] text-lg md:text-xl lg:text-2xl font-light leading-relaxed text-[var(--text-secondary)]">
+              Perpaduan hafalan Al-Quran dengan kompetensi teknologi, bahasa, dan kepemimpinan — <strong className="font-semibold text-[var(--text)]">membentuk santri unggul sejak hari pertama.</strong>
+            </p>
           </div>
         </FlowSection>
 
         {/* SECTION 2: Visi & Misi */}
-        <FlowSection id="vision" aria-label="Visi Misi" style={{ backgroundColor: '#EFEDE8', color: '#1A1A1A' }}>
+        <FlowSection id="vision" aria-label="Visi Misi" className="scroll-mt-28" style={{ backgroundColor: '#EFEDE8', color: '#1A1A1A' }}>
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5" />
 
-          <div className="relative z-10 flex flex-col h-full overflow-y-auto no-scrollbar">
-            <p className="text-sm md:text-base font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] pt-2 shrink-0">02 — Arah dan Tujuan</p>
-            <hr className="my-4 border-none border-t border-[var(--border-strong)] shrink-0" />
+          <div className="relative z-10">
+            <p className="text-sm md:text-base font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)]">02 — Arah dan Tujuan</p>
+            <hr className="my-4 border-none border-t border-[var(--border-strong)]" />
 
-            <div className="flex-1 flex flex-col justify-center py-2 gap-4 md:gap-6">
+            <div className="flex flex-col gap-4 md:gap-6">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-[var(--text)]">
                 Visi & <span className="text-[var(--accent)]">Misi</span>
               </h1>
@@ -178,11 +144,11 @@ export default function AboutClient({ staff }: { staff: Staff[] }) {
         <FlowSection aria-label="Nilai Santri" style={{ backgroundColor: '#F7F5F0', color: '#1A1A1A' }}>
           <div className="absolute inset-0 bg-pattern-dots-gold opacity-[0.04]" />
 
-          <div className="relative z-10 flex flex-col h-full overflow-y-auto no-scrollbar">
-            <p className="text-sm md:text-base font-bold uppercase tracking-[0.2em] text-[var(--accent-gold)] pt-2 shrink-0">03 — Profil Santri</p>
-            <hr className="my-4 border-none border-t border-[var(--border-strong)] shrink-0" />
+          <div className="relative z-10">
+            <p className="text-sm md:text-base font-bold uppercase tracking-[0.2em] text-[var(--accent-gold)]">03 — Profil Santri</p>
+            <hr className="my-4 border-none border-t border-[var(--border-strong)]" />
 
-            <div className="flex-1 flex flex-col justify-center py-4">
+            <div className="flex flex-col gap-6">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight mb-8 text-[var(--text)]">
                 Nilai Santri
               </h1>
@@ -212,9 +178,9 @@ export default function AboutClient({ staff }: { staff: Staff[] }) {
               </div>
             </div>
 
-            <hr className="my-4 border-none border-t border-[var(--border-strong)] shrink-0" />
+            <hr className="my-4 border-none border-t border-[var(--border-strong)]" />
 
-            <div className="mt-auto flex flex-col md:flex-row gap-4 md:gap-6 items-start md:items-center pb-6 shrink-0">
+            <div className="flex flex-col md:flex-row gap-4 md:gap-6 items-start md:items-center">
               <div className="px-5 py-3 rounded-xl bg-gradient-to-br from-[var(--accent-subtle)] to-transparent border border-[var(--accent)]/10">
                 <span className="arabic-quote text-xl md:text-2xl text-[var(--accent-gold)]">«جَعَلَكُمْ رَحْمَةً لِلْعَالَمِينَ»</span>
               </div>
@@ -232,11 +198,11 @@ export default function AboutClient({ staff }: { staff: Staff[] }) {
         <FlowSection aria-label="Nilai Inti" style={{ backgroundColor: '#EFEDE8', color: '#1A1A1A' }}>
           <div className="absolute inset-0 bg-pattern-grid opacity-[0.03]" />
 
-          <div className="relative z-10 flex flex-col h-full overflow-y-auto no-scrollbar">
-            <p className="text-sm md:text-base font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)] pt-2 shrink-0">04 — Nilai Inti</p>
-            <hr className="my-4 border-none border-t border-[var(--border-strong)] shrink-0" />
+          <div className="relative z-10">
+            <p className="text-sm md:text-base font-bold uppercase tracking-[0.2em] text-[var(--text-secondary)]">04 — Nilai Inti</p>
+            <hr className="my-4 border-none border-t border-[var(--border-strong)]" />
 
-            <div className="flex-1 flex flex-col justify-center py-4 gap-6">
+            <div className="flex flex-col gap-6">
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-[var(--text)]">
                 Apa Yang Kami <span className="text-[var(--accent-gold)]">Perjuangkan</span>
               </h1>
@@ -257,47 +223,12 @@ export default function AboutClient({ staff }: { staff: Staff[] }) {
               </div>
             </div>
 
-            <hr className="my-4 border-none border-t border-[var(--border-strong)] shrink-0 opacity-0" />
           </div>
         </FlowSection>
       </FlowArt>
 
-      {/* Leadership */}
-      <section className="py-16 sm:py-20 md:py-28 bg-[var(--bg)]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <SectionTitle
-            center
-            badge="KEPEMIMPINAN"
-            title="Tim Kepemimpinan Kami"
-          />
-          <div className="grid md:grid-cols-3 gap-6">
-            {leaders.map((person) => {
-              const p = person.content ?? {}
-              return (
-                <div key={person.id} className="solid-card text-center p-8">
-                  <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 border-2 border-[var(--accent)]/20 relative">
-                    {person.image ? <Image src={person.image} alt={p.name || ''} fill className="object-cover" sizes="96px" /> : <div className="w-full h-full bg-[var(--bg-secondary)] rounded-full" />}
-                  </div>
-                  <h3 className="font-[var(--font-heading)] text-base font-bold">{p.name}</h3>
-                  <p className="text-xs text-[var(--accent)] font-medium mb-3">{p.position}</p>
-                  <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-4 line-clamp-3">{p.bio}</p>
-                  <div className="flex flex-wrap justify-center gap-1.5">
-                    {(p.expertise || []).map((exp, j) => (
-                      <span key={j} className="text-[10px] sm:text-xs px-2 py-0.5 rounded-full bg-[var(--accent-subtle)] text-[var(--accent)]">{exp}</span>
-                    ))}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-          <div className="text-center mt-10">
-            <Link href="/staff" className="btn-ghost">
-              {'Lihat Semua Guru & Staff'}
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
-      </section>
+      {/* Struktur organisasi: dua kelompok pengurus — CMS tab "Struktur Organisasi" */}
+      <LeadershipBoards boards={leadership} />
 
       {/* CTA */}
       <section className="py-16 sm:py-20 bg-[var(--accent)]">

@@ -25,10 +25,10 @@ from typing import Any
 # are not listed here are rejected (400), not silently dropped or forwarded to SQL.
 #
 # NOTE on `order`: only entities that really have an `order` column accept it
-# here (`hero-slides`, `programs`, `testimonials` -- see `INT_COLUMNS`). The
-# `staff` entity keeps its display order inside the JSON `content`
-# (`content.order`) because its table has no such column, so `order` is
-# deliberately absent from its whitelist and sending it would be a 422.
+# here (`hero-slides`, `programs`, `testimonials`, `leadership` -- see
+# `INT_COLUMNS`). The `staff` entity keeps its display order inside the JSON
+# `content` (`content.order`) because its table has no such column, so `order`
+# is deliberately absent from its whitelist and sending it would be a 422.
 ENTITY_COLUMNS: dict[str, set[str]] = {
     "news": {"slug", "category", "date", "image", "gallery", "content"},
     "programs": {"slug", "icon", "image", "order", "content"},
@@ -39,6 +39,7 @@ ENTITY_COLUMNS: dict[str, set[str]] = {
     "social-links": {"label", "href", "path"},
     "testimonials": {"name", "child", "image", "order", "content"},
     "hero-slides": {"image", "order", "content"},
+    "leadership": {"board", "order", "content"},
 }
 
 # Columns that must be present (and non-empty) when creating a row. Mirrors the
@@ -56,6 +57,7 @@ REQUIRED_FIELDS: dict[str, set[str]] = {
     "social-links": {"label", "href", "path"},
     "testimonials": {"name", "child"},
     "hero-slides": {"content"},
+    "leadership": {"board"},
 }
 
 # Simple per-column type coercion for columns that map to typed DB columns.
@@ -64,6 +66,7 @@ INT_COLUMNS: dict[str, set[str]] = {
     "programs": {"order"},
     "testimonials": {"order"},
     "hero-slides": {"order"},
+    "leadership": {"order"},
 }
 
 # Real column widths from `src/models/content.py`. Oversized input is a client
@@ -80,6 +83,7 @@ MAX_LENGTHS: dict[str, int] = {
     "name": 255,
     "child": 255,
     "role": 100,
+    "board": 50,
 }
 
 # Unbounded Text columns. A generous cap still stops a runaway payload (an
@@ -100,6 +104,7 @@ COLUMN_DEFAULTS: dict[str, dict[str, Any]] = {
     "programs": {"order": 0},
     "testimonials": {"order": 0},
     "hero-slides": {"order": 0},
+    "leadership": {"order": 0},
 }
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")

@@ -1,7 +1,8 @@
 import type { Metadata } from 'next'
 import AboutClient from './AboutClient'
-import { getStaff } from '@/app/lib/api'
-import type { Staff } from '@/app/lib/types'
+import { getLeadership } from '@/app/lib/api'
+import { fallbackLeadershipBoards } from '@/app/data/leadership'
+import type { LeadershipBoard } from '@/app/lib/types'
 
 export const metadata: Metadata = {
   title: 'Tentang Kami',
@@ -30,7 +31,9 @@ export const metadata: Metadata = {
 }
 
 export default async function AboutPage() {
-  let staff: Staff[] | null = null
-  try { staff = await getStaff() } catch { staff = null }
-  return <AboutClient staff={staff ?? []} />
+  // Struktur organisasi: CMS tab "Struktur Organisasi"; fallback ke data resmi
+  // statis saat CMS kosong/gagal agar halaman tidak pernah tampil tanpa pengurus.
+  let leadership: LeadershipBoard[] | null = null
+  try { leadership = await getLeadership() } catch { leadership = null }
+  return <AboutClient leadership={leadership ?? fallbackLeadershipBoards} />
 }

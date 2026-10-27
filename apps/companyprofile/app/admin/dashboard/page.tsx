@@ -63,6 +63,7 @@ const TAB_DESCRIPTIONS: Record<string, string> = {
   programs: 'Atur program pendidikan yang ditawarkan pesantren.',
   facilities: 'Kelola sarana dan prasarana yang dimiliki pesantren.',
   staff: 'Kelola daftar guru dan pengurus pesantren.',
+  leadership: 'Kelola susunan pengurus halaman Tentang Kami — dua kelompok: Yayasan Generasi Cerdas Akhlak Mulia dan Ar Rahman Islamic Center.',
   achievements: 'Catat raihan dan penghargaan santri.',
   gallery: 'Kelola dokumentasi foto kegiatan pesantren.',
   testimonials: 'Kelola kesan dan testimoni wali santri.',

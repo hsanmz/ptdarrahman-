@@ -1,7 +1,7 @@
 import {
   Newspaper, GraduationCap, Building2, Users, Trophy,
   Image as ImageIcon, MessageSquare, Link as LinkIcon, Phone, Settings,
-  Home,
+  Home, Network,
 } from 'lucide-react'
 import * as api from '@/app/lib/api'
 import { facilityCategoryLabel } from '@/app/lib/facility-categories'
@@ -13,6 +13,7 @@ export const TABS: TabDef[] = [
   { key: 'programs', label: 'Program', endpoint: '/programs', fetch: api.getPrograms, icon: GraduationCap },
   { key: 'facilities', label: 'Fasilitas', endpoint: '/facilities', fetch: api.getFacilities, icon: Building2 },
   { key: 'staff', label: 'Staff', endpoint: '/staff', fetch: api.getStaff, icon: Users },
+  { key: 'leadership', label: 'Struktur Organisasi', endpoint: '/leadership', fetch: api.getLeadershipRows, icon: Network },
   { key: 'achievements', label: 'Prestasi', endpoint: '/achievements', fetch: api.getAchievements, icon: Trophy },
   { key: 'gallery', label: 'Galeri', endpoint: '/gallery', fetch: api.getGallery, icon: ImageIcon },
   { key: 'testimonials', label: 'Testimoni', endpoint: '/testimonials', fetch: api.getTestimonials, icon: MessageSquare },
@@ -22,7 +23,7 @@ export const TABS: TabDef[] = [
 ]
 
 export const HAS_CONTENT: string[] = [
-  'hero', 'news', 'programs', 'facilities', 'staff', 'achievements', 'gallery', 'testimonials',
+  'hero', 'news', 'programs', 'facilities', 'staff', 'leadership', 'achievements', 'gallery', 'testimonials',
 ]
 
 /**
@@ -45,6 +46,7 @@ export const FIELD_MAX_LENGTHS: Record<string, number> = {
   child: 255,
   role: 100,
   position: 255,
+  board: 50,
 }
 
 export function maxLengthFor(field: string): number {
@@ -52,11 +54,23 @@ export function maxLengthFor(field: string): number {
 }
 
 /**
+ * Tab yang tabelnya punya kolom `image` di DB — cermin `ENTITY_COLUMNS` di
+ * `apps/api/src/modules/companyprofile/schemas.py`.
+ *
+ * Dialog generik selalu menambahkan `payload.image` saat menyimpan; untuk tab
+ * lain tombol itu harus disembunyikan dan key tidak boleh dikirim, karena
+ * whitelist backend akan menolaknya sebagai unknown field (422). Tab
+ * `leadership` tidak punya kolom gambar.
+ */
+export const HAS_IMAGE_COLUMN: string[] = ['hero', 'news', 'programs']
+
+/**
  * Di mana nilai "Urutan Tampilan" disimpan untuk tiap entitas.
  *
  * - `column` : kolom `order` di tabel DB (`hero_slides`, `programs`,
- *              `testimonials`). Backend mengurutkan list endpoint dengan
- *              `ORDER BY order ASC`, jadi urutannya sudah benar sejak API.
+ *              `testimonials`, `leadership_members`). Backend mengurutkan
+ *              list endpoint dengan `ORDER BY order ASC`, jadi urutannya
+ *              sudah benar sejak API.
  * - `content`: di dalam JSON `content` (`content.order`). Tabel entitas ini
  *              tidak punya kolom `order`, jadi backend tidak bisa mengurutkan
  *              di SQL — urutannya diurus di sisi klien.
@@ -66,6 +80,7 @@ export const ORDER_SOURCE: Record<string, 'column' | 'content'> = {
   programs: 'column',
   testimonials: 'column',
   staff: 'content',
+  leadership: 'column',
 }
 
 function toOrderNumber(value: unknown): number | null {
@@ -154,6 +169,21 @@ export const TABLE_COLS: Record<string, TableColumn[]> = {
   staff: [
     { label: 'Nama', accessor: (i) => i.content?.name || '', variant: 'title' },
     { label: 'Peran', accessor: (i) => i.role, variant: 'badge' },
+  ],
+  leadership: [
+    { label: 'Nama', accessor: (i) => i.content?.name || '', variant: 'title' },
+    { label: 'Jabatan', accessor: (i) => i.content?.position || '', variant: 'text' },
+    {
+      label: 'Kelompok',
+      accessor: (i) => {
+        const board = String(i.board || '')
+        if (board === 'yayasan') return 'Yayasan'
+        if (board === 'islamic-center') return 'Islamic Center'
+        return board
+      },
+      variant: 'badge',
+    },
+    { label: 'Urutan', accessor: (i) => (i.order != null ? String(i.order) : ''), variant: 'badge' },
   ],
   achievements: [
     { label: 'Tahun', accessor: (i) => (i.year != null ? String(i.year) : ''), variant: 'badge', tone: 'gold' },
@@ -307,6 +337,10 @@ export const FORM_FIELDS: Record<string, FormField[]> = {
   ],
   facilities: [{ name: 'category', label: 'Kategori', type: 'text' }],
   staff: [{ name: 'role', label: 'Peran (leader / teacher)', type: 'text' }],
+  leadership: [
+    { name: 'board', label: 'Kelompok Lembaga', type: 'select', required: true, options: ['yayasan', 'islamic-center'] },
+    { name: 'order', label: 'Urutan Tampilan', type: 'number' },
+  ],
   achievements: [{ name: 'year', label: 'Tahun', type: 'number' }],
   gallery: [{ name: 'category', label: 'Kategori', type: 'text' }],
   testimonials: [
@@ -362,6 +396,10 @@ export const CONTENT_FIELDS: Record<string, { name: string; label: string; type:
     { name: 'expertise', label: 'Keahlian (1 per baris)', type: 'list' },
     { name: 'parentId', label: 'Atasan (biarkan kosong jika puncak)', type: 'parent' },
     { name: 'order', label: 'Urutan Tampilan', type: 'number' },
+  ],
+  leadership: [
+    { name: 'name', label: 'Nama Pengurus', type: 'text' },
+    { name: 'position', label: 'Jabatan', type: 'text' },
   ],
   achievements: [
     { name: 'title', label: 'Judul Prestasi', type: 'text' },

@@ -58,6 +58,26 @@ class Staff(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
 
+class LeadershipMember(Base):
+    """Satu anggota struktur organisasi khusus halaman About.
+
+    Terpisah dari `staff` (Guru & Staff). `board` menandai kelompok lembaga
+    (`yayasan` / `islamic-center`); nama dan jabatan disimpan di JSON
+    `content` (name, position). Urutan tampil ada di kolom `order` (ASC);
+    NOT NULL tanpa server_default: nilai default create dikirim router lewat
+    `COLUMN_DEFAULTS` karena penulisan generik memakai INSERT mentah.
+    """
+
+    __tablename__ = "leadership_members"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    board: Mapped[str] = mapped_column(String(50), nullable=False)
+    order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    content: Mapped[dict | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+
 class Achievement(Base):
     __tablename__ = "achievements"
 

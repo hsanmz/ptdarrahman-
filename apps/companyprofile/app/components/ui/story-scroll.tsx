@@ -30,15 +30,12 @@ export const FlowSection: React.FC<FlowSectionProps> = ({
     id={id}
     data-flow-section
     aria-label={ariaLabel}
-    className={cx('sticky top-0 h-screen w-full overflow-hidden', className)}
+    className={cx('relative w-full overflow-hidden', className)}
+    style={style}
   >
     <div
       data-flow-inner
-      className={cx(
-        'flow-art-container relative flex h-screen w-full flex-col justify-between gap-6 px-[4vw] pt-[clamp(2rem,8vw,4vw)] pb-[4vw]',
-        'will-change-transform',
-      )}
-      style={{ transformOrigin: 'bottom left', ...style }}
+      className="flow-art-container mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 sm:px-6 py-[clamp(3.5rem,9vw,6.5rem)]"
     >
       {children}
     </div>
@@ -80,47 +77,26 @@ const FlowArt: React.FC<FlowArtProps> = ({
 
       const triggers: ScrollTrigger[] = [];
 
-      // Assign z-index so cards visually stack (later = higher)
-      sections.forEach((section, i) => {
-        gsap.set(section, { zIndex: i + 1 });
-      });
-
-      sections.forEach((section, i) => {
-        const inner = section.querySelector<HTMLElement>('.flow-art-container');
-        if (!inner) return;
-
-        // Cards 2, 3, 4 … start tilted and rotate flush as they enter
-        if (i > 0) {
-          gsap.set(inner, { rotation: 25, transformOrigin: 'bottom left' });
-          const tween = gsap.to(inner, {
-            rotation: 0,
-            ease: 'power2.out',
+      // Seluruh band (background + isi) naik & fade sebagai satu unit,
+      // digerakkan langsung oleh posisi scroll (scrub) — effect selalu
+      // terlihat dan teks tidak pernah tertinggal dari background-nya.
+      sections.forEach((section) => {
+        const tween = gsap.fromTo(
+          section,
+          { autoAlpha: 0, y: 96 },
+          {
+            autoAlpha: 1,
+            y: 0,
+            ease: 'none',
             scrollTrigger: {
               trigger: section,
-              start: 'top bottom',  // animation starts when card enters viewport from bottom
-              end: 'top top',       // finishes when card is fully covering the screen
-              scrub: 1.2,           // slight lag makes it feel physical/natural
+              start: 'top 96%',
+              end: 'top 55%',
+              scrub: 0.4,
             },
-          });
-          if (tween.scrollTrigger) triggers.push(tween.scrollTrigger);
-        }
-
-        // Each card (except the last) is pinned in place until the container's
-        // bottom hits the bottom of the viewport. This keeps them stacked in
-        // the background so they reveal correctly when scrolling back up.
-        if (i < sections.length - 1) {
-          triggers.push(
-            ScrollTrigger.create({
-              trigger: section,
-              start: 'top top',         // pin when this card hits the top
-              endTrigger: containerRef.current,
-              end: 'bottom bottom',     // unpin only when the entire container finishes
-              pin: true,
-              pinSpacing: false,
-              anticipatePin: 1,         // prevents scroll jump / jank on fast scroll
-            }),
-          );
-        }
+          },
+        );
+        if (tween.scrollTrigger) triggers.push(tween.scrollTrigger);
       });
 
       ScrollTrigger.refresh();

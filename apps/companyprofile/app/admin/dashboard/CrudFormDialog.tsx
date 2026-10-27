@@ -23,7 +23,7 @@ import {
   Dialog, DialogContent, DialogTitle,
 } from '@/app/components/ui/Dialog'
 import {
-  TABS, FORM_FIELDS, CONTENT_FIELDS, HAS_CONTENT, maxLengthFor,
+  TABS, FORM_FIELDS, CONTENT_FIELDS, HAS_CONTENT, HAS_IMAGE_COLUMN, maxLengthFor,
 } from './_constants'
 import type { RowRecord, FormState } from './_types'
 import { errorMessage } from './_types'
@@ -166,7 +166,11 @@ export function CrudFormDialog({
         return
       }
       setFieldErrors({})
-      payload.image = formData.image || ''
+      // `image` hanya ada pada tab yang tabelnya punya kolom gambar
+      // (HAS_IMAGE_COLUMN). Tab seperti `leadership` tidak punya kolom itu,
+      // jadi key boleh tidak dikirim — whitelist backend menolak unknown
+      // field dengan 422.
+      if (HAS_IMAGE_COLUMN.includes(activeTab)) payload.image = formData.image || ''
       if (activeTab === 'news') payload.gallery = JSON.stringify(formData.gallery ?? [])
       if (HAS_CONTENT.includes(activeTab)) {
         payload.content = JSON.stringify(buildContent())
@@ -473,10 +477,12 @@ export function CrudFormDialog({
           )}
 
           {/* ── Gambar ── */}
-          <ImageSection
-            value={formData.image ?? ''}
-            onChange={(url) => setFormData({ ...formData, image: url })}
-          />
+          {HAS_IMAGE_COLUMN.includes(activeTab) && (
+            <ImageSection
+              value={formData.image ?? ''}
+              onChange={(url) => setFormData({ ...formData, image: url })}
+            />
+          )}
 
           {/* ── Galeri ── */}
           {activeTab === 'news' && (

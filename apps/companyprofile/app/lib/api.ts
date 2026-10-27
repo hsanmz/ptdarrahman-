@@ -6,6 +6,8 @@ import type {
   Facility,
   GalleryItem,
   HeroSlide,
+  LeadershipBoard,
+  LeadershipMember,
   NewsArticle,
   Program,
   SettingsItem,
@@ -13,6 +15,7 @@ import type {
   Staff,
   Testimonial,
 } from './types'
+import { groupLeadership } from '../data/leadership'
 
 export const PRIMARY_API = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000').replace(/\/+$/, '')
 // Fallback API opsional (mis. darurat ke server kedua). Kosongkan untuk
@@ -214,6 +217,17 @@ export async function getFacilities(): Promise<Facility[]> {
 export async function getStaff(): Promise<Staff[]> {
   const items = await fetchApi<JsonValue[]>('/staff')
   return items.map((item) => mapContent(item) as unknown as Staff)
+}
+
+export async function getLeadershipRows(): Promise<LeadershipMember[]> {
+  const items = await fetchApi<JsonValue[]>('/leadership')
+  return items.map((item) => mapContent(item) as unknown as LeadershipMember)
+}
+
+// Baris CMS dikelompokkan per lembaga (Yayasan dulu, lalu Islamic Center)
+// sebelum dipakai halaman About; tanpa grouping halaman harus sort sendiri.
+export async function getLeadership(): Promise<LeadershipBoard[]> {
+  return groupLeadership(await getLeadershipRows())
 }
 
 // ── Auth ────────────────────────────────────────────────────

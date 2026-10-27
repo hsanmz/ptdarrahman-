@@ -53,6 +53,7 @@ TABLES = {
     "social-links": "social_links",
     "testimonials": "testimonials",
     "hero-slides": "hero_slides",
+    "leadership": "leadership_members",
 }
 
 PUBLIC_SETTINGS_KEYS = {
@@ -739,17 +740,17 @@ def cp_entity_list(entity: str, skip: int = 0, limit: int = 100):
     reject_reserved(entity)
     table = get_table(entity)
     # Urutan default tiap entitas. Hanya entitas yang PUNYA kolom `order`
-    # (`hero_slides`, `programs`, `testimonials`) bisa diurutkan di SQL.
-    # Entitas PPDB dan `staff` menyimpan urutan di dalam JSON `content`
-    # (`content.order`) karena tabelnya tidak punya kolom tersebut — urutan
-    # entitas itu diurus di sisi klien, bukan di sini.
+    # (`hero_slides`, `programs`, `testimonials`, `leadership_members`) bisa
+    # diurutkan di SQL. Entitas PPDB dan `staff` menyimpan urutan di dalam
+    # JSON `content` (`content.order`) karena tabelnya tidak punya kolom
+    # tersebut — urutan entitas itu diurus di sisi klien, bukan di sini.
     order = (
         "date.desc"
         if entity == "news"
         else "year.desc"
         if entity == "achievements"
         else "order.asc"
-        if entity in ("hero-slides", "programs", "testimonials")
+        if entity in ("hero-slides", "programs", "testimonials", "leadership")
         else None
     )
     items = list_all(table, order=order, skip=skip, limit=limit)
