@@ -518,7 +518,7 @@ class SelectionStageService:
         h1h_end = now + timedelta(minutes=65)
 
         # Ambil gelombang aktif
-        waves = self.db.query(PPDBWave).filter(PPDBWave.is_active.is_(True)).all()
+        waves = self.db.query(PPDBWave).filter(PPDBWave.status == "active").all()
         for wave in waves:
             schedules = self.get_all_schedules_for_wave(wave.id)
             if not schedules:
