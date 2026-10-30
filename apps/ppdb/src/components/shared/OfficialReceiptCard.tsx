@@ -11,7 +11,6 @@ export interface ReceiptData {
   txn_id?: string
   payment_type?: string
   payment_type_label?: string
-  installment_number?: number | null
   applicant_name: string
   registration_number?: string
   wave_name?: string
@@ -50,13 +49,7 @@ export default function OfficialReceiptCard({ receipt, showWatermark = true }: O
       }) + ' WIB'
     : '-'
 
-  const docTitle = receipt.payment_type_label || (
-    receipt.payment_type === 'dp'
-      ? 'Kuitansi Pembayaran Formulir'
-      : receipt.payment_type === 'installment'
-      ? 'Kuitansi Pembayaran Formulir'
-      : 'Kuitansi Pembayaran Formulir'
-  )
+  const docTitle = receipt.payment_type_label || 'Kuitansi Pembayaran Formulir'
 
   const isLunas = receipt.financial_snapshot?.is_lunas ?? (receipt.financial_snapshot?.remaining_after === 0)
 
@@ -132,7 +125,7 @@ export default function OfficialReceiptCard({ receipt, showWatermark = true }: O
           </div>
         </div>
 
-        {/* Snapshot Finansial Resmi (jika ada snapshot DP/Tahap 2) */}
+        {/* Snapshot Finansial Resmi */}
         {receipt.financial_snapshot && (
           <div className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5 space-y-3 shadow-2xs">
             <div className="flex items-center justify-between border-b pb-2.5">

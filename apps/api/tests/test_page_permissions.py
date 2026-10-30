@@ -21,7 +21,6 @@ PPDB_KEYS = {
     "data-pendaftar",
     "verifikasi-dokumen",
     "pembayaran-formulir",
-    "pembayaran-tahap2",
     "sessions",
     "penilaian",
     "review-loa",

@@ -8,11 +8,9 @@ from src.models.auth import User
 from src.models.ppdb import (
     FileUpload,
     PPDBApplicant,
-    PPDBApplicantDiscount,
     PPDBPaymentTransaction,
     PPDBPeriod,
     PPDBPeriodFeeItem,
-    PPDBStage2Bill,
     PPDBWave,
     PPDBWaveFeeDiscount,
     PPDBWaveFeeItem,
@@ -299,26 +297,6 @@ class PPDBRepository:
             .first(),
         )
 
-    def count_discounts_for_fee_item(self, fee_item_id: str) -> int:
-        return cast(
-            int,
-            (
-                self.db.query(PPDBApplicantDiscount)
-                .filter(PPDBApplicantDiscount.fee_item_id == fee_item_id)
-                .count()
-            ),
-        )
-
-    def count_bills_for_fee_item(self, fee_item_id: str) -> int:
-        return cast(
-            int,
-            (
-                self.db.query(PPDBStage2Bill)
-                .filter(PPDBStage2Bill.fee_item_id == fee_item_id)
-                .count()
-            ),
-        )
-
     # -------------------------------------------------------------------------
     # Registration & Applicants
     # -------------------------------------------------------------------------
@@ -524,12 +502,6 @@ class PPDBRepository:
 
         self.db.query(PPDBPaymentTransaction).filter(
             PPDBPaymentTransaction.applicant_id == applicant.id
-        ).delete(synchronize_session=False)
-        self.db.query(PPDBApplicantDiscount).filter(
-            PPDBApplicantDiscount.applicant_id == applicant.id
-        ).delete(synchronize_session=False)
-        self.db.query(PPDBStage2Bill).filter(
-            PPDBStage2Bill.applicant_id == applicant.id
         ).delete(synchronize_session=False)
 
         self.db.execute(

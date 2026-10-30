@@ -12,7 +12,7 @@ import {
 } from '@/components/ui'
 import {
   Plus, Edit, Trash2, CheckCircle, XCircle, Waves, Receipt, Check, Users, Banknote,
-  Percent, Tag, Calculator, Sparkles, Info
+  Percent, Tag, Calculator, Sparkles, Info, Calendar
 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm, useWatch } from 'react-hook-form'
@@ -549,27 +549,29 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
 
       {/* Modal Form Tambah / Edit Gelombang */}
       <Dialog open={showForm} onOpenChange={(v: boolean) => { setShowForm(v); if (!v) setFormError(null) }}>
-        <DialogContent className="w-[95vw] sm:max-w-xl max-h-[90vh] flex flex-col p-4 sm:p-6">
+        <DialogContent className="w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
           <DialogHeader>
             <DialogTitle>{editingWave ? 'Edit Gelombang' : 'Tambah Gelombang'}</DialogTitle>
             <DialogDescription>
               {editingWave
                 ? `Ubah konfigurasi ${editingWave.name} pada periode ${period?.name}.`
-                : `Konfigurasi gelombang baru untuk periode ${period?.name}. Rincian biaya diatur di panel Rincian Biaya.`}
+                : `Konfigurasi gelombang baru untuk periode ${period?.name}.`}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit(handleSave)} className="space-y-5 pt-2 max-h-[65vh] overflow-y-auto flex-1 pr-1">
+          <form onSubmit={handleSubmit(handleSave)} className="space-y-4 pt-4">
             <div className="space-y-2">
-              <Label htmlFor="wave-name">Nama Gelombang *</Label>
+              <Label htmlFor="wave-name">Nama Gelombang</Label>
               <Input id="wave-name" {...register('name')} placeholder="Contoh: Gelombang 1" disabled={!canCrud} />
               {errors.name && <p className="text-xs text-red-500">{errors.name.message}</p>}
             </div>
 
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Jadwal Pendaftaran</p>
+            <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                <Calendar className="h-3.5 w-3.5" /> Jadwal Pendaftaran
+              </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="wave-start">Tanggal Mulai *</Label>
+                  <Label htmlFor="wave-start">Tanggal Mulai</Label>
                   <Input
                     id="wave-start"
                     type="date"
@@ -580,7 +582,7 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                   {errors.registration_start_date && <p className="text-xs text-red-500">{errors.registration_start_date.message}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="wave-end">Tanggal Akhir *</Label>
+                  <Label htmlFor="wave-end">Tanggal Akhir</Label>
                   <Input
                     id="wave-end"
                     type="date"
@@ -593,11 +595,13 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
               </div>
             </div>
 
-            <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kuota Pendaftar</p>
+            <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                <Users className="h-3.5 w-3.5" /> Kuota Pendaftar &amp; Diskon Awal
+              </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="wave-quota">Kuota Pendaftar *</Label>
+                  <Label htmlFor="wave-quota">Kuota Pendaftar</Label>
                   <Input
                     id="wave-quota"
                     type="number"
@@ -609,7 +613,7 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                   {errors.quota && <p className="text-xs text-red-500">{errors.quota.message}</p>}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="wave-early-discount-quota">Kuota Pendaftar Awal</Label>
+                  <Label htmlFor="wave-early-discount-quota">Kuota Diskon Pendaftar Awal</Label>
                   <Input
                     id="wave-early-discount-quota"
                     type="number"
@@ -631,7 +635,7 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
             )}
 
             <p className="text-[11px] text-muted-foreground leading-snug pt-2 border-t border-dashed">
-              * Dihitung dari {'{x}'} pembayaran formulir pertama yang berhasil.
+              Catatan: Kuota diskon pendaftar awal dihitung dari pembayaran formulir pertama yang berhasil diverifikasi.
             </p>
 
             {canCrud && (
@@ -668,7 +672,7 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
       {/* DIALOG RINCIAN BIAYA & DISKON (3 TAB) */}
       {/* ===================================================================== */}
       <Dialog open={!!feeDialogWave} onOpenChange={(v: boolean) => !v && setFeeDialogWave(null)}>
-        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[95vw] sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-2">
               <Receipt className="h-5 w-5 text-emerald-600" />
@@ -808,7 +812,7 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                 )}
 
                 {/* Tabel Diskon Reguler */}
-                <div className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-xs">
+                <div className="rounded-xl border border-slate-200 overflow-x-auto bg-white shadow-xs">
                   <Table className="min-w-[550px]">
                     <TableHeader className="bg-slate-50">
                       <TableRow>
@@ -979,7 +983,7 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                 )}
 
                 {/* Tabel Diskon Pendaftar Awal */}
-                <div className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-xs">
+                <div className="rounded-xl border border-slate-200 overflow-x-auto bg-white shadow-xs">
                   <Table className="min-w-[550px]">
                     <TableHeader className="bg-slate-50">
                       <TableRow>
@@ -1073,7 +1077,7 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                 </div>
 
                 {/* Tabel Simpel 5 Kolom: No, Komponen, Biaya Normal, Diskon Reguler, Pendaftar Awal */}
-                <div className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-xs">
+                <div className="rounded-xl border border-slate-200 overflow-x-auto bg-white shadow-xs">
                   <Table className="min-w-[550px]">
                     <TableHeader className="bg-slate-50">
                       <TableRow>

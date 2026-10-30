@@ -17,14 +17,13 @@ import {
 const DEFAULT_POLL_MS = 7000
 
 const DEFAULT_FINANCIALS = {
-  total_obligation: 15000000,
-  minimum_dp: 5000000,
+  total_obligation: 0,
+  minimum_dp: 0,
   dp_paid: false,
   dp_amount_paid: 0,
   total_paid: 0,
-  remaining_balance: 15000000,
-  is_lunas: false,
-  successful_installments_count: 0,
+  remaining_balance: 0,
+  is_lunas: true,
 }
 
 export interface UseQrisPaymentOptions {

@@ -20,7 +20,6 @@ from src.models.ppdb import (
     PPDBPaymentTransaction,
     PPDBPeriod,
     PPDBPeriodFeeItem,
-    PPDBStage2Bill,
     PPDBWave,
     PPDBWaveFeeDiscount,
 )
@@ -530,9 +529,7 @@ class PPDBService:
         item_data = []
         for item in items:
             serialized = {c.name: getattr(item, c.name) for c in item.__table__.columns}
-            serialized["has_bills"] = (
-                self.repository.count_bills_for_fee_item(item.id) > 0
-            )
+            serialized["has_bills"] = False
             item_data.append(serialized)
         return {
             "items": item_data,
@@ -2217,14 +2214,6 @@ class PPDBService:
             .order_by(PPDBPaymentTransaction.created_at.desc())
             .all()
         )
-        stage2_bills: list[PPDBStage2Bill] = []  #
-        _dummy = (
-            type("X", (), {"all": staticmethod(list)})()
-            #
-            #
-            #
-            .all()
-        )
 
         from src.models.auth import AuditLog
 
@@ -2268,19 +2257,6 @@ class PPDBService:
                         "payment_method": p.payment_method,
                     }
                     for p in form_payments
-                ],
-                "stage2_bills": [
-                    {
-                        "id": b.id,
-                        "installment_number": b.installment_number,
-                        "amount": b.amount,
-                        "status": b.status,
-                        "due_date": b.due_date.isoformat() if b.due_date else None,
-                        "confirmed_at": b.confirmed_at.isoformat()
-                        if b.confirmed_at
-                        else None,
-                    }
-                    for b in stage2_bills
                 ],
             },
             "accessed_at": datetime.now(WIB).isoformat(),

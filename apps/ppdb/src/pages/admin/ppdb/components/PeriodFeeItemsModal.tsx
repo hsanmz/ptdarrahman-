@@ -180,21 +180,21 @@ export default function PeriodFeeItemsModal({
   return (
     <>
       <Dialog open={open} onOpenChange={onClose}>
-        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-          <DialogHeader className="p-6 pb-4 pr-16 border-b">
-            <div className="flex items-center justify-between">
+        <DialogContent className="w-[95vw] sm:max-w-3xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="p-4 sm:p-6 pb-4 sm:pr-16 border-b">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="space-y-1">
-                <DialogTitle className="flex items-center gap-2 text-xl font-bold">
+                <DialogTitle className="flex items-center gap-2 text-lg sm:text-xl font-bold">
                   <Banknote className="h-5 w-5 text-primary" />
                   Master Komponen Biaya Pendidikan
                 </DialogTitle>
-                <DialogDescription className="text-sm">
+                <DialogDescription className="text-xs sm:text-sm">
                   Periode: <span className="font-semibold text-foreground">{period?.name}</span>{' '}
                   ({period?.academic_year || 'Tahun Ajaran'})
                 </DialogDescription>
               </div>
               {canManage && (
-                <Button onClick={openCreate} size="sm" className="gap-1.5 shrink-0">
+                <Button onClick={openCreate} size="sm" className="gap-1.5 shrink-0 self-start sm:self-auto">
                   <Plus className="h-4 w-4" />
                   Tambah Komponen
                 </Button>
@@ -258,8 +258,8 @@ export default function PeriodFeeItemsModal({
             </div>
 
             {/* Table */}
-            <div className="rounded-lg border overflow-hidden">
-              <Table>
+            <div className="rounded-lg border overflow-x-auto">
+              <Table className="min-w-[550px]">
                 <TableHeader className="bg-muted/50">
                   <TableRow>
                     <TableHead className="w-12 text-center">#</TableHead>
@@ -350,7 +350,7 @@ export default function PeriodFeeItemsModal({
 
       {/* Form Dialog for Create/Edit */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
               {editingItem ? 'Edit Komponen Biaya' : 'Tambah Komponen Biaya'}

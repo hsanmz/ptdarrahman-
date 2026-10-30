@@ -37,8 +37,6 @@ PPDB_PAGE_KEYS = {
     "applicants",
     "selection",
     "payments",
-    "diskonasi",
-    "stage2-pembayaran",
     "periods",
     "notifications",
 }
@@ -212,9 +210,7 @@ def reconcile_and_purge() -> None:
     purge("selection_categories")
     purge("selection_sessions")
 
-    # Tahap 2 / pembayaran
-    purge("ppdb_stage2_bills")
-    purge("ppdb_applicants_discounts")
+    # Pembayaran formulir
     purge("ppdb_payment_transactions")
     purge("ppdb_wave_fee_items")
 

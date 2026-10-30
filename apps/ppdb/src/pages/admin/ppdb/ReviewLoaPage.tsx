@@ -106,7 +106,7 @@ export default function ReviewLoaPage() {
       <Card className="border-slate-200/80 shadow-xs">
         <CardContent className="p-4 sm:p-6 space-y-4">
           {/* Search Bar */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="relative w-full sm:w-80">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <Input
@@ -122,7 +122,7 @@ export default function ReviewLoaPage() {
           </div>
 
           {/* Table */}
-          <div className="rounded-xl border border-slate-200 overflow-hidden bg-white">
+          <div className="rounded-xl border border-slate-200 overflow-x-auto bg-white">
             <Table className="w-full min-w-[680px] lg:min-w-0 lg:table-fixed">
               <colgroup>
                 <col className="lg:w-[16%]" />

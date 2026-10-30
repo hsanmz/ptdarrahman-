@@ -90,14 +90,6 @@ const AVAILABLE_VARS = [
   { key: '{jam_selesai}',           desc: 'Jam selesai ujian',                   group: 'Ujian' },
   { key: '{waktu}',                 desc: 'Waktu ujian (ringkas)',                group: 'Ujian' },
   { key: '{lokasi_atau_link}',      desc: 'Lokasi fisik atau link Zoom',         group: 'Ujian' },
-  // Kelulusan
-  { key: '{deadline_daftar_ulang}', desc: 'Deadline daftar ulang',               group: 'Kelulusan' },
-  // DP
-  { key: '{sisa_waktu}',            desc: 'Sisa waktu bayar DP',                 group: 'DP' },
-  { key: '{tanggal_jatuh_tempo}',   desc: 'Tanggal jatuh tempo pembayaran',      group: 'DP' },
-  // Cicilan
-
-
 ]
 
 const VAR_GROUPS = [...new Set(AVAILABLE_VARS.map(v => v.group))]
@@ -128,11 +120,6 @@ const PREVIEW_CONTEXT: Record<string, string> = {
   '{jam_selesai}': '10.00',
   '{waktu}': '08.00 WIB',
   '{lokasi_atau_link}': 'Gedung Aula Lt. 2',
-  '{deadline_daftar_ulang}': '20 Oktober 2026 23:59',
-  '{sisa_waktu}': '2 pekan lagi',
-  '{tanggal_jatuh_tempo}': '10 Januari 2027',
-
-
 }
 
 // Event key kanonikal berdasarkan spec notifikasi (urutan per fase)
@@ -628,7 +615,8 @@ function TemplateTab({ templates, loading, onRefresh, canCrud = true }: Template
             </div>
           </div>
 
-          <Table className="min-w-[650px]">
+          <div className="overflow-x-auto">
+            <Table className="min-w-[650px]">
             <TableHeader className="bg-primary/5">
               <TableRow>
                 <TableHead className="whitespace-nowrap">Event Key</TableHead>
@@ -753,6 +741,7 @@ function TemplateTab({ templates, loading, onRefresh, canCrud = true }: Template
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -1064,7 +1053,8 @@ function LogTab() {
           </div>
         </div>
 
-        <Table className="min-w-[750px]">
+        <div className="overflow-x-auto">
+          <Table className="min-w-[750px]">
           <TableHeader className="bg-muted/40">
             <TableRow>
               <TableHead className="whitespace-nowrap">Penerima</TableHead>
@@ -1155,6 +1145,7 @@ function LogTab() {
             )}
           </TableBody>
         </Table>
+        </div>
 
         {totalPages > 1 && (
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-t border-border px-3.5 sm:px-5 py-3 text-xs sm:text-sm text-muted-foreground">

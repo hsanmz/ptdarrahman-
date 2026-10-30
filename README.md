@@ -388,7 +388,7 @@ Struktur data relasional dikelompokkan secara terpisah berdasarkan domain bisnis
 ```
 apps/api/src/models/
 ├── auth.py          # User, Role, Module, Page, UserPagePermission, RefreshToken, AuditLog
-├── ppdb.py          # PPDBPeriod, PPDBWave, PPDBApplicant, FileUpload, PPDBPaymentTransaction, NotificationTemplate, NotificationLog, PPDBPeriodFeeItem, PPDBWaveFeeDiscount, PPDBWaveFeeItem, PPDBApplicantDiscount, PPDBStage2Bill
+├── ppdb.py          # PPDBPeriod, PPDBWave, PPDBApplicant, FileUpload, PPDBPaymentTransaction, NotificationTemplate, NotificationLog, PPDBPeriodFeeItem, PPDBWaveFeeDiscount, PPDBWaveFeeItem
 ├── selection.py     # SelectionSession, SelectionResult, SelectionCategory, SelectionCriteria, SelectionScore
 ├── cbt.py           # ExamBank, ExamQuestion, ExamOption, ExamSchedule, ExamAttempt, ExamAnswer
 └── content.py       # NewsArticle, Program, Facility, Staff, GalleryItem, Testimonial, Achievement, SiteSetting, SocialLink, ContactInfo
@@ -397,8 +397,8 @@ apps/api/src/models/
 #### Entitas & Relasi Inti:
 1. **`PPDBPeriod` (1) ───< (N) `PPDBWave`:** Periode menaungi gelombang. Hanya 1 periode dan 1 gelombang yang boleh berstatus aktif dalam satu waktu secara global.
 2. **`PPDBWave` (1) ───< (N) `PPDBApplicant`:** Pendaftar otomatis terikat pada satu-satunya gelombang yang aktif saat registrasi.
-3. **`PPDBApplicant` (1) ───< (N) `PPDBPaymentTransaction`:** Transaksi pembayaran formulir pendaftar.
-4. **`PPDBPeriodFeeItem` / `PPDBWaveFeeDiscount`:** Master komponen biaya didefinisikan di level periode, diskon diatur per gelombang. Terdapat juga model legacy `PPDBWaveFeeItem` dan `PPDBApplicantDiscount`/`PPDBStage2Bill` untuk kompatibilitas skema lama.
+3. **`PPDBApplicant` (1) ───< (N) `PPDBPaymentTransaction`:** Transaksi pembayaran formulir pendaftar (satu-satunya transaksi pembayaran online di portal PPDB).
+4. **`PPDBPeriodFeeItem` / `PPDBWaveFeeDiscount`:** Master komponen biaya didefinisikan di level periode, diskon diatur per gelombang. Hasil kalkulasi biaya disajikan transparan pada LoA santri lulus (pembayaran biaya pendidikan dilakukan di luar aplikasi). Sistem tagihan cicilan / tahap 2 lama telah di-decommission secara permanen.
 
 #### Konvensi Migrasi Skema:
 Semua perubahan skema database wajib melalui berkas migrasi Alembic (`apps/api/alembic/versions/`). **Dilarang keras mengeksekusi perintah DDL (`ALTER TABLE`) langsung di database produksi.**

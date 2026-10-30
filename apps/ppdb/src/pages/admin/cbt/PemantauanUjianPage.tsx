@@ -347,7 +347,7 @@ export default function PemantauanUjianPage() {
           </div>
 
           <div className="rounded-md border overflow-x-auto">
-            <Table>
+            <Table className="min-w-[680px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="text-xs">No. Regis</TableHead>

@@ -1400,7 +1400,7 @@ export default function VerifikasiDokumenDetailPage() {
           ══════════════════════════════════════════════════════════════════ */}
       {imagePreviewUrl && (
         <Dialog open={!!imagePreviewUrl} onOpenChange={() => setImagePreviewUrl(null)}>
-          <DialogContent className="max-w-4xl p-2 bg-black/90 border-0">
+          <DialogContent className="w-[95vw] sm:max-w-4xl p-2 bg-black/90 border-0">
             <div className="relative flex items-center justify-center min-h-[400px] max-h-[85vh]">
               <img
                 src={imagePreviewUrl}
@@ -1438,7 +1438,7 @@ export default function VerifikasiDokumenDetailPage() {
         open={confirmModalType === 'reject'}
         onOpenChange={(open) => !open && setConfirmModalType(null)}
       >
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-rose-600">
               <AlertTriangle className="w-5 h-5" /> Kirim Permintaan Revisi Dokumen
@@ -1506,7 +1506,7 @@ export default function VerifikasiDokumenDetailPage() {
         open={confirmModalType === 'approve'}
         onOpenChange={(open) => !open && setConfirmModalType(null)}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-emerald-700">
               <CheckCircle className="w-5 h-5 text-emerald-600" /> Verifikasi Dokumen Calon Santri

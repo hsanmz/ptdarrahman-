@@ -16,6 +16,10 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
 } from '@/components/ui'
 import {
   Lock,
@@ -27,6 +31,7 @@ import {
   Send,
   AlertTriangle,
   HelpCircle,
+  LayoutGrid,
 } from 'lucide-react'
 
 type ExamStage = 'GATE' | 'EXAM' | 'LOCKED' | 'COMPLETED'
@@ -51,6 +56,7 @@ export default function CbtExamPage() {
   const [remainingSeconds, setRemainingSeconds] = useState<number>(3600)
   const [isSavingAnswer, setIsSavingAnswer] = useState(false)
   const [showFinishConfirm, setShowFinishConfirm] = useState(false)
+  const [mobilePaletteOpen, setMobilePaletteOpen] = useState(false)
   const [finalScore, setFinalScore] = useState<number | null>(null)
 
   // Anti-Cheat State
@@ -319,24 +325,24 @@ export default function CbtExamPage() {
   // ═════════════════════════════════════════════════════════════════════════
   if (stage === 'GATE') {
     return (
-      <div className="min-h-screen bg-muted/20 flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center space-y-2">
-            <h2 className="text-xl font-bold tracking-tight text-foreground">
+      <div className="min-h-screen bg-muted/20 flex flex-col items-center justify-center p-3 sm:p-4">
+        <div className="w-full max-w-md space-y-4 sm:space-y-6">
+          <div className="text-center space-y-1.5 sm:space-y-2 px-2">
+            <h2 className="text-base sm:text-xl font-bold tracking-tight text-foreground leading-snug">
               PESANTREN TAHFIDZ QUR'AN DAN DIGITAL AR-RAHMAN
             </h2>
-            <p className="text-xs text-muted-foreground uppercase tracking-widest font-semibold">
+            <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider sm:tracking-widest font-semibold">
               Sistem Resmi CBT Seleksi Santri Baru (PTDARRAHMAN)
             </p>
           </div>
 
           <Card className="border border-emerald-500/30 shadow-lg">
-            <CardContent className="p-6 space-y-5">
+            <CardContent className="p-4 sm:p-6 space-y-4 sm:space-y-5">
               <div className="text-center space-y-1">
-                <div className="w-12 h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-2">
-                  <ShieldAlert className="w-6 h-6" />
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-2">
+                  <ShieldAlert className="w-5 h-5 sm:w-6 sm:h-6" />
                 </div>
-                <h3 className="text-lg font-bold text-foreground">
+                <h3 className="text-base sm:text-lg font-bold text-foreground">
                   Konfirmasi Kehadiran Ujian
                 </h3>
                 <p className="text-xs text-muted-foreground">
@@ -412,18 +418,18 @@ export default function CbtExamPage() {
   // ═════════════════════════════════════════════════════════════════════════
   if (stage === 'LOCKED') {
     return (
-      <div className="min-h-screen bg-red-950/90 flex flex-col items-center justify-center p-4 select-none">
+      <div className="min-h-screen bg-red-950/90 flex flex-col items-center justify-center p-3 sm:p-4 select-none">
         <Card className="w-full max-w-lg border-2 border-red-500 shadow-2xl bg-background animate-shake">
-          <CardContent className="p-8 text-center space-y-5">
-            <div className="w-16 h-16 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto animate-pulse">
-              <Lock className="w-8 h-8" />
+          <CardContent className="p-5 sm:p-8 text-center space-y-4 sm:space-y-5">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto animate-pulse">
+              <Lock className="w-7 h-7 sm:w-8 sm:h-8" />
             </div>
 
             <div className="space-y-2">
               <Badge className="bg-red-600 text-white font-bold text-xs uppercase px-3 py-1">
                 Peringatan Sistem Anti-Curang
               </Badge>
-              <h2 className="text-2xl font-extrabold text-red-700">
+              <h2 className="text-xl sm:text-2xl font-extrabold text-red-700">
                 UJIAN ANDA TERKUNCI!
               </h2>
               <p className="text-xs text-muted-foreground leading-relaxed">
@@ -432,9 +438,9 @@ export default function CbtExamPage() {
               </p>
             </div>
 
-            <div className="p-4 bg-muted/40 border border-border rounded-lg text-xs space-y-2 text-left">
+            <div className="p-3.5 sm:p-4 bg-muted/40 border border-border rounded-lg text-xs space-y-2 text-left">
               <div className="font-semibold text-foreground flex items-center gap-1.5">
-                <HelpCircle className="w-4 h-4 text-emerald-600" />
+                <HelpCircle className="w-4 h-4 text-emerald-600 shrink-0" />
                 Cara Membuka Kunci:
               </div>
               <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
@@ -444,7 +450,7 @@ export default function CbtExamPage() {
               </ol>
             </div>
 
-            <div className="flex items-center justify-center gap-2 text-xs font-semibold text-emerald-700 pt-2">
+            <div className="flex items-center justify-center gap-2 text-xs font-semibold text-emerald-700 pt-1 sm:pt-2">
               <span className="flex h-2 w-2 relative">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
@@ -466,18 +472,18 @@ export default function CbtExamPage() {
   // ═════════════════════════════════════════════════════════════════════════
   if (stage === 'COMPLETED') {
     return (
-      <div className="min-h-screen bg-muted/20 flex flex-col items-center justify-center p-4">
+      <div className="min-h-screen bg-muted/20 flex flex-col items-center justify-center p-3 sm:p-4">
         <Card className="w-full max-w-md border border-emerald-500/40 shadow-xl text-center">
-          <CardContent className="p-8 space-y-5">
-            <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
-              <CheckCircle2 className="w-10 h-10" />
+          <CardContent className="p-5 sm:p-8 space-y-4 sm:space-y-5">
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto">
+              <CheckCircle2 className="w-9 h-9 sm:w-10 sm:h-10" />
             </div>
 
             <div className="space-y-1.5">
               <Badge className="bg-emerald-600 text-white text-xs font-semibold">
                 Alhamdulillah
               </Badge>
-              <h2 className="text-2xl font-bold text-foreground">
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground">
                 Ujian Berhasil Diselesaikan!
               </h2>
               <p className="text-xs text-muted-foreground leading-relaxed">
@@ -486,9 +492,9 @@ export default function CbtExamPage() {
             </div>
 
             {finalScore !== null && (
-              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg space-y-1">
+              <div className="p-3.5 sm:p-4 bg-emerald-50 border border-emerald-200 rounded-lg space-y-1">
                 <span className="text-xs text-emerald-800 font-medium">Skor / Nilai Anda:</span>
-                <div className="text-3xl font-extrabold text-emerald-700">{finalScore}</div>
+                <div className="text-2xl sm:text-3xl font-extrabold text-emerald-700">{finalScore}</div>
               </div>
             )}
 
@@ -516,20 +522,20 @@ export default function CbtExamPage() {
     <div className="min-h-screen bg-background flex flex-col select-none">
       {/* ⚠️ EMERGENCY WARNING MODAL WHEN BLUR / LEAVING TAB ⚠️ */}
       {blurWarningSeconds !== null && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-red-600 text-white p-8 rounded-2xl max-w-md w-full text-center space-y-4 shadow-2xl border-4 border-white animate-bounce">
-            <ShieldAlert className="w-16 h-16 mx-auto text-yellow-300" />
-            <h3 className="text-2xl font-black tracking-wide">
+        <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-3 sm:p-4 animate-fade-in">
+          <div className="bg-red-600 text-white p-5 sm:p-8 rounded-2xl max-w-md w-[92vw] sm:w-full text-center space-y-3 sm:space-y-4 shadow-2xl border-4 border-white animate-bounce">
+            <ShieldAlert className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-yellow-300" />
+            <h3 className="text-xl sm:text-2xl font-black tracking-wide">
               PERINGATAN DARURAT!
             </h3>
-            <p className="text-sm font-semibold leading-relaxed">
+            <p className="text-xs sm:text-sm font-semibold leading-relaxed">
               Anda terdeteksi meninggalkan layar ujian!
               Segera kembali ke layar ini sekarang juga!
             </p>
-            <div className="text-5xl font-black font-mono text-yellow-300">
+            <div className="text-4xl sm:text-5xl font-black font-mono text-yellow-300">
               {blurWarningSeconds}s
             </div>
-            <p className="text-xs text-red-100">
+            <p className="text-[11px] sm:text-xs text-red-100">
               Jika waktu habis, ujian Anda akan otomatis <strong>TERKUNCI</strong> dan Anda dikeluarkan dari sesi ujian!
             </p>
           </div>
@@ -537,93 +543,107 @@ export default function CbtExamPage() {
       )}
 
       {/* Top Header Bar */}
-      <header className="h-16 border-b border-border bg-card px-4 md:px-8 flex items-center justify-between sticky top-0 z-40 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-sm shadow-sm">
+      <header className="h-14 sm:h-16 border-b border-border bg-card px-3 sm:px-4 md:px-8 flex items-center justify-between sticky top-0 z-40 shadow-sm gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+          <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-emerald-600 text-white font-bold flex items-center justify-center text-xs sm:text-sm shadow-sm shrink-0">
             AR
           </div>
-          <div>
-            <h1 className="font-bold text-sm md:text-base text-foreground line-clamp-1">
+          <div className="min-w-0 flex-1">
+            <h1 className="font-bold text-xs sm:text-sm md:text-base text-foreground truncate" title={examSheet?.exam_title || 'Ujian Seleksi Calon Santri'}>
               {examSheet?.exam_title || 'Ujian Seleksi Calon Santri'}
             </h1>
-            <p className="text-[11px] text-muted-foreground uppercase tracking-wider font-medium">
-              Pesantren Tahfidz Qur'an dan Digital Ar-Rahman (PTDARRAHMAN)
+            <p className="text-[10px] sm:text-[11px] text-muted-foreground uppercase tracking-wider font-medium truncate hidden xs:block">
+              PTDARRAHMAN
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           {/* Autosave Indicator */}
-          <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground">
+          <div className="hidden lg:flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
             <span>{isSavingAnswer ? 'Menyimpan...' : 'Jawaban Autosaved'}</span>
           </div>
 
           {/* Countdown Timer */}
           <div
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border font-mono font-bold text-sm shadow-sm ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg border font-mono font-bold text-xs sm:text-sm shadow-sm ${
               remainingSeconds < 300
                 ? 'bg-red-50 text-red-700 border-red-300 animate-pulse'
                 : 'bg-emerald-50 text-emerald-800 border-emerald-300'
             }`}
           >
-            <Clock className="w-4 h-4" />
+            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
             <span>{formatTimer(remainingSeconds)}</span>
           </div>
+
+          {/* Mobile Question Palette Drawer Trigger */}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setMobilePaletteOpen(true)}
+            className="md:hidden text-xs h-8 sm:h-9 px-2 sm:px-2.5 gap-1 shrink-0 font-medium border-emerald-300 text-emerald-800 hover:bg-emerald-50"
+            title="Buka Daftar Soal"
+          >
+            <LayoutGrid className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+            <span className="font-mono text-[11px]">{answeredCount}/{totalCount}</span>
+          </Button>
 
           <Button
             size="sm"
             onClick={() => setShowFinishConfirm(true)}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 px-3.5 shadow-sm"
+            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-8 sm:h-9 px-2.5 sm:px-3.5 shadow-sm shrink-0"
           >
-            <Send className="w-3.5 h-3.5 mr-1.5" />
-            Selesai Ujian
+            <Send className="w-3.5 h-3.5 sm:mr-1.5 shrink-0" />
+            <span className="hidden sm:inline">Selesai Ujian</span>
+            <span className="sm:hidden">Selesai</span>
           </Button>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto p-4 md:p-6 gap-6">
+      <div className="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto p-3 sm:p-4 md:p-6 gap-4 sm:gap-6">
         {/* Left/Center: Question Sheet */}
-        <div className="flex-1 flex flex-col justify-between space-y-6">
+        <div className="flex-1 flex flex-col justify-between space-y-4 sm:space-y-6 min-w-0">
           {currentQ ? (
             <Card className="border border-border/80 shadow-sm flex-1 flex flex-col justify-between">
-              <CardContent className="p-6 md:p-8 space-y-6 flex-1">
-                <div className="flex items-center justify-between pb-4 border-b border-border/60">
-                  <div className="flex items-center gap-2">
-                    <span className="font-extrabold text-base md:text-lg text-emerald-700">
+              <CardContent className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6 flex-1">
+                <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-border/60 gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-extrabold text-sm sm:text-base md:text-lg text-emerald-700 whitespace-nowrap">
                       Soal No. {currentQ.question_number}
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
                       dari {totalCount} Soal
                     </span>
                   </div>
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-[11px] sm:text-xs shrink-0">
                     Bobot: {currentQ.points} Poin
                   </Badge>
                 </div>
 
                 {/* Question Text */}
-                <div className="text-base md:text-lg text-foreground font-medium leading-relaxed whitespace-pre-line py-2">
+                <div className="text-sm sm:text-base md:text-lg text-foreground font-medium leading-relaxed whitespace-pre-line py-1 sm:py-2 break-words">
                   {currentQ.question_text}
                 </div>
 
                 {/* Multiple Choice Options */}
-                <div className="space-y-3 pt-2">
+                <div className="space-y-2.5 sm:space-y-3 pt-1 sm:pt-2">
                   {currentQ.options.map((opt) => {
                     const isSelected = answers[currentQ.id] === opt.option_key
                     return (
                       <div
                         key={opt.id}
                         onClick={() => handleSelectOption(currentQ, opt.id, opt.option_key)}
-                        className={`group cursor-pointer p-3.5 md:p-4 rounded-xl border-2 transition-all flex items-center gap-3.5 ${
+                        className={`group cursor-pointer p-3 sm:p-3.5 md:p-4 rounded-xl border-2 transition-all flex items-start gap-3 sm:gap-3.5 ${
                           isSelected
                             ? 'border-emerald-600 bg-emerald-50/70 text-emerald-950 font-semibold shadow-sm'
                             : 'border-border hover:border-emerald-400/60 hover:bg-muted/30 text-foreground'
                         }`}
                       >
                         <div
-                          className={`w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 transition-colors ${
+                          className={`w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center font-bold text-xs shrink-0 mt-0.5 transition-colors ${
                             isSelected
                               ? 'bg-emerald-600 text-white'
                               : 'bg-muted text-muted-foreground group-hover:bg-emerald-100 group-hover:text-emerald-800'
@@ -631,7 +651,7 @@ export default function CbtExamPage() {
                         >
                           {opt.option_key}
                         </div>
-                        <span className="text-sm md:text-base leading-snug">{opt.option_text}</span>
+                        <span className="text-xs sm:text-sm md:text-base leading-snug break-words min-w-0 flex-1">{opt.option_text}</span>
                       </div>
                     )
                   })}
@@ -639,19 +659,19 @@ export default function CbtExamPage() {
               </CardContent>
 
               {/* Prev / Next Bottom Navigation */}
-              <div className="p-4 md:px-8 border-t border-border/60 flex items-center justify-between bg-muted/10 rounded-b-xl">
+              <div className="p-3 sm:p-4 md:px-8 border-t border-border/60 flex items-center justify-between bg-muted/10 rounded-b-xl gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentQuestionIndex((prev) => Math.max(0, prev - 1))}
                   disabled={currentQuestionIndex === 0}
-                  className="text-xs h-9 px-4"
+                  className="text-xs h-9 px-2.5 sm:px-4 shrink-0"
                 >
-                  <ChevronLeft className="w-4 h-4 mr-1" />
-                  Sebelumnya
+                  <ChevronLeft className="w-4 h-4 sm:mr-1 shrink-0" />
+                  <span className="hidden xs:inline">Sebelumnya</span>
                 </Button>
 
-                <span className="text-xs text-muted-foreground font-mono">
+                <span className="text-xs text-muted-foreground font-mono font-semibold shrink-0">
                   {currentQuestionIndex + 1} / {totalCount}
                 </span>
 
@@ -661,10 +681,10 @@ export default function CbtExamPage() {
                     setCurrentQuestionIndex((prev) => Math.min(totalCount - 1, prev + 1))
                   }
                   disabled={currentQuestionIndex === totalCount - 1}
-                  className="text-xs h-9 px-4 bg-emerald-600 hover:bg-emerald-700 text-white"
+                  className="text-xs h-9 px-2.5 sm:px-4 bg-emerald-600 hover:bg-emerald-700 text-white shrink-0"
                 >
-                  Selanjutnya
-                  <ChevronRight className="w-4 h-4 ml-1" />
+                  <span className="hidden xs:inline">Selanjutnya</span>
+                  <ChevronRight className="w-4 h-4 sm:ml-1 shrink-0" />
                 </Button>
               </div>
             </Card>
@@ -675,10 +695,10 @@ export default function CbtExamPage() {
           )}
         </div>
 
-        {/* Right Sidebar: Question Grid Navigator */}
+        {/* Right Sidebar: Question Grid Navigator (Desktop/Tablet) */}
         <div className="w-full md:w-80 space-y-4">
-          <Card className="border border-border/80 shadow-sm sticky top-24">
-            <CardContent className="p-5 space-y-4">
+          <Card className="border border-border/80 shadow-sm md:sticky md:top-24">
+            <CardContent className="p-4 sm:p-5 space-y-4">
               <div className="flex items-center justify-between border-b pb-3">
                 <h3 className="font-bold text-sm text-foreground">Daftar Soal</h3>
                 <span className="text-xs font-semibold text-emerald-700">
@@ -687,7 +707,7 @@ export default function CbtExamPage() {
               </div>
 
               {/* Grid 1..N */}
-              <div className="grid grid-cols-5 gap-2 max-h-[50vh] overflow-y-auto p-1">
+              <div className="grid grid-cols-6 xs:grid-cols-8 sm:grid-cols-10 md:grid-cols-5 gap-1.5 sm:gap-2 max-h-[50vh] overflow-y-auto p-1 touch-pan-y">
                 {questions.map((q, idx) => {
                   const isAnswered = !!answers[q.id]
                   const isCurrent = idx === currentQuestionIndex
@@ -695,7 +715,7 @@ export default function CbtExamPage() {
                     <button
                       key={q.id}
                       onClick={() => setCurrentQuestionIndex(idx)}
-                      className={`h-9 rounded-lg font-bold text-xs flex items-center justify-center transition-all ${
+                      className={`h-8 sm:h-9 rounded-lg font-bold text-xs flex items-center justify-center transition-all ${
                         isCurrent
                           ? 'ring-2 ring-emerald-600 ring-offset-2 scale-105 z-10'
                           : ''
@@ -736,9 +756,77 @@ export default function CbtExamPage() {
         </div>
       </div>
 
+      {/* Mobile Drawer Sheet for Question Navigation */}
+      <Sheet open={mobilePaletteOpen} onOpenChange={setMobilePaletteOpen}>
+        <SheetContent side="right" className="w-[85vw] max-w-sm p-4 sm:p-5 flex flex-col justify-between">
+          <SheetHeader className="pb-3 border-b border-border">
+            <SheetTitle className="flex items-center justify-between text-base">
+              <span>Daftar Soal Ujian</span>
+              <Badge variant="outline" className="text-emerald-700 font-mono text-xs">
+                {answeredCount} / {totalCount} Terjawab
+              </Badge>
+            </SheetTitle>
+          </SheetHeader>
+
+          <div className="flex-1 overflow-y-auto py-4">
+            <div className="grid grid-cols-5 gap-2 p-1">
+              {questions.map((q, idx) => {
+                const isAnswered = !!answers[q.id]
+                const isCurrent = idx === currentQuestionIndex
+                return (
+                  <button
+                    key={q.id}
+                    onClick={() => {
+                      setCurrentQuestionIndex(idx)
+                      setMobilePaletteOpen(false)
+                    }}
+                    className={`h-10 rounded-lg font-bold text-xs flex items-center justify-center transition-all ${
+                      isCurrent
+                        ? 'ring-2 ring-emerald-600 ring-offset-2 scale-105 z-10'
+                        : ''
+                    } ${
+                      isAnswered
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm'
+                        : 'bg-muted text-foreground hover:bg-muted/80 border border-border'
+                    }`}
+                  >
+                    {idx + 1}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Legend */}
+            <div className="pt-4 mt-4 border-t border-border/60 flex items-center justify-around text-xs text-muted-foreground">
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded bg-emerald-600"></div>
+                <span>Terjawab</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded bg-muted border border-border"></div>
+                <span>Belum</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-3 border-t border-border space-y-2">
+            <Button
+              onClick={() => {
+                setMobilePaletteOpen(false)
+                setShowFinishConfirm(true)
+              }}
+              className="w-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs h-9 font-semibold"
+            >
+              <Send className="w-3.5 h-3.5 mr-1.5" />
+              Selesai Ujian
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
+
       {/* Confirmation Modal: Selesai Ujian */}
       <Dialog open={showFinishConfirm} onOpenChange={setShowFinishConfirm}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base text-foreground">
               <CheckCircle2 className="w-5 h-5 text-emerald-600" />
@@ -763,7 +851,7 @@ export default function CbtExamPage() {
             </p>
           </div>
 
-          <DialogFooter className="pt-2">
+          <DialogFooter className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => setShowFinishConfirm(false)}>
               Lanjut Mengerjakan
             </Button>

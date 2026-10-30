@@ -370,7 +370,7 @@ export default function JadwalUjianPage({ category, title }: JadwalUjianPageProp
       ) : viewMode === 'list' ? (
         <Card className="border border-slate-200/90 shadow-sm rounded-2xl overflow-hidden bg-white">
           <div className="overflow-x-auto">
-            <Table>
+            <Table className="min-w-[700px]">
               <TableHeader>
                 <TableRow className="bg-slate-50/70">
                   <TableHead className="text-xs font-semibold">Jadwal Sesi</TableHead>
@@ -591,7 +591,7 @@ export default function JadwalUjianPage({ category, title }: JadwalUjianPageProp
           if (!open) setEditingId(null)
         }}
       >
-        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0 overflow-hidden rounded-2xl">
+        <DialogContent className="w-[95vw] sm:max-w-lg max-h-[85vh] flex flex-col p-0 overflow-hidden rounded-2xl">
           <DialogHeader className="p-5 pr-16 border-b bg-slate-50/60 shrink-0">
             <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
               <Plus className="w-5 h-5 text-emerald-600" />

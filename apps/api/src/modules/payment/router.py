@@ -14,7 +14,6 @@ from src.core.dependencies import (
     get_current_user,
     require_module_access,
 )
-from src.modules.payment.schemas import Stage2DiscountsPayload
 from src.repositories.payment_repository import PaymentRepository
 from src.services.payment_service import PaymentService
 
@@ -181,35 +180,3 @@ async def pakkasir_webhook(
     x_secret = request.headers.get("X-Secret")
     return service.process_pakkasir_webhook(payload, x_secret=x_secret)
 
-
-# ── Stage 2: diskonasi & tagihan biaya pendidikan (bayar di luar aplikasi) ────
-
-
-@router.get("/stage2/applicants")
-def get_stage2_applicants(
-    user: dict = Depends(require_payment_read),
-    service: PaymentService = Depends(get_payment_service),
-):
-    """Pendaftar lulus di gelombang aktif untuk pengaturan diskonasi tahap 2."""
-    return service.get_stage2_overview()
-
-
-@router.get("/stage2/{applicant_id}/discounts")
-def get_stage2_discounts(
-    applicant_id: str,
-    user: dict = Depends(require_payment_read),
-    service: PaymentService = Depends(get_payment_service),
-):
-    """Konfig diskon saat ini + status slot diskon pendaftar awal."""
-    return service.get_stage2_applicant_discounts(applicant_id)
-
-
-@router.post("/stage2/{applicant_id}/discounts")
-def save_stage2_discounts(
-    applicant_id: str,
-    payload: Stage2DiscountsPayload,
-    user: dict = Depends(require_payment_admin),
-    service: PaymentService = Depends(get_payment_service),
-):
-    """Simpan diskon & cicilan, lalu bangun ulang tagihan tahap 2."""
-    return service.save_stage2_discounts(applicant_id, payload)

@@ -12,7 +12,6 @@ import NotFoundPage from './pages/errors/NotFoundPage'
 import ForbiddenPage from './pages/errors/ForbiddenPage'
 import AdminDashboardPage from './pages/admin/AdminDashboardPage'
 import PeriodsPage from './pages/admin/ppdb/PeriodsPage'
-import DiskonasiPage from './pages/admin/ppdb/DiskonasiPage'
 import LandingPage from './pages/public/LandingPage'
 import GlobeDemoPage from './pages/public/GlobeDemoPage'
 import RegisterPage from './pages/public/RegisterPage'
@@ -94,9 +93,6 @@ export default function App() {
               <Route path="verifikasi-dokumen" element={<VerifikasiDokumenPage />} />
               <Route path="verifikasi-dokumen/:id" element={<VerifikasiDokumenDetailPage />} />
               <Route path="pembayaran-formulir" element={<PembayaranFormulirPage />} />
-              {/* Redirect URL lama pembayaran tahap 2 ke pembayaran formulir */}
-              <Route path="pembayaran-tahap2" element={<Navigate to="/admin/pembayaran-formulir" replace />} />
-              <Route path="pembayaran-tahap2/*" element={<Navigate to="/admin/pembayaran-formulir" replace />} />
               <Route path="kuitansi/:id" element={<AdminReceiptPage />} />
               <Route path="sessions" element={<Navigate to="/admin/jadwal-seleksi/tahfidz" replace />} />
               <Route path="sessions/tahfidz" element={<Navigate to="/admin/jadwal-seleksi/tahfidz" replace />} />
@@ -104,7 +100,6 @@ export default function App() {
               <Route path="sessions/:sessionType/evaluasi/:sessionId" element={<SessionEvaluationPage />} />
               <Route path="penilaian" element={<PenilaianPage />} />
               <Route path="review-loa" element={<ReviewLoaPage />} />
-              <Route path="diskonasi" element={<DiskonasiPage />} />
               <Route path="arsip" element={<ArsipPendaftarPage />} />
               <Route path="periods" element={<PeriodsPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
@@ -147,9 +142,6 @@ export default function App() {
               <Route path="seleksi-tahfidz" element={<Navigate to="/applicant/tes-seleksi" replace />} />
               <Route path="seleksi-wawancara" element={<Navigate to="/applicant/wawancara" replace />} />
               <Route path="pengumuman" element={<ResultStagePage />} />
-              {/* Redirect URL lama pembayaran tahap 2 & DP ke pengumuman */}
-              <Route path="bayar-dp" element={<Navigate to="/applicant/pengumuman" replace />} />
-              <Route path="pembayaran-tahap2" element={<Navigate to="/applicant/pengumuman" replace />} />
               <Route path="profile" element={<ApplicantProfilePage />} />
             </Route>
             <Route path="/applicant/kartu-ujian" element={<ProtectedRoute role="applicant" requirePaid={true}><ExamCardPage /></ProtectedRoute>} />

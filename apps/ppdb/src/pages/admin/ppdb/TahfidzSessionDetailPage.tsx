@@ -421,7 +421,7 @@ export default function TahfidzSessionDetailPage() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <Table>
+              <Table className="min-w-[600px]">
                 <TableHeader>
                   <TableRow className="bg-slate-50/70">
                     <TableHead className="text-xs font-semibold">Nama Santri</TableHead>

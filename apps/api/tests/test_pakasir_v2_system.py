@@ -257,11 +257,11 @@ def test_credentials_are_redacted_from_error_details():
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_financial_calculation_neutralizes_stage2_obligation():
-    """Biaya pendidikan kini dibayar di luar aplikasi.
+def test_financial_calculation_neutralizes_legacy_obligation():
+    """Biaya pendidikan dibayar di luar aplikasi (non-in-app).
 
-    Kalkulasi tagihan tahap 2 sengaja dinetralkan agar portal PPDB tidak
-    menagih pembayaran yang tidak lagi ditangani sistem.
+    Kalkulasi finansial mengembalikan status bersih bebas tagihan in-app
+    karena transaksi pendaftaran di dalam sistem hanya untuk biaya formulir.
     """
     mock_repo = MagicMock()
     app = PPDBApplicant(

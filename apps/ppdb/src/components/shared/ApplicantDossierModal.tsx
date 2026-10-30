@@ -207,7 +207,7 @@ export default function ApplicantDossierModal({
 
             {/* Quick Status Bar */}
             {applicant && (
-              <div className="mt-4 pt-4 border-t border-slate-200/60 grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+              <div className="mt-4 pt-4 border-t border-slate-200/60 grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
                 <div>
                   <span className="text-muted-foreground block">Nama Lengkap</span>
                   <span className="font-bold text-slate-800 text-sm">{applicant.full_name}</span>
@@ -438,67 +438,69 @@ export default function ApplicantDossierModal({
                         Belum ada dokumen yang diunggah oleh pendaftar.
                       </div>
                     ) : (
-                      <Table className="min-w-[650px]">
-                        <TableHeader>
-                          <TableRow className="bg-slate-50/50">
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Nama Dokumen</TableHead>
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Nama Berkas</TableHead>
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Ukuran</TableHead>
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Status</TableHead>
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Catatan / Verifikasi</TableHead>
-                            <TableHead className="text-xs font-semibold text-right whitespace-nowrap">Aksi</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {documents.map((doc: any) => (
-                            <TableRow key={doc.id}>
-                              <TableCell className="font-medium text-sm text-slate-800">
-                                {doc.doc_type}
-                              </TableCell>
-                              <TableCell className="text-xs text-slate-600 font-mono">
-                                {doc.original_name || '-'}
-                              </TableCell>
-                              <TableCell className="text-xs text-muted-foreground">
-                                {doc.file_size ? `${Math.round(doc.file_size / 1024)} KB` : '-'}
-                              </TableCell>
-                              <TableCell>
-                                <DocStatusBadge status={doc.status} />
-                              </TableCell>
-                              <TableCell className="text-xs text-slate-600">
-                                {doc.notes ? (
-                                  <span className="text-red-600 font-medium">{doc.notes}</span>
-                                ) : doc.verified_at ? (
-                                  <span className="text-muted-foreground">
-                                    Diverifikasi {formatDate(doc.verified_at)}
-                                  </span>
-                                ) : (
-                                  '-'
-                                )}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {doc.public_url ? (
-                                  <Button
-                                    asChild
-                                    variant="outline"
-                                    size="sm"
-                                    className="h-7 text-xs gap-1"
-                                  >
-                                    <a
-                                      href={doc.public_url}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                    >
-                                      Lihat <ExternalLink className="h-3 w-3" />
-                                    </a>
-                                  </Button>
-                                ) : (
-                                  <span className="text-xs text-slate-400">Tidak ada link</span>
-                                )}
-                              </TableCell>
+                      <div className="overflow-x-auto">
+                        <Table className="min-w-[650px]">
+                          <TableHeader>
+                            <TableRow className="bg-slate-50/50">
+                              <TableHead className="text-xs font-semibold whitespace-nowrap">Nama Dokumen</TableHead>
+                              <TableHead className="text-xs font-semibold whitespace-nowrap">Nama Berkas</TableHead>
+                              <TableHead className="text-xs font-semibold whitespace-nowrap">Ukuran</TableHead>
+                              <TableHead className="text-xs font-semibold whitespace-nowrap">Status</TableHead>
+                              <TableHead className="text-xs font-semibold whitespace-nowrap">Catatan / Verifikasi</TableHead>
+                              <TableHead className="text-xs font-semibold text-right whitespace-nowrap">Aksi</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {documents.map((doc: any) => (
+                              <TableRow key={doc.id}>
+                                <TableCell className="font-medium text-sm text-slate-800">
+                                  {doc.doc_type}
+                                </TableCell>
+                                <TableCell className="text-xs text-slate-600 font-mono">
+                                  {doc.original_name || '-'}
+                                </TableCell>
+                                <TableCell className="text-xs text-muted-foreground">
+                                  {doc.file_size ? `${Math.round(doc.file_size / 1024)} KB` : '-'}
+                                </TableCell>
+                                <TableCell>
+                                  <DocStatusBadge status={doc.status} />
+                                </TableCell>
+                                <TableCell className="text-xs text-slate-600">
+                                  {doc.notes ? (
+                                    <span className="text-red-600 font-medium">{doc.notes}</span>
+                                  ) : doc.verified_at ? (
+                                    <span className="text-muted-foreground">
+                                      Diverifikasi {formatDate(doc.verified_at)}
+                                    </span>
+                                  ) : (
+                                    '-'
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {doc.public_url ? (
+                                    <Button
+                                      asChild
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-7 text-xs gap-1"
+                                    >
+                                      <a
+                                        href={doc.public_url}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                      >
+                                        Lihat <ExternalLink className="h-3 w-3" />
+                                      </a>
+                                    </Button>
+                                  ) : (
+                                    <span className="text-xs text-slate-400">Tidak ada link</span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     )}
                   </div>
                 </TabsContent>
@@ -507,14 +509,14 @@ export default function ApplicantDossierModal({
                 <TabsContent value="seleksi" className="space-y-6">
                   {/* Rubric Breakdown */}
                   <div className="rounded-xl border border-slate-200 p-5 bg-white space-y-4">
-                    <div className="flex items-center justify-between border-b pb-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b pb-3">
                       <div className="flex items-center gap-2">
                         <Award className="h-4 w-4 text-emerald-600" />
                         <h3 className="font-semibold text-slate-800 text-sm">
                           Penilaian Seleksi Tahfidz &amp; Wawancara Terpadu
                         </h3>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Button
                           variant="outline"
                           size="sm"
@@ -572,36 +574,38 @@ export default function ApplicantDossierModal({
                     )}
 
                     {transcript?.evaluations?.length > 0 ? (
-                      <Table className="min-w-[650px]">
-                        <TableHeader>
-                          <TableRow className="bg-slate-50/50">
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Tipe Evaluasi</TableHead>
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Kriteria Penilaian</TableHead>
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Bobot</TableHead>
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Nilai</TableHead>
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Penguji / Catatan</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {transcript.evaluations.map((ev: any, idx: number) => (
-                            <TableRow key={idx}>
-                              <TableCell className="font-medium text-xs capitalize">
-                                {ev.type}
-                              </TableCell>
-                              <TableCell className="text-xs">{ev.criteria}</TableCell>
-                              <TableCell className="text-xs text-muted-foreground">
-                                {ev.weight}%
-                              </TableCell>
-                              <TableCell className="text-xs font-bold text-slate-800">
-                                {ev.score}
-                              </TableCell>
-                              <TableCell className="text-xs text-muted-foreground">
-                                {ev.evaluator_name || '-'} {ev.notes ? `(${ev.notes})` : ''}
-                              </TableCell>
+                      <div className="overflow-x-auto">
+                        <Table className="min-w-[650px]">
+                          <TableHeader>
+                            <TableRow className="bg-slate-50/50">
+                              <TableHead className="text-xs font-semibold whitespace-nowrap">Tipe Evaluasi</TableHead>
+                              <TableHead className="text-xs font-semibold whitespace-nowrap">Kriteria Penilaian</TableHead>
+                              <TableHead className="text-xs font-semibold whitespace-nowrap">Bobot</TableHead>
+                              <TableHead className="text-xs font-semibold whitespace-nowrap">Nilai</TableHead>
+                              <TableHead className="text-xs font-semibold whitespace-nowrap">Penguji / Catatan</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {transcript.evaluations.map((ev: any, idx: number) => (
+                              <TableRow key={idx}>
+                                <TableCell className="font-medium text-xs capitalize">
+                                  {ev.type}
+                                </TableCell>
+                                <TableCell className="text-xs">{ev.criteria}</TableCell>
+                                <TableCell className="text-xs text-muted-foreground">
+                                  {ev.weight}%
+                                </TableCell>
+                                <TableCell className="text-xs font-bold text-slate-800">
+                                  {ev.score}
+                                </TableCell>
+                                <TableCell className="text-xs text-muted-foreground">
+                                  {ev.evaluator_name || '-'} {ev.notes ? `(${ev.notes})` : ''}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     ) : (
                       <p className="text-xs text-muted-foreground py-4 text-center">
                         Belum ada data input rubrik penilaian tahfidz/wawancara.
@@ -636,52 +640,54 @@ export default function ApplicantDossierModal({
                     </div>
 
                     {payments?.form_payments?.length > 0 ? (
-                      <Table className="min-w-[650px]">
-                        <TableHeader>
-                          <TableRow className="bg-slate-50/50">
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Nomor Invoice</TableHead>
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Nominal</TableHead>
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Status</TableHead>
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Metode</TableHead>
-                            <TableHead className="text-xs font-semibold whitespace-nowrap">Waktu Pembayaran</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {payments.form_payments.map((p: any) => (
-                            <TableRow key={p.id}>
-                              <TableCell className="font-mono text-xs text-slate-800 font-semibold">
-                                {p.invoice_number || '-'}
-                              </TableCell>
-                              <TableCell className="text-xs font-semibold text-emerald-700">
-                                {formatRupiah(p.amount)}
-                              </TableCell>
-                              <TableCell>
-                                <Badge
-                                  variant={
-                                    p.status === 'paid' || p.status === 'success'
-                                      ? 'success'
-                                      : p.status === 'expired' || p.status === 'cancelled' || p.status === 'failed'
-                                      ? 'destructive'
-                                      : p.status === 'exception'
-                                      ? 'warning'
-                                      : 'outline'
-                                  }
-                                  className="text-[10px] uppercase font-bold"
-                                  title={p.notes || undefined}
-                                >
-                                  {p.status === 'exception' ? 'Pengecualian' : p.status}
-                                </Badge>
-                              </TableCell>
-                              <TableCell className="text-xs uppercase text-slate-600">
-                                {p.payment_method || 'PG Gateway'}
-                              </TableCell>
-                              <TableCell className="text-xs text-muted-foreground">
-                                {formatDate(p.paid_at)}
-                              </TableCell>
+                      <div className="overflow-x-auto">
+                        <Table className="min-w-[650px]">
+                          <TableHeader>
+                            <TableRow className="bg-slate-50/50">
+                              <TableHead className="text-xs font-semibold whitespace-nowrap">Nomor Invoice</TableHead>
+                              <TableHead className="text-xs font-semibold whitespace-nowrap">Nominal</TableHead>
+                              <TableHead className="text-xs font-semibold whitespace-nowrap">Status</TableHead>
+                              <TableHead className="text-xs font-semibold whitespace-nowrap">Metode</TableHead>
+                              <TableHead className="text-xs font-semibold whitespace-nowrap">Waktu Pembayaran</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {payments.form_payments.map((p: any) => (
+                              <TableRow key={p.id}>
+                                <TableCell className="font-mono text-xs text-slate-800 font-semibold">
+                                  {p.invoice_number || '-'}
+                                </TableCell>
+                                <TableCell className="text-xs font-semibold text-emerald-700">
+                                  {formatRupiah(p.amount)}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge
+                                    variant={
+                                      p.status === 'paid' || p.status === 'success'
+                                        ? 'success'
+                                        : p.status === 'expired' || p.status === 'cancelled' || p.status === 'failed'
+                                        ? 'destructive'
+                                        : p.status === 'exception'
+                                        ? 'warning'
+                                        : 'outline'
+                                    }
+                                    className="text-[10px] uppercase font-bold"
+                                    title={p.notes || undefined}
+                                  >
+                                    {p.status === 'exception' ? 'Pengecualian' : p.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-xs uppercase text-slate-600">
+                                  {p.payment_method || 'PG Gateway'}
+                                </TableCell>
+                                <TableCell className="text-xs text-muted-foreground">
+                                  {formatDate(p.paid_at)}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
                     ) : (
                       <p className="text-xs text-muted-foreground py-4 text-center">
                         Tidak ada riwayat transaksi pembayaran formulir.
@@ -693,7 +699,7 @@ export default function ApplicantDossierModal({
                 {/* TAB 5: SURAT LoA */}
                 <TabsContent value="loa" className="space-y-4">
                   <div className="rounded-xl border border-slate-200 p-5 bg-white space-y-4">
-                    <div className="flex items-center justify-between border-b pb-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b pb-3">
                       <div>
                         <h3 className="font-semibold text-slate-800 text-sm">
                           Surat Penerimaan Resmi (Letter of Acceptance)

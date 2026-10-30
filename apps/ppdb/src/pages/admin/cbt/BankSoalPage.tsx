@@ -385,7 +385,7 @@ export default function BankSoalPage({ category, title }: BankSoalPageProps) {
           setShowImportModal(open)
         }}
       >
-        <DialogContent className="max-w-lg">
+        <DialogContent className="w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-lg">
               <Upload className="w-5 h-5 text-emerald-600" />
@@ -539,7 +539,7 @@ export default function BankSoalPage({ category, title }: BankSoalPageProps) {
                 </div>
               )}
 
-              <div className="flex items-center justify-between p-2.5 bg-emerald-50/70 border border-emerald-200/60 rounded-md text-xs text-emerald-900">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 p-2.5 bg-emerald-50/70 border border-emerald-200/60 rounded-md text-xs text-emerald-900">
                 <span>Belum punya format file?</span>
                 <Button
                   type="button"

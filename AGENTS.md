@@ -139,7 +139,7 @@ Model SQLAlchemy dikelompokkan per domain di `apps/api/src/models/`:
 | File Model | Domain | Tabel Utama |
 |---|---|---|
 | `auth.py` | Autentikasi & Pengguna | `users`, `roles`, `modules`, `pages`, `user_page_permissions`, `audit_logs`, `refresh_tokens` |
-| `ppdb.py` | PPDB Inti | `ppdb_periods`, `ppdb_waves`, `ppdb_applicants`, `file_uploads`, `ppdb_payment_transactions`, `notification_templates`, `notification_logs`, `ppdb_period_fee_items`, `ppdb_wave_fee_discounts`, `ppdb_wave_fee_items` (legacy), `ppdb_applicant_discounts`, `ppdb_stage2_bills` |
+| `ppdb.py` | PPDB Inti | `ppdb_periods`, `ppdb_waves`, `ppdb_applicants`, `file_uploads`, `ppdb_payment_transactions`, `notification_templates`, `notification_logs`, `ppdb_period_fee_items`, `ppdb_wave_fee_discounts`, `ppdb_wave_fee_items` (legacy) |
 | `selection.py` | Seleksi & Wawancara | `selection_sessions` (dengan `batch_name`), `selection_results` (dengan `interview_parent_session_id`, `batch_name`, `current_stage`), `selection_categories`, `selection_criteria`, `selection_scores` |
 | `cbt.py` | Ujian CBT (Akademik & Psikologi) | `ppdb_exam_banks`, `ppdb_exam_questions`, `ppdb_exam_options`, `ppdb_exam_schedules` (dengan `batch_name`), `ppdb_exam_attempts`, `ppdb_exam_answers` |
 | `content.py` | CMS Company Profile | `news_articles`, `programs`, `facilities`, `staff`, `gallery_items`, `testimonials`, `achievements`, `site_settings`, `social_links`, `contact_info` |

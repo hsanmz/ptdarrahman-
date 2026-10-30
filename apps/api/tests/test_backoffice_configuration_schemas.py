@@ -30,7 +30,7 @@ def test_wave_early_discount_quota_must_fit_wave_quota():
 
 
 def test_wave_no_longer_holds_fee_components_or_dp():
-    """Biaya formulir, biaya tahap 2, dan minimal DP pindah ke level Periode."""
+    """Biaya formulir dan minimal DP diatur di master Periode; bukan di gelombang."""
     assert "registration_fee" not in WaveBase.model_fields
     assert "second_stage_fee" not in WaveBase.model_fields
     assert "minimum_dp" not in WaveBase.model_fields

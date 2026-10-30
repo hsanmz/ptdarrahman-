@@ -102,11 +102,7 @@ export default function QrisPaymentModal({
               {formatRp(activeTx?.amount || 0)}
             </div>
             <span className="text-[11px] text-emerald-600">
-              {activeTx?.payment_type === 'form'
-                ? 'Biaya Formulir Pendaftaran'
-                : activeTx?.payment_type === 'dp'
-                  ? 'Pembayaran Uang Muka (DP)'
-                  : 'Cicilan Biaya Pendidikan'}
+              Biaya Formulir Pendaftaran
             </span>
           </div>
 

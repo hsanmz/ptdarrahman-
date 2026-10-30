@@ -22,9 +22,6 @@ TEST FIXTURE — penting:
   ``get_paid_form_payment_rank``). Halaman "Pembayaran Formulir" juga tidak
   menampilkan tagihan untuk akun ini.
 
-  DP / Tahap 2 sengaja dibiarkan ``dp_status="pending"`` (belum bayar) supaya
-  alur daftar ulang setelah LoA tetap bisa diuji.
-
 Nomor registrasi + LoA dibuat otomatis oleh endpoint ``/ppdb/applicants/me/loa``
 saat dashboard dibuka. Akun ditautkan ke gelombang aktif bila ada, atau
 gelombang terbaru. Bila belum ada gelombang sama sekali, dibuat periode +
@@ -424,7 +421,6 @@ def main() -> None:
     print("  Login    : /auth/login")
     print(f"  Status   : payment_status=paid, status={TEST_STATUS}")
     print("  LoA      : tersedia, BELUM ditandatangani (is_loa_signed=False)")
-    print("  DP       : belum dibayar (dp_status=pending)")
     print("  Catatan  : tanpa transaksi 'success' -> tidak dihitung ke kuota/diskon.")
 
 

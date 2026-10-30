@@ -837,7 +837,7 @@ export default function BankSoalDetailPage() {
 
       {/* Modal Bagikan Akses Ujian */}
       <Dialog open={showShare} onOpenChange={setShowShare}>
-        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0 overflow-hidden rounded-2xl">
+        <DialogContent className="w-[95vw] sm:max-w-lg max-h-[85vh] flex flex-col p-0 overflow-hidden rounded-2xl">
           <DialogHeader className="p-5 pr-16 border-b bg-slate-50/60 shrink-0">
             <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
               <Share2 className="h-5 w-5 text-emerald-600" />

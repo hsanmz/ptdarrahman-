@@ -1,8 +1,8 @@
-"""Perilaku slot early bird, tagihan cicilan tahap 2, dan LoA diskonasi.
+"""Perilaku slot early bird pendaftar dan perhitungan diskonasi gelombang pada LoA.
 
 Semua kasus berjalan murni pada unit service dengan repository palsu,
-tanpa menyentuh database, supaya aturan slot "X pembayar formulir awal",
-angka LoA, dan pembagian cicilan bisa dites terisolasi.
+tanpa menyentuh database, supaya aturan slot "X pembayar formulir awal"
+dan angka diskon gelombang pada LoA bisa dites terisolasi.
 """
 
 from types import SimpleNamespace
@@ -159,25 +159,3 @@ class TestEarlyBirdSlot:
         assert svc._assign_early_bird_slot(applicant) is False
         assert applicant.early_discount_eligible is False
 
-
-class TestInstallmentSplit:
-    def test_lump_sum_is_single_bill(self):
-        assert PaymentService._split_installments(5_000_000, 0) == [5_000_000]
-        assert PaymentService._split_installments(5_000_000, 1) == [5_000_000]
-
-    def test_split_sums_exactly_with_remainder_in_first_bill(self):
-        split = PaymentService._split_installments(1_000_005, 2)
-
-        assert split[0] == 500_003
-        assert split[1] == 500_002
-        assert sum(split) == 1_000_005
-
-    def test_single_round_amount(self):
-        assert PaymentService._split_installments(3_000_000, 3) == [
-            1_000_000,
-            1_000_000,
-            1_000_000,
-        ]
-
-    def test_zero_total_has_no_bill(self):
-        assert PaymentService._split_installments(0, 4) == []
