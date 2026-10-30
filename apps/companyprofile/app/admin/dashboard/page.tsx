@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import { BookOpen } from 'lucide-react'
 import * as api from '@/app/lib/api'
 import { eventBus } from '@/app/lib/event-bus'
 import { useSSE } from '@/app/hooks/useSSE'
@@ -634,6 +635,14 @@ export default function AdminDashboard() {
     })),
   )
 
+  // Tambah link "Tentang Kami" ke grup Informasi — mengarah ke halaman publik
+  // `/about`, bukan tab admin.
+  const navGroupsWithAbout = navGroups.map((g) =>
+    g.label === 'Informasi'
+      ? { ...g, items: [...g.items, { key: 'about', label: 'Tentang Kami', icon: BookOpen, href: '/about', target: '_blank' }] }
+      : g,
+  )
+
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <>
@@ -647,7 +656,7 @@ export default function AdminDashboard() {
           faviconUrl: faviconUrl || undefined,
           logoUrl: faviconUrl || undefined,
         }}
-        navGroups={navGroups}
+        navGroups={navGroupsWithAbout}
         renderLink={AdminDashboardLink}
         onNavigate={(item) => {
           if (item.onClick) {
