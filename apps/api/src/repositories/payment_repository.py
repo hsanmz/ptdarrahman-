@@ -7,8 +7,11 @@ from sqlalchemy.orm import Session
 
 from src.models.ppdb import (
     PPDBApplicant,
+    PPDBApplicantDiscount,
     PPDBPaymentTransaction,
     PPDBPeriod,
+    PPDBPeriodFeeItem,
+    PPDBStage2Bill,
     PPDBWave,
 )
 
@@ -185,6 +188,10 @@ class PaymentRepository:
         stmt = select(PPDBWave).where(PPDBWave.id == wave_id)
         return cast(PPDBWave | None, self.db.scalars(stmt).first())
 
+    def get_period_by_id(self, period_id: str) -> PPDBPeriod | None:
+        stmt = select(PPDBPeriod).where(PPDBPeriod.id == period_id)
+        return cast(PPDBPeriod | None, self.db.scalars(stmt).first())
+
     def get_transaction_by_order_id(
         self, order_id: str
     ) -> PPDBPaymentTransaction | None:
@@ -215,6 +222,130 @@ class PaymentRepository:
             stmt = stmt.where(PPDBPaymentTransaction.payment_type == payment_type)
         stmt = stmt.order_by(PPDBPaymentTransaction.created_at.desc()).limit(1)
         return cast(PPDBPaymentTransaction | None, self.db.scalars(stmt).first())
+
+    def get_form_payment_rank(self, wave_id: str, applicant_id: str) -> int | None:
+        """Rangking pendaftar pada himpunan X pembayar formulir pertama.
+
+        Semesta urutan sama dengan definisi kuota atomik: seluruh transaksi
+        formulir sukses pada gelombang, diurutkan berdasarkan waktu konfirmasi
+        (paid_at, fallback created_at), lalu dihitung unik per pendaftar.
+        Pendaftar tanpa pembayaran formulir sukses mendapat None.
+        """
+        stmt = (
+            select(PPDBPaymentTransaction.applicant_id)
+            .join(
+                PPDBApplicant, PPDBApplicant.id == PPDBPaymentTransaction.applicant_id
+            )
+            .where(PPDBApplicant.wave_id == wave_id)
+            .where(PPDBPaymentTransaction.status == "success")
+            .order_by(
+                func.coalesce(
+                    PPDBPaymentTransaction.paid_at,
+                    PPDBPaymentTransaction.created_at,
+                ),
+                PPDBPaymentTransaction.id,
+            )
+        )
+        rows = self.db.execute(stmt).scalars().all()
+        seen: set[str] = set()
+        rank = 0
+        for applicant in rows:
+            if applicant == applicant_id:
+                return rank + 1
+            if applicant not in seen:
+                seen.add(applicant)
+                rank += 1
+        return None
+
+    # ── Stage 2: diskonasi & tagihan biaya pendidikan lulus seleksi ──────────
+
+    def get_stage2_applicants(self, wave_id: str) -> list[PPDBApplicant]:
+        """Pendaftar lulus di gelombang aktif (belum soft delete)."""
+        stmt = (
+            select(PPDBApplicant)
+            .where(
+                PPDBApplicant.wave_id == wave_id,
+                PPDBApplicant.status == "passed",
+                PPDBApplicant.deleted_at.is_(None),
+            )
+            .order_by(PPDBApplicant.full_name.asc())
+        )
+        return list(self.db.scalars(stmt).all())
+
+    def get_stage2_bill_counts(self, wave_id: str) -> dict[str, tuple[int, int]]:
+        """(total, lunas) tagihan tahap 2 per pendaftar pada gelombang."""
+        stmt = (
+            select(PPDBStage2Bill.applicant_id, func.count())
+            .join(PPDBApplicant, PPDBApplicant.id == PPDBStage2Bill.applicant_id)
+            .where(PPDBApplicant.wave_id == wave_id)
+            .group_by(PPDBStage2Bill.applicant_id)
+        )
+        totals = dict(self.db.execute(stmt).all())
+        if not totals:
+            return {}
+        paid_stmt = (
+            select(PPDBStage2Bill.applicant_id, func.count())
+            .join(PPDBApplicant, PPDBApplicant.id == PPDBStage2Bill.applicant_id)
+            .where(
+                PPDBApplicant.wave_id == wave_id,
+                PPDBStage2Bill.status == "paid",
+            )
+            .group_by(PPDBStage2Bill.applicant_id)
+        )
+        paid = dict(self.db.execute(paid_stmt).all())
+        return {
+            aid: (int(total), int(paid.get(aid, 0))) for aid, total in totals.items()
+        }
+
+    def get_stage2_discount_configured_ids(self, wave_id: str) -> set[str]:
+        """ID pendaftar yang pernah dikonfigurasi diskonasi tahap 2."""
+        stmt = (
+            select(PPDBApplicantDiscount.applicant_id)
+            .join(PPDBApplicant, PPDBApplicant.id == PPDBApplicantDiscount.applicant_id)
+            .where(
+                PPDBApplicant.wave_id == wave_id,
+                PPDBApplicantDiscount.discount_type.is_not(None),
+            )
+        )
+        return {row for row in self.db.scalars(stmt).all()}
+
+    def get_period_fee_items_ordered(
+        self, period_id: str | None
+    ) -> list[PPDBPeriodFeeItem]:
+        """Master komponen biaya periode menurut urutan konfigurasi."""
+        if not period_id:
+            return []
+        stmt = (
+            select(PPDBPeriodFeeItem)
+            .where(PPDBPeriodFeeItem.period_id == period_id)
+            .order_by(PPDBPeriodFeeItem.order_index.asc())
+        )
+        return list(self.db.scalars(stmt).all())
+
+    def get_applicant_discounts(self, applicant_id: str) -> list[PPDBApplicantDiscount]:
+        stmt = select(PPDBApplicantDiscount).where(
+            PPDBApplicantDiscount.applicant_id == applicant_id
+        )
+        return list(self.db.scalars(stmt).all())
+
+    def save_stage2_plan(
+        self,
+        applicant_id: str,
+        discounts: list[PPDBApplicantDiscount],
+        bills: list[PPDBStage2Bill],
+    ) -> None:
+        """Ganti penuh rancangan diskonasi & tagihan tahap 2 pendaftar."""
+        self.db.query(PPDBApplicantDiscount).filter(
+            PPDBApplicantDiscount.applicant_id == applicant_id
+        ).delete(synchronize_session=False)
+        self.db.query(PPDBStage2Bill).filter(
+            PPDBStage2Bill.applicant_id == applicant_id
+        ).delete(synchronize_session=False)
+        for discount in discounts:
+            self.db.add(discount)
+        for bill in bills:
+            self.db.add(bill)
+        self.db.commit()
 
     def get_applicant_transactions(
         self, applicant_id: str

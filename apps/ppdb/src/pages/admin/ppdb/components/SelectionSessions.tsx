@@ -139,7 +139,7 @@ export default function SelectionSessions() {
                 <TableRow>
                   <TableHead>Nama Sesi</TableHead>
                   <TableHead>Jadwal & Lokasi</TableHead>
-                  <TableHead>Kuota Booking</TableHead>
+                  <TableHead>Kuota Peserta</TableHead>
                   {canCrud && <TableHead className="text-right">Aksi</TableHead>}
                 </TableRow>
               </TableHeader>
@@ -175,7 +175,7 @@ export default function SelectionSessions() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">
-                          {s.booked_count || 0} / {s.quota === 0 ? 'Tak Terbatas' : s.quota}
+                          {s.participant_count || 0} / {s.quota === 0 ? 'Tak Terbatas' : s.quota}
                         </Badge>
                       </TableCell>
                       {canCrud && (
@@ -293,7 +293,7 @@ export default function SelectionSessions() {
         onConfirm={() => deleteId && deleteMutation.mutate(deleteId)}
         loading={deleteMutation.isPending}
         title="Hapus Sesi"
-        message="Yakin ingin menghapus sesi ini? Peserta yang sudah booking akan dilepas dari sesi."
+        message="Yakin ingin menghapus sesi ini? Seluruh peserta akan dilepas dari sesi."
         confirmLabel="Ya, Hapus"
         variant="destructive"
       />

@@ -38,8 +38,8 @@ const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="group absolute right-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-500 shadow-sm backdrop-blur transition-all hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 disabled:pointer-events-none sm:right-4 sm:top-4 sm:h-10 sm:w-10">
-        <X className="h-4 w-4" />
+      <DialogPrimitive.Close className="group absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white/95 text-slate-500 shadow-sm backdrop-blur transition-all hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 focus-visible:ring-offset-2 disabled:pointer-events-none sm:h-10 sm:w-10">
+        <X className="h-4 w-4 transition-transform duration-200 group-hover:rotate-90 group-hover:scale-110 sm:h-[18px] sm:w-[18px]" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
@@ -48,7 +48,8 @@ const DialogContent = React.forwardRef<
 DialogContent.displayName = DialogPrimitive.Content.displayName
 
 const DialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('flex flex-col space-y-1.5 text-center sm:text-left', className)} {...props} />
+  // pr-11/sm:pr-10 merezervasi lajur tombol close (absolute top-right) agar judul & deskripsi tidak pernah bertabrakan dengannya.
+  <div className={cn('flex flex-col space-y-1.5 pr-11 text-center sm:pr-10 sm:text-left', className)} {...props} />
 )
 DialogHeader.displayName = 'DialogHeader'
 

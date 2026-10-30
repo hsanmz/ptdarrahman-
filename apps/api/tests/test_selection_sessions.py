@@ -70,7 +70,7 @@ def active_wave(db: Session):
     return wave
 
 
-def test_session_creation_quota_default_and_created_by(db: Session, active_wave):
+def test_session_creation_quota_massal_and_created_by(db: Session, active_wave):
     repo = SelectionRepository(db)
     svc = SelectionService(repo)
 
@@ -85,7 +85,7 @@ def test_session_creation_quota_default_and_created_by(db: Session, active_wave)
         officer_name="Ustaz Zaid",
         location=None,
         meeting_url=AnyHttpUrl("https://meet.google.com/xyz"),
-        quota=0,  # Should default to 1 for 1:1 session
+        quota=0,  # 0 = massal, berlaku untuk seluruh pendaftar gelombang
     )
 
     creator_id = str(uuid.uuid4())
@@ -94,57 +94,8 @@ def test_session_creation_quota_default_and_created_by(db: Session, active_wave)
 
     session_row = repo.get_session_by_id(session_id)
     assert session_row is not None
-    assert session_row.quota == 1
+    assert session_row.quota == 0
     assert session_row.created_by == creator_id
-
-
-def test_cleanup_expired_unbooked_sessions(db: Session, active_wave):
-    repo = SelectionRepository(db)
-
-    # 1. Past session without booking (should be deleted)
-    past_date = (datetime.now(WIB).date() - timedelta(days=1)).isoformat()
-    past_session = SelectionSession(
-        id=str(uuid.uuid4()),
-        wave_id=active_wave.id,
-        name="Sesi Kemarin",
-        session_type="tahfidz",
-        session_date=date.fromisoformat(past_date),
-        start_time="08:00",
-        end_time="09:00",
-        mode="offline",
-        officer_name="Ustaz Fulan",
-        location="Ruang A",
-        quota=1,
-        created_at=datetime.now(),
-        updated_at=datetime.now(),
-    )
-    db.add(past_session)
-
-    # 2. Future session without booking (should NOT be deleted)
-    future_date = (datetime.now(WIB).date() + timedelta(days=2)).isoformat()
-    future_session = SelectionSession(
-        id=str(uuid.uuid4()),
-        wave_id=active_wave.id,
-        name="Sesi Masa Depan",
-        session_type="tahfidz",
-        session_date=date.fromisoformat(future_date),
-        start_time="08:00",
-        end_time="09:00",
-        mode="offline",
-        officer_name="Ustaz Fulan",
-        location="Ruang B",
-        quota=1,
-        created_at=datetime.now(),
-        updated_at=datetime.now(),
-    )
-    db.add(future_session)
-    db.commit()
-
-    deleted_count = repo.cleanup_expired_unbooked_sessions(active_wave.id)
-    assert deleted_count >= 1
-
-    assert repo.get_session_by_id(past_session.id) is None
-    assert repo.get_session_by_id(future_session.id) is not None
 
 
 def test_session_status_colors_red_yellow_green(db: Session, active_wave):
@@ -153,7 +104,7 @@ def test_session_status_colors_red_yellow_green(db: Session, active_wave):
 
     future_date = (datetime.now(WIB).date() + timedelta(days=2)).isoformat()
 
-    # Session 1: unbooked -> RED
+    # Session 1: belum ada peserta -> RED
     s1 = SelectionSession(
         id=str(uuid.uuid4()),
         wave_id=active_wave.id,
@@ -165,13 +116,13 @@ def test_session_status_colors_red_yellow_green(db: Session, active_wave):
         mode="offline",
         officer_name="Ustaz A",
         location="Ruang 1",
-        quota=1,
+        quota=0,
         created_at=datetime.now(),
         updated_at=datetime.now(),
     )
     db.add(s1)
 
-    # Session 2: booked but not evaluated -> YELLOW
+    # Session 2: ada peserta tapi belum dinilai -> YELLOW
     s2 = SelectionSession(
         id=str(uuid.uuid4()),
         wave_id=active_wave.id,
@@ -183,7 +134,7 @@ def test_session_status_colors_red_yellow_green(db: Session, active_wave):
         mode="offline",
         officer_name="Ustaz A",
         location="Ruang 2",
-        quota=1,
+        quota=0,
         created_at=datetime.now(),
         updated_at=datetime.now(),
     )
@@ -218,11 +169,11 @@ def test_session_status_colors_red_yellow_green(db: Session, active_wave):
     s2_dict = next(s for s in sessions_data if s["id"] == s2.id)
 
     assert s1_dict["status_color"] == "red"
-    assert s1_dict["booked_count"] == 0
+    assert s1_dict["participant_count"] == 0
 
     assert s2_dict["status_color"] == "yellow"
-    assert s2_dict["booked_count"] == 1
-    assert s2_dict["booked_applicant"]["full_name"] == "Calon Santri Budi"
+    assert s2_dict["participant_count"] == 1
+    assert s2_dict["participants"][0]["full_name"] == "Calon Santri Budi"
 
     # Now evaluate s2: add score in Tahfidz rubric -> GREEN
     cat = SelectionCategory(

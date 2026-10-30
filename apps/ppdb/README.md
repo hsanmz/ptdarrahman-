@@ -28,7 +28,7 @@ Aplikasi frontend berbasis **Vite + React + TypeScript** untuk sistem Penerimaan
 - 📋 **Pengaturan Rubrik Penilaian:** Konfigurasi kriteria evaluasi dan bobot rubrik (Tahfidz dan Wawancara Terpadu).
 - 💻 **Bank Soal & Jadwal CBT Massal:** Kelola Bank Soal CBT Akademik & Psikologi (MCQ A-E, kunci jawaban, template CSV & import), serta penjadwalan ujian CBT massal per batch dengan cutoff H-1.
 - 👁️ **Live Monitoring Ujian Real-Time:** Konsol pengawasan live pengerjaan ujian CBT (`/admin/monitoring/:category/:scheduleId`), status pengerjaan, pelanggaran keluar layar > 5 detik, dan modal unfreeze peserta.
-- 🎙️ **Penjadwalan Tahfidz & Wawancara:** Manajemen slot jadwal penguji Tahfidz dan pewawancara terpadu.
+- 🎙️ **Penjadwalan Tahfidz & Wawancara:** Manajemen jadwal penguji Tahfidz dan pewawancara terpadu.
 - ⚖️ **Penilaian & Review LoA:** Form penilaian evaluator dua kolom, rekapitulasi nilai seleksi gabungan, penentuan kelulusan, dan monitoring tanda tangan LoA pendaftar.
 - 💳 **Monitoring Keuangan Formulir:** Pemantauan transaksi pembayaran formulir via webhook Pakasir v2, kuitansi resmi bertanda tangan digital HMAC.
 - 🗄️ **Arsip Dossier:** Pencarian data dossier lengkap lintas periode dan gelombang, serta ekspor bundle ZIP satu-klik dengan log audit alamat IP admin.

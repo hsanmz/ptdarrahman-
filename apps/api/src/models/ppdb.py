@@ -28,12 +28,24 @@ class PPDBPeriod(Base):
     description: Mapped[str | None] = mapped_column(Text)
     wa_group_link: Mapped[str | None] = mapped_column(String(500), nullable=True)
     head_of_committee: Mapped[str | None] = mapped_column(String(150), nullable=True)
+    # Biaya formulir dibayar via QRIS saat pendaftaran — satu nilai untuk
+    # seluruh gelombang di bawah periode ini (master di level periode).
+    form_fee: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
+    # Minimal uang muka (DP) biaya pendidikan yang dicantumkan pada LoA.
+    minimum_dp: Mapped[int] = mapped_column(BigInteger, default=0, nullable=False)
     status: Mapped[str] = mapped_column(String(20), default="inactive")
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
 
 class PPDBWave(Base):
+    """Gelombang pendaftaran: jadwal & kuota.
+
+    Gelombang tidak lagi menyimpan komponen biaya, biaya formulir, maupun
+    minimal DP — semuanya tingkat periode. Yang tersisa hanya data diskon
+    per komponen biaya periode (``PPDBWaveFeeDiscount``).
+    """
+
     __tablename__ = "ppdb_waves"
 
     id: Mapped[str] = mapped_column(String(50), primary_key=True)
@@ -48,9 +60,6 @@ class PPDBWave(Base):
     early_discount_quota: Mapped[int] = mapped_column(
         Integer, default=0, nullable=False
     )
-    registration_fee: Mapped[int] = mapped_column(BigInteger, default=0)
-    second_stage_fee: Mapped[int] = mapped_column(BigInteger, default=0)
-    minimum_dp: Mapped[int] = mapped_column(BigInteger, default=0)
     status: Mapped[str] = mapped_column(String(20), default="inactive")
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
@@ -117,6 +126,13 @@ class PPDBApplicant(Base):
     loa_signature_token: Mapped[str | None] = mapped_column(
         String(64), unique=True, nullable=True
     )
+    # ── Early bird (diskon X pendaftar awal) ─────────────────────────────────
+    # Ditandai atomik saat pembayaran formulir sukses: slot dihitung dari
+    # massa transaksinya sendiri, sehingga hanya X pembayar formulir pertama
+    # di gelombang yang mendapat True. LoA dan diskonasi membaca flag ini.
+    early_discount_eligible: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
     # ── DP status ────────────────────────────────────────────────────────────
     # dp_status: pending | paid
     dp_status: Mapped[str] = mapped_column(String(20), default="pending")
@@ -140,7 +156,9 @@ class FileUpload(Base):
     public_url: Mapped[str | None] = mapped_column(String(500))
     entity_type: Mapped[str | None] = mapped_column(String(50))
     entity_id: Mapped[str | None] = mapped_column(String(50))
-    data: Mapped[bytes | None] = mapped_column(LargeBinary(length=16777215), deferred=True)
+    data: Mapped[bytes | None] = mapped_column(
+        LargeBinary(length=16777215), deferred=True
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
 
@@ -243,9 +261,10 @@ class NotificationLog(Base):
 
 
 class PPDBPeriodFeeItem(Base):
-    """Komponen Biaya Pendidikan/Masuk resmi per periode PPDB (Uang Pangkal, Seragam, SPP, dll).
+    """Komponen biaya pendidikan/masuk resmi per periode PPDB.
 
-    Komponen biaya didefinisikan satu kali pada level Periode, dan berlaku untuk semua gelombang.
+    Mencakup uang pangkal, seragam, SPP, dan komponen lain. Komponen biaya
+    didefinisikan satu kali pada level Periode dan berlaku untuk semua gelombang.
     """
 
     __tablename__ = "ppdb_period_fee_items"
@@ -265,7 +284,8 @@ class PPDBPeriodFeeItem(Base):
 class PPDBWaveFeeDiscount(Base):
     """Konfigurasi diskon per gelombang untuk komponen biaya periode.
 
-    Gelombang hanya mengatur diskon (reguler & pendaftar awal) terhadap komponen biaya periode induk.
+    Gelombang hanya mengatur diskon (reguler & pendaftar awal) terhadap
+    komponen biaya periode induk.
     """
 
     __tablename__ = "ppdb_wave_fee_discounts"
@@ -275,7 +295,9 @@ class PPDBWaveFeeDiscount(Base):
         String(50), ForeignKey("ppdb_waves.id", ondelete="CASCADE"), nullable=False
     )
     fee_item_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("ppdb_period_fee_items.id", ondelete="CASCADE"), nullable=False
+        String(36),
+        ForeignKey("ppdb_period_fee_items.id", ondelete="CASCADE"),
+        nullable=False,
     )
     discount_type: Mapped[str | None] = mapped_column(String(10), nullable=True)
     discount_value: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -315,7 +337,7 @@ class PPDBApplicantDiscount(Base):
         String(64), ForeignKey("ppdb_applicants.id", ondelete="CASCADE")
     )
     fee_item_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("ppdb_wave_fee_items.id", ondelete="CASCADE")
+        String(36), ForeignKey("ppdb_period_fee_items.id", ondelete="CASCADE")
     )
     discount_type: Mapped[str | None] = mapped_column(String(10))
     discount_value: Mapped[float | None] = mapped_column(Float, nullable=True)
@@ -333,7 +355,7 @@ class PPDBStage2Bill(Base):
         String(64), ForeignKey("ppdb_applicants.id", ondelete="CASCADE")
     )
     fee_item_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("ppdb_wave_fee_items.id")
+        String(36), ForeignKey("ppdb_period_fee_items.id")
     )
     discount_id: Mapped[str | None] = mapped_column(
         String(36), ForeignKey("ppdb_applicant_discounts.id", ondelete="SET NULL")

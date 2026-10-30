@@ -299,22 +299,6 @@ class PPDBRepository:
             .first(),
         )
 
-    def create_fee_item(self, item: PPDBWaveFeeItem) -> PPDBWaveFeeItem:
-        self.db.add(item)
-        self.db.commit()
-        self.db.refresh(item)
-        return item
-
-    def update_fee_item(self, item: PPDBWaveFeeItem) -> PPDBWaveFeeItem:
-        self.db.add(item)
-        self.db.commit()
-        self.db.refresh(item)
-        return item
-
-    def delete_fee_item(self, item: PPDBWaveFeeItem):
-        self.db.delete(item)
-        self.db.commit()
-
     def count_discounts_for_fee_item(self, fee_item_id: str) -> int:
         return cast(
             int,

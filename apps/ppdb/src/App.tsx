@@ -12,6 +12,7 @@ import NotFoundPage from './pages/errors/NotFoundPage'
 import ForbiddenPage from './pages/errors/ForbiddenPage'
 import AdminDashboardPage from './pages/admin/AdminDashboardPage'
 import PeriodsPage from './pages/admin/ppdb/PeriodsPage'
+import DiskonasiPage from './pages/admin/ppdb/DiskonasiPage'
 import LandingPage from './pages/public/LandingPage'
 import GlobeDemoPage from './pages/public/GlobeDemoPage'
 import RegisterPage from './pages/public/RegisterPage'
@@ -103,6 +104,7 @@ export default function App() {
               <Route path="sessions/:sessionType/evaluasi/:sessionId" element={<SessionEvaluationPage />} />
               <Route path="penilaian" element={<PenilaianPage />} />
               <Route path="review-loa" element={<ReviewLoaPage />} />
+              <Route path="diskonasi" element={<DiskonasiPage />} />
               <Route path="arsip" element={<ArsipPendaftarPage />} />
               <Route path="periods" element={<PeriodsPage />} />
               <Route path="notifications" element={<NotificationsPage />} />

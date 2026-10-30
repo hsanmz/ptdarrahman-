@@ -13,7 +13,7 @@ export interface Session {
   meeting_url?: string | null
   description?: string
   quota: number
-  booked_count?: number
+  participant_count?: number
 }
 
 export interface SelectionCategory {

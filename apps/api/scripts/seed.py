@@ -52,7 +52,7 @@ PAGES = {
         ("verifikasi-dokumen", "Verifikasi Dokumen", "ClipboardCheck", 20),
         ("pembayaran-formulir", "Pembayaran Formulir", "Wallet", 30),
         ("pembayaran-tahap2", "Pembayaran Tahap 2", "CreditCard", 35),
-        ("sessions", "Sesi 1:1", "Calendar", 40),
+        ("sessions", "Jadwal Seleksi", "Calendar", 40),
         ("penilaian", "Hasil Pendaftaran", "Award", 45),
         ("review-loa", "Review LoA", "FileCheck2", 50),
         ("periods", "Periode PPDB", "CalendarDays", 55),
@@ -219,6 +219,7 @@ NOTIF_TEMPLATES = [
         ),
     },
 ]
+
 
 def _now() -> str:
     from src.core.database import utcnow

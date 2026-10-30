@@ -9,6 +9,10 @@ class PeriodCreate(BaseModel):
     description: str | None = None
     wa_group_link: str | None = None
     head_of_committee: str | None = None
+    # Master pembayaran tingkat periode: biaya formulir (QRIS saat daftar)
+    # dan minimal uang muka (DP) yang dicantumkan pada LoA.
+    form_fee: int = Field(default=0, ge=0)
+    minimum_dp: int = Field(default=0, ge=0)
 
 
 class PeriodUpdate(BaseModel):
@@ -17,6 +21,8 @@ class PeriodUpdate(BaseModel):
     description: str | None = None
     wa_group_link: str | None = None
     head_of_committee: str | None = None
+    form_fee: int | None = Field(default=None, ge=0)
+    minimum_dp: int | None = Field(default=None, ge=0)
 
 
 class PeriodFeeItemCreate(BaseModel):
@@ -69,14 +75,16 @@ class LoASignatureRequest(BaseModel):
 
 
 class WaveBase(BaseModel):
+    """Gelombang hanya mengatur jadwal, kuota, dan diskonasi.
+
+    Komponen biaya, biaya formulir, dan minimal DP dikelola di level Periode.
+    """
+
     name: str = Field(min_length=1, max_length=100)
     registration_start_date: date
     registration_end_date: date
     quota: int = Field(ge=1)
     early_discount_quota: int = Field(default=0, ge=0)
-    registration_fee: int = Field(default=0, ge=0)
-    second_stage_fee: int | None = Field(default=None, ge=0)
-    minimum_dp: int = Field(default=0, ge=0)
 
     @model_validator(mode="after")
     def check_schedule_order(self):
@@ -102,9 +110,6 @@ class WaveUpdate(BaseModel):
     registration_end_date: date | None = None
     quota: int | None = Field(default=None, ge=1)
     early_discount_quota: int | None = Field(default=None, ge=0)
-    registration_fee: int | None = Field(default=None, ge=0)
-    second_stage_fee: int | None = Field(default=None, ge=0)
-    minimum_dp: int | None = Field(default=None, ge=0)
 
 
 def _digits_or_none(value: str | None, length: int, label: str) -> str | None:
@@ -592,44 +597,6 @@ class ApplicantProfileUpdate(BaseModel):
         if v and v > date.today():
             raise ValueError("Tanggal lahir tidak boleh di masa depan")
         return v
-
-
-class WaveFeeItemCreate(BaseModel):
-    name: str = Field(min_length=1, max_length=200)
-    nominal: int = Field(ge=0)
-    description: str | None = Field(default=None, max_length=500)
-    order_index: int = Field(default=0, ge=0)
-    discount_type: str | None = Field(default=None, pattern=r"^(percent|nominal)$")
-    discount_value: float | None = Field(default=None, gt=0)
-    discount_scope: str = Field(default="all", pattern=r"^(all|first_x)$")
-    early_discount_type: str | None = Field(
-        default=None, pattern=r"^(percent|nominal)$"
-    )
-    early_discount_value: float | None = Field(default=None, gt=0)
-
-    @model_validator(mode="after")
-    def validate_discount(self):
-        if (self.discount_type is None) != (self.discount_value is None):
-            raise ValueError("Tipe dan nilai diskon reguler harus diisi bersama")
-        if (
-            self.discount_type == "percent"
-            and self.discount_value is not None
-            and self.discount_value > 100
-        ):
-            raise ValueError("Diskon persentase reguler maksimal 100%")
-        if (self.early_discount_type is None) != (self.early_discount_value is None):
-            raise ValueError("Tipe dan nilai diskon pendaftar awal harus diisi bersama")
-        if (
-            self.early_discount_type == "percent"
-            and self.early_discount_value is not None
-            and self.early_discount_value > 100
-        ):
-            raise ValueError("Diskon persentase pendaftar awal maksimal 100%")
-        return self
-
-
-class WaveFeeItemUpdate(WaveFeeItemCreate):
-    pass
 
 
 class DocumentVerify(BaseModel):

@@ -316,7 +316,7 @@ export default function AdminDashboardPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {mySessions.map((s: any) => {
               const isInterview = s.session_type === 'interview'
-              const bookedCount = s.booked_count || 0
+              const participantCount = s.participant_count || 0
               const evaluatedCount = s.evaluated_count || 0
 
               return (
@@ -349,13 +349,13 @@ export default function AdminDashboardPage() {
                         </div>
                       </div>
                       <Badge
-                        variant={s.is_evaluated ? 'success' : bookedCount > 0 ? 'secondary' : 'outline'}
+                        variant={s.is_evaluated ? 'success' : participantCount > 0 ? 'secondary' : 'outline'}
                         className="text-[9px] py-0 px-1.5 font-bold shrink-0"
                       >
                         {s.is_evaluated
                           ? 'Selesai'
-                          : bookedCount > 0
-                          ? `${evaluatedCount}/${bookedCount} Dinilai`
+                          : participantCount > 0
+                          ? `${evaluatedCount}/${participantCount} Dinilai`
                           : '0 Peserta'}
                       </Badge>
                     </div>
@@ -370,7 +370,7 @@ export default function AdminDashboardPage() {
                       </div>
                       <div className="flex items-center justify-between font-semibold text-slate-900 border-t border-slate-200/60 pt-1">
                         <span>{s.officer_name ? `Penguji: ${s.officer_name}` : 'PTDARRAHMAN'}</span>
-                        <span className="text-emerald-700 font-mono">{bookedCount} Peserta</span>
+                        <span className="text-emerald-700 font-mono">{participantCount} Peserta</span>
                       </div>
                     </div>
                   </div>

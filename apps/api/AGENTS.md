@@ -165,8 +165,10 @@ apps/api/src/
    - Pendaftar otomatis ditautkan ke gelombang aktif saat ini; pendaftar tidak memilih gelombang.
 4. **Master Biaya Periode & Diskonasi Gelombang:**
    - Master komponen biaya masuk / biaya pendidikan (uang pangkal, SPP, seragam, dll.) dikelola di level Periode (`PPDBPeriodFeeItem`).
+   - Biaya formulir (`PPDBPeriod.form_fee`) dan minimal DP (`PPDBPeriod.minimum_dp`) adalah master tingkat Periode — dulu tersimpan pada `PPDBWave` dan kini dihapus dari gelombang.
    - Gelombang hanya mengatur diskon per komponen biaya (`PPDBWaveFeeDiscount`), bukan membuat item biaya baru dari nol.
-   - Penyetoran biaya pendidikan dilakukan **di luar aplikasi** (transfer manual rekening resmi PTDARRAHMAN / tunai di kantor bendahara). Sistem backend tidak menyediakan endpoint QRIS untuk biaya tahap 2 di portal pendaftar.
+   - Penyetoran biaya pendidikan dilakukan **di luar aplikasi** (transfer manual rekening resmi PTDARRAHMAN / tunai di kantor bendahara). Sistem backend tidak menyediakan endpoint QRIS untuk biaya tahap 2 di portal pendaftar; QRIS hanya untuk biaya formulir dari `form_fee` periode.
+   - Slot "X pendaftar awal" dikualifikasikan per pendaftar (`PPDBApplicant.early_discount_eligible`): ditandai `PaymentService._assign_early_bird_slot` saat webhook settle (hitungan diambil sebelum transaksi masuk success), di-backfill migrasi 0061, dan dipakai LoA dari dikonfigurasi. Endpoint diskonasi tahap 2: `GET /payment/stage2/applicants`, `GET|POST /payment/stage2/{applicant_id}/discounts` (`PPDBApplicantDiscount` + `PPDBStage2Bill` menunjuk master `ppdb_period_fee_items`).
 5. **Standar Penulisan Nama Institusi (PTDARRAHMAN):**
    - Nama resmi lengkap backend: **`Pesantren Tahfidz Qur'an dan Digital Ar-Rahman`** (tetap utuh, jangan diubah).
    - Singkatan institusi/rekening/footer: **`PTDARRAHMAN`**.

@@ -57,7 +57,7 @@ export default function LoaOfficialDocument({ data, page = 'both' }: LoaOfficial
   const regNo = data.registration_number || app.id?.slice(0, 8).toUpperCase() || 'REG-PENDARRAHMAN'
   const schoolOrigin = app.previous_school || '-'
   const waveName = app.wave_name || 'Gelombang 1'
-  const discountName = data.discount_name || 'Potongan Biaya Pembangunan (Early Bird Gelombang 1)'
+  const discountName = data.discount_name
 
   // Verification URL for QR Codes
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://ptdarrahman.sch.id'
@@ -146,12 +146,14 @@ export default function LoaOfficialDocument({ data, page = 'both' }: LoaOfficial
                 <td className="py-1.5 px-3 font-semibold text-slate-600">Asal Sekolah</td>
                 <td className="py-1.5 px-3 text-slate-800">{schoolOrigin}</td>
               </tr>
-              <tr>
-                <td className="py-1.5 px-3 font-semibold text-slate-600">Subsidi / Diskon Pendaftar</td>
-                <td className="py-1.5 px-3 text-emerald-700 font-semibold">
-                  {discountName}
-                </td>
-              </tr>
+              {discountName ? (
+                <tr>
+                  <td className="py-1.5 px-3 font-semibold text-slate-600">Subsidi / Diskon Pendaftar</td>
+                  <td className="py-1.5 px-3 text-emerald-700 font-semibold">
+                    {discountName}
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         </div>
@@ -183,7 +185,7 @@ export default function LoaOfficialDocument({ data, page = 'both' }: LoaOfficial
               ) : (
                 <tr>
                   <td colSpan={4} className="py-1.5 text-center text-slate-500 italic">
-                    Komponen biaya belum dikonfigurasi pada gelombang ini.
+                    Komponen biaya belum dikonfigurasi pada periode ini.
                   </td>
                 </tr>
               )}

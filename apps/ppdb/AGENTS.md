@@ -63,6 +63,7 @@ Aplikasi frontend Penerimaan Peserta Didik Baru (PPDB) untuk Pesantren Tahfidz Q
 - `/admin/bank-soal/detail/:bankId` (`BankSoalDetailPage`): Detail Bank Soal — edit data bank (judul, deskripsi, durasi) dengan tombol simpan eksplisit, editor butir soal (tambah/ubah/hapus dengan opsi A-E, kunci, poin) + pencarian & paginasi, serta modal Bagikan Akses Ujian (link `/exam/:scheduleId` + PIN per jadwal pemakai bank) dan zona hapus bank. Bank yang sudah dipakai Jadwal Ujian dikunci (`in_use`).
 - `/admin/penilaian` (`PenilaianPage`): Rekapitulasi nilai akhir gabungan (Akademik, Psikologi, Tahfidz, Wawancara) dan penetapan keputusan kelulusan.
 - `/admin/review-loa` (`ReviewLoaPage`): Monitoring seluruh penerima LoA resmi (lulus), status tanda tangan digital orang tua & santri, dan unduh berkas LoA.
+- `/admin/diskonasi` (`DiskonasiPage`): Pengaturan diskon & cicilan biaya pendidikan tahap 2 untuk pendaftar lulus gelombang aktif (rangking pembayar formulir, status slot pendaftar awal, dan monitoring tagihan).
 - `/admin/periods` (`PeriodsPage`): Manajemen periode, master komponen biaya (`PeriodFeeItemsModal`), gelombang pendaftaran, dan diskonasi (`WavesSheet`).
 - `/admin/rubrik` & `/admin/selection` (`SelectionPage`): Konfigurasi kriteria dan bobot rubrik penilaian seleksi.
 - `/admin/arsip` (`ArsipPendaftarPage`): Pencarian arsip dossier lengkap lintas periode/gelombang dan ekspor bundle ZIP.
@@ -108,7 +109,8 @@ Aplikasi frontend Penerimaan Peserta Didik Baru (PPDB) untuk Pesantren Tahfidz Q
 3. **Kuesioner Identifikasi Kesehatan (10 Soal):**
    - Menggantikan Medcheck, diisi saat registrasi, tersimpan sebagai data profil sensitif yang hanya dapat dilihat di detail/dossier admin.
 4. **Pembayaran Formulir, Master Biaya Periode & Diskonasi Gelombang:**
-   - Kuota gelombang dan diskon pendaftar awal dihitung dari pembayaran formulir sukses via QRIS dinamis Pakasir v2.
+   - Biaya formulir (`ppdb_periods.form_fee`) dan minimal DP biaya pendidikan (`ppdb_periods.minimum_dp`) adalah master tingkat **Periode** — semua gelombang di bawahnya memakai nilai yang sama. Kuota gelombang dan diskon pendaftar awal dihitung dari pembayaran formulir sukses via QRIS dinamis Pakasir v2.
+   - Kelayakan diskon pendaftar awal per pendaftar (`early_discount_eligible`) ditandai backend saat formulir sukses; halaman `/admin/diskonasi` menampilkan rangking pembayar formulirnya, dan LoA hanya menerapkan early bird bila flag itu aktif.
    - Seluruh komponen biaya masuk / biaya pendidikan dikonfigurasi di level Periode (`ppdb_period_fee_items`), sedangkan gelombang hanya mengatur diskonasi (`ppdb_wave_fee_discounts`): Diskon Reguler dan Diskon Early Bird.
    - Biaya pendidikan disajikan transparan pada LoA resmi. Penyetoran biaya dilakukan **di luar aplikasi** (transfer rekening resmi PTDARRAHMAN / tunai di kantor bendahara pesantren).
    - **Di dalam portal PPDB tidak ada pembayaran online tahap 2.** Alur pendaftaran tuntas saat penandatanganan LoA.

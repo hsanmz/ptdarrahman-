@@ -20,8 +20,10 @@ const STATUS_LABEL: Record<string, string> = {
   document_rejected: 'Dokumen Ditolak',
   document_approved: 'Dokumen Disetujui',
   selection: 'Tahap Seleksi',
-  passed: 'LULUS ✓',
-  failed: 'Tidak Lulus',
+  passed: 'Diterima ✓',
+  conditional: 'Diterima Bersyarat',
+  waitlist: 'Cadangan',
+  failed: 'Tidak Diterima',
   expired: 'Kedaluwarsa',
 }
 
@@ -44,7 +46,14 @@ export default function ApplicantDashboardPage() {
   const status = applicant?.status
   const loading = transactionQuery.isLoading || documentsQuery.isLoading
 
-  const inSelection = ['document_approved', 'selection', 'passed', 'failed'].includes(status)
+  const inSelection = [
+    'document_approved',
+    'selection',
+    'passed',
+    'conditional',
+    'waitlist',
+    'failed',
+  ].includes(status)
 
   const selectionQuery = useQuery({
     queryKey: ['my-selection'],
@@ -103,7 +112,7 @@ export default function ApplicantDashboardPage() {
       title: 'Upload Dokumen',
       description: 'Mengunggah seluruh berkas persyaratan wajib.',
       icon: FileUp,
-      status: ['document_approved', 'selection', 'passed', 'failed'].includes(status) ? 'completed' :
+      status: ['document_approved', 'selection', 'passed', 'conditional', 'waitlist', 'failed'].includes(status) ? 'completed' :
               applicant?.payment_status === 'paid' ? 'active' : 'locked',
       path: '/applicant/dokumen',
     },
@@ -114,7 +123,7 @@ export default function ApplicantDashboardPage() {
         ? 'Jadwal dan hasil ujian seleksi akademik, psikologi, dan tahfidz.'
         : 'Dokumen disetujui. Menunggu jadwal seleksi diterbitkan panitia.',
       icon: BookOpen,
-      status: (hasTahfidzScore || selectionQuery.data?.result?.cbt_results?.akademik || ['passed', 'failed'].includes(status)) ? 'completed' :
+      status: (hasTahfidzScore || selectionQuery.data?.result?.cbt_results?.akademik || ['passed', 'conditional', 'waitlist', 'failed'].includes(status)) ? 'completed' :
               ['document_approved', 'selection'].includes(status) ? 'active' : 'locked',
       path: '/applicant/tes-seleksi',
     },
@@ -123,16 +132,16 @@ export default function ApplicantDashboardPage() {
       title: 'Wawancara',
       description: 'Wawancara calon santri dan orang tua/wali.',
       icon: MessageSquare,
-      status: hasInterviewScore || ['passed', 'failed'].includes(status) ? 'completed' :
+      status: hasInterviewScore || ['passed', 'conditional', 'waitlist', 'failed'].includes(status) ? 'completed' :
               ['document_approved', 'selection'].includes(status) ? 'active' : 'locked',
       path: '/applicant/wawancara',
     },
     {
       number: 5,
       title: 'Hasil Kelulusan & LoA',
-      description: 'Pengumuman kelulusan dan penandatanganan LoA resmi.',
+      description: 'Pengumuman hasil pendaftaran dan penandatanganan LoA resmi.',
       icon: Trophy,
-      status: status === 'passed' ? (isLoaSigned ? 'completed' : 'active') : status === 'failed' ? 'completed' : 'locked',
+      status: status === 'passed' ? (isLoaSigned ? 'completed' : 'active') : ['conditional', 'waitlist'].includes(status) ? 'active' : status === 'failed' ? 'completed' : 'locked',
       path: '/applicant/pengumuman',
     },
   ]

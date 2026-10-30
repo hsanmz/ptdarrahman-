@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui'
 import { Badge } from '@/components/ui'
 import { Printer, FileText, Award } from 'lucide-react'
+import { resultStatusLabel } from '@/lib/selectionStatus'
 
 interface ApplicantTranscriptModalProps {
   open: boolean
@@ -106,7 +107,7 @@ export default function ApplicantTranscriptModal({
               <div className="flex items-center justify-between border-b pb-1">
                 <h3 className="font-bold text-xs uppercase tracking-wide flex items-center gap-1.5 text-slate-800">
                   <Award className="h-4 w-4 text-amber-700" />
-                  Evaluasi Rubrik Penguji (Tahfidz & Wawancara)
+                  Evaluasi Rubrik Penguji (Tahfidz &amp; Wawancara)
                 </h3>
                 <span className="text-[10px] text-slate-500">Rata-rata: {averageRubricScore} / 100</span>
               </div>
@@ -160,10 +161,15 @@ export default function ApplicantTranscriptModal({
             <div className="flex items-center justify-between p-3.5 border-2 rounded-lg bg-slate-50 text-xs">
               <span className="font-bold text-sm text-slate-800">STATUS AKHIR SELEKSI:</span>
               <Badge
-                variant={graduationStatus === 'passed' ? 'success' : graduationStatus === 'failed' ? 'destructive' : 'warning'}
+                variant={
+                  graduationStatus === 'passed' ? 'success' :
+                  graduationStatus === 'failed' ? 'destructive' :
+                  graduationStatus === 'conditional' ? 'info' :
+                  graduationStatus === 'waitlist' ? 'gold' : 'warning'
+                }
                 className="text-xs uppercase px-3 py-1 font-bold"
               >
-                {graduationStatus === 'passed' ? 'LULUS SELEKSI' : graduationStatus === 'failed' ? 'TIDAK LULUS' : 'MENUNGGU KEPUTUSAN'}
+                {resultStatusLabel(graduationStatus)}
               </Badge>
             </div>
 

@@ -4163,7 +4163,7 @@ function buildStories(academicYear) {
 
           : "Penerimaan Peserta Didik Baru (PPDB) membuka kesempatan bagi calon santri berprestasi."),
 
-        "Penerimaan santri baru terpadu dengan seleksi Tahfidz Al-Qur'an 1:1 dan Wawancara Personal."
+        "Penerimaan santri baru terpadu dengan seleksi Tahfidz Al-Qur'an dan Wawancara Personal."
 
       ]
 

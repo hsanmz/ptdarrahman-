@@ -113,9 +113,9 @@ const STATIC_JALUR: PpdbJalurCard[] = [
     content: {
       order: 2,
       accent: 'amber',
-      kicker: 'Uji Tahfidz 1:1',
+      kicker: 'Uji Tahfidz',
       title: 'Program Tahfidz Intensif',
-      desc: "Bagi calon santri putra yang telah memiliki bekal hafalan Al-Qur'an dan siap diuji pada sesi Tahfidz 1:1.",
+      desc: "Bagi calon santri putra yang telah memiliki bekal hafalan Al-Qur'an dan siap mengikuti uji Tahfidz bersama asatidz penguji.",
       items: [],
       cta_label: 'Daftar Sekarang',
       cta_href: '/register',

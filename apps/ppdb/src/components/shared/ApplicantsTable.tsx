@@ -4,6 +4,7 @@ import { TableSkeletonRows } from "@/components/ui"
 import { UserRoundSearch, Waves, ChevronRight } from 'lucide-react'
 import PaymentStatusBadge from './PaymentStatusBadge'
 import { cn } from '@/lib/utils'
+import { resultStatusMeta } from '@/lib/selectionStatus'
 
 interface ApplicantsTableProps {
   applicants: any[]
@@ -45,28 +46,16 @@ function DocStatusBadge({ status }: { status: string }) {
 }
 
 function SelectionStatusBadge({ status }: { status?: string }) {
-  if (status === 'passed')
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200 whitespace-nowrap">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-        Lulus
-      </span>
-    )
-  if (status === 'failed')
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 ring-1 ring-inset ring-red-200 whitespace-nowrap">
-        <span className="h-1.5 w-1.5 rounded-full bg-red-500 shrink-0" />
-        Tidak Lulus
-      </span>
-    )
-  if (status === 'selection')
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200 whitespace-nowrap">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
-        Seleksi
-      </span>
-    )
-  return <span className="text-sm text-slate-300">—</span>
+  const meta = resultStatusMeta(status)
+  if (!['passed', 'failed', 'conditional', 'waitlist', 'selection'].includes(status || '')) {
+    return <span className="text-sm text-slate-300">—</span>
+  }
+  return (
+    <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset whitespace-nowrap', meta.cls)}>
+      <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', meta.dot)} />
+      {meta.label}
+    </span>
+  )
 }
 
 const headBase = 'h-11 text-[11px] font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap align-middle'

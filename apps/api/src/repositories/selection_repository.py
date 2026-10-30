@@ -1,9 +1,9 @@
 from collections.abc import Sequence
-from datetime import date, datetime
+from datetime import datetime
 from typing import Any, cast
 from uuid import uuid4
 
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import delete, or_, select, update
 from sqlalchemy.orm import Session
 
 from src.models.auth import User
@@ -34,51 +34,27 @@ class SelectionRepository:
         )
         return cast(str | None, self.db.execute(stmt).scalar_one_or_none())
 
-    def cleanup_expired_unbooked_sessions(
-        self, wave_ids: str | list[str] | None = None
-    ) -> int:
-        """Jadwal seleksi sekarang bersifat global/massal per gelombang.
-        Tidak lagi dihapus otomatis jika belum ada yang booking.
-        """
-        return 0
-
-    def get_sessions(self, wave_id: str) -> Sequence[tuple]:
-        # Returns tuples of (SelectionSession, wave_name, booked_count)
-        self.cleanup_expired_unbooked_sessions(wave_id)
+    def get_sessions(self, wave_id: str) -> Sequence[SelectionSession]:
         stmt = (
-            select(
-                SelectionSession,
-                PPDBWave.name.label("wave_name"),
-                select(func.count())
-                .where(
-                    or_(
-                        SelectionResult.session_id == SelectionSession.id,
-                        SelectionResult.interview_session_id == SelectionSession.id,
-                    )
-                )
-                .scalar_subquery()
-                .label("booked_count"),
-            )
-            .outerjoin(PPDBWave, SelectionSession.wave_id == PPDBWave.id)
+            select(SelectionSession)
             .where(SelectionSession.wave_id == wave_id)
             .order_by(
                 SelectionSession.session_date.asc(), SelectionSession.start_time.asc()
             )
         )
-        return cast(Sequence[tuple[Any, ...]], self.db.execute(stmt).all())
+        return cast(Sequence[SelectionSession], self.db.scalars(stmt).all())
 
-    def get_sessions_with_booking_details(
+    def get_sessions_with_participants(
         self, wave_ids: list[str], session_type: str | None = None
     ) -> list[dict[str, Any]]:
         """List sesi dengan info status warna (merah/kuning/hijau),
-        data pendaftar booking, dan skor evaluasi.
+        data peserta sesi, dan skor evaluasi.
 
         ``wave_ids`` adalah seluruh gelombang dalam periode aktif, sehingga
         halaman admin menampilkan sesi dari semua gelombang periode tersebut.
         """
         if not wave_ids:
             return []
-        self.cleanup_expired_unbooked_sessions(wave_ids)
 
         stmt = (
             select(SelectionSession, PPDBWave.name.label("wave_name"))
@@ -110,8 +86,8 @@ class SelectionRepository:
         if not session_rows:
             return []
 
-        # Ambil pendaftar yang mengambil sesi di gelombang-gelombang periode aktif
-        bookings_stmt = (
+        # Ambil peserta yang mengikuti sesi di gelombang-gelombang periode aktif
+        participants_stmt = (
             select(
                 SelectionResult,
                 PPDBApplicant.id.label("app_id"),
@@ -128,11 +104,11 @@ class SelectionRepository:
             .join(PPDBApplicant, SelectionResult.applicant_id == PPDBApplicant.id)
             .where(PPDBApplicant.wave_id.in_(wave_ids))
         )
-        booking_rows = self.db.execute(bookings_stmt).all()
+        participant_rows = self.db.execute(participants_stmt).all()
 
-        session_bookings: dict[str, list[dict[str, Any]]] = {}
-        applicant_ids_booked: set[str] = set()
-        for b_row in booking_rows:
+        session_participants: dict[str, list[dict[str, Any]]] = {}
+        participant_ids: set[str] = set()
+        for b_row in participant_rows:
             (
                 res,
                 app_id,
@@ -166,25 +142,25 @@ class SelectionRepository:
                 "mother_name": app_mother_name,
             }
             if res.session_id:
-                session_bookings.setdefault(res.session_id, []).append(app_dict)
-                applicant_ids_booked.add(app_id)
+                session_participants.setdefault(res.session_id, []).append(app_dict)
+                participant_ids.add(app_id)
             if hasattr(res, "interview_session_id") and res.interview_session_id:
-                session_bookings.setdefault(res.interview_session_id, []).append(
+                session_participants.setdefault(res.interview_session_id, []).append(
                     app_dict
                 )
-                applicant_ids_booked.add(app_id)
+                participant_ids.add(app_id)
             if (
                 hasattr(res, "interview_parent_session_id")
                 and res.interview_parent_session_id
             ):
-                session_bookings.setdefault(res.interview_parent_session_id, []).append(
-                    app_dict
-                )
-                applicant_ids_booked.add(app_id)
+                session_participants.setdefault(
+                    res.interview_parent_session_id, []
+                ).append(app_dict)
+                participant_ids.add(app_id)
 
         # Cek apakah pendaftar sudah dinilai untuk kategori sesi terkait
         evaluated_map: dict[tuple[str, str], tuple[bool, float | None]] = {}
-        if applicant_ids_booked:
+        if participant_ids:
             scores_stmt = (
                 select(
                     SelectionScore.applicant_id,
@@ -199,7 +175,7 @@ class SelectionRepository:
                     SelectionCategory,
                     SelectionCriteria.category_id == SelectionCategory.id,
                 )
-                .where(SelectionScore.applicant_id.in_(applicant_ids_booked))
+                .where(SelectionScore.applicant_id.in_(participant_ids))
             )
             score_rows = self.db.execute(scores_stmt).all()
             temp_scores: dict[tuple[str, str], list[float]] = {}
@@ -244,8 +220,8 @@ class SelectionRepository:
                 else "tahfidz"
             )
 
-            booked_apps = session_bookings.get(s_row.id, [])
-            for a in booked_apps:
+            participant_list = session_participants.get(s_row.id, [])
+            for a in participant_list:
                 a_id = a["id"]
                 a["is_tahfidz_evaluated"] = evaluated_map.get(
                     (a_id, "tahfidz"), (False, None)
@@ -266,28 +242,29 @@ class SelectionRepository:
                     (a_id, "interview_ortu"), (False, None)
                 )[1]
 
-            d["booked_count"] = len(booked_apps)
-            d["booked_applicants"] = booked_apps
-            d["booked_applicant"] = booked_apps[0] if booked_apps else None
+            d["participant_count"] = len(participant_list)
+            d["participants"] = participant_list
 
             evaluated_count = sum(
                 1
-                for a in booked_apps
+                for a in participant_list
                 if evaluated_map.get((a["id"], stype_key), (False, None))[0]
             )
             d["evaluated_count"] = evaluated_count
             d["is_evaluated"] = (
-                (evaluated_count == len(booked_apps)) if booked_apps else False
+                evaluated_count == len(participant_list) if participant_list else False
             )
             d["evaluated_score"] = (
-                evaluated_map.get((booked_apps[0]["id"], stype_key), (False, None))[1]
-                if booked_apps
+                evaluated_map.get(
+                    (participant_list[0]["id"], stype_key), (False, None)
+                )[1]
+                if participant_list
                 else None
             )
             d["status_color"] = (
                 "green"
-                if d["is_evaluated"] and booked_apps
-                else ("yellow" if booked_apps else "red")
+                if d["is_evaluated"] and participant_list
+                else ("yellow" if participant_list else "red")
             )
 
             results.append(d)
@@ -301,21 +278,6 @@ class SelectionRepository:
 
     def get_session_by_id(self, session_id: str) -> SelectionSession | None:
         return cast(SelectionSession | None, self.db.get(SelectionSession, session_id))
-
-    def get_session_with_booked_count(self, session_id: str) -> tuple | None:
-        stmt = select(
-            SelectionSession,
-            select(func.count())
-            .where(
-                or_(
-                    SelectionResult.session_id == SelectionSession.id,
-                    SelectionResult.interview_session_id == SelectionSession.id,
-                )
-            )
-            .scalar_subquery()
-            .label("booked_count"),
-        ).where(SelectionSession.id == session_id)
-        return cast(tuple[Any, ...] | None, self.db.execute(stmt).first())
 
     def update_session(self, session: SelectionSession) -> SelectionSession:
         self.db.add(session)
@@ -405,8 +367,8 @@ class SelectionRepository:
     ) -> SelectionResult:
         """Ambil baris hasil seleksi pendaftar, buat jika belum ada.
 
-        Tanpa ini, UPDATE notes/session menyentuh 0 baris dan booking
-        terlihat sukses padahal tidak tersimpan.
+        Tanpa ini, UPDATE notes/session menyentuh 0 baris sehingga
+        pembaruan terlihat sukses padahal tidak tersimpan.
         """
         existing = self.get_selection_result_by_applicant(applicant_id)
         if existing:
@@ -519,6 +481,19 @@ class SelectionRepository:
         self.db.add(row)
         self.db.flush()
 
+    def update_selection_result_note_fields(
+        self, applicant_id: str, fields: dict[str, str | None], now: datetime
+    ):
+        """Simpan catatan hasil per komponen seleksi (kolom notes_<komponen>)."""
+        row = self.ensure_selection_result(applicant_id, now)
+        for field, value in fields.items():
+            if not hasattr(row, field):
+                continue
+            setattr(row, field, (value or "").strip() or None)
+        row.updated_at = now
+        self.db.add(row)
+        self.db.flush()
+
     def get_selection_score(
         self, applicant_id: str, criteria_id: str
     ) -> SelectionScore | None:
@@ -538,22 +513,6 @@ class SelectionRepository:
 
     def update_applicant(self, applicant: PPDBApplicant):
         self.db.add(applicant)
-        self.db.flush()
-
-    def update_selection_result_session(
-        self,
-        applicant_id: str,
-        session_id: str,
-        now: datetime,
-        session_type: str | None = None,
-    ):
-        row = self.ensure_selection_result(applicant_id, now)
-        if (session_type or "").lower() == "wawancara":
-            row.interview_session_id = session_id
-        else:
-            row.session_id = session_id
-        row.updated_at = now
-        self.db.add(row)
         self.db.flush()
 
     def get_applicant_scores_with_details(self, applicant_id: str) -> Sequence[tuple]:
@@ -588,56 +547,6 @@ class SelectionRepository:
             )
             .where(SelectionScore.applicant_id == applicant_id)
             .order_by(SelectionCategory.created_at, SelectionCriteria.created_at)
-        )
-        return cast(Sequence[tuple[Any, ...]], self.db.execute(stmt).all())
-
-    def get_earliest_session_date(self, wave_id: str, today_iso: str) -> date | None:
-        stmt = (
-            select(SelectionSession.session_date)
-            .where(
-                SelectionSession.wave_id == wave_id,
-                SelectionSession.session_date.isnot(None),
-                SelectionSession.session_date >= today_iso,
-            )
-            .order_by(SelectionSession.session_date.asc())
-            .limit(1)
-        )
-        return cast(date | None, self.db.scalar(stmt))
-
-    def get_unassigned_applicants(self, wave_id: str) -> Sequence[str]:
-        stmt = (
-            select(SelectionResult.applicant_id)
-            .join(PPDBApplicant, SelectionResult.applicant_id == PPDBApplicant.id)
-            .where(
-                PPDBApplicant.wave_id == wave_id,
-                SelectionResult.session_id.is_(None),
-                PPDBApplicant.status == "selection",
-            )
-        )
-        return cast(Sequence[str], self.db.scalars(stmt).all())
-
-    def get_available_sessions(self, wave_id: str, today_iso: str) -> Sequence[tuple]:
-        stmt = (
-            select(
-                SelectionSession,
-                select(func.count())
-                .where(
-                    or_(
-                        SelectionResult.session_id == SelectionSession.id,
-                        SelectionResult.interview_session_id == SelectionSession.id,
-                    )
-                )
-                .scalar_subquery()
-                .label("booked_count"),
-            )
-            .where(
-                SelectionSession.wave_id == wave_id,
-                (SelectionSession.session_date >= today_iso)
-                | (SelectionSession.session_date.is_(None)),
-            )
-            .order_by(
-                SelectionSession.session_date.asc(), SelectionSession.start_time.asc()
-            )
         )
         return cast(Sequence[tuple[Any, ...]], self.db.execute(stmt).all())
 

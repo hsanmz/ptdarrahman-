@@ -181,7 +181,7 @@ export default function PeriodFeeItemsModal({
     <>
       <Dialog open={open} onOpenChange={onClose}>
         <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col p-0 overflow-hidden">
-          <DialogHeader className="p-6 pb-4 border-b">
+          <DialogHeader className="p-6 pb-4 pr-16 border-b">
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <DialogTitle className="flex items-center gap-2 text-xl font-bold">
@@ -214,7 +214,7 @@ export default function PeriodFeeItemsModal({
                 Di setiap gelombang, panitia cukup menentukan persentase atau nominal diskon (reguler & pendaftar awal).
               </p>
               <p className="text-emerald-700 font-medium">
-                Pembayaran biaya pendidikan dilakukan di luar aplikasi (transfer rekening resmi yayasan atau tunai di kantor bendahara pesantren).
+                Pembayaran biaya pendidikan dilakukan di luar aplikasi (transfer rekening resmi PTDARRAHMAN atau tunai di kantor bendahara pesantren).
               </p>
             </div>
 
@@ -237,6 +237,22 @@ export default function PeriodFeeItemsModal({
                   <Badge variant="outline" className="text-[10px] font-normal">
                     Standar Periode
                   </Badge>
+                </div>
+              </div>
+              <div className="rounded-lg border bg-card p-3.5 space-y-1 shadow-sm">
+                <span className="text-xs text-muted-foreground font-medium">
+                  Biaya Formulir (QRIS)
+                </span>
+                <div className="text-xl font-bold text-foreground">
+                  {period?.form_fee ? formatIdr(Number(period.form_fee)) : 'Gratis'}
+                </div>
+              </div>
+              <div className="rounded-lg border bg-card p-3.5 space-y-1 shadow-sm">
+                <span className="text-xs text-muted-foreground font-medium">
+                  Minimal DP (di LoA)
+                </span>
+                <div className="text-xl font-bold text-foreground">
+                  {formatIdr(Number(period?.minimum_dp) || 0)}
                 </div>
               </div>
             </div>

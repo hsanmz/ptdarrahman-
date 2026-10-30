@@ -36,7 +36,7 @@ export function Modal({ isOpen, onClose, title, children, footer, size = 'md', c
         className={cn('max-h-[90vh] flex flex-col overflow-hidden gap-0 p-0', sizes[size], className)}
       >
         {(title || description) && (
-          <DialogHeader className="px-6 py-4 border-b shrink-0 bg-secondary/30 text-left">
+          <DialogHeader className="px-6 py-4 pr-16 sm:pr-16 border-b shrink-0 bg-secondary/30 text-left">
             {title && <DialogTitle>{title}</DialogTitle>}
             {description && <DialogDescription className="mt-1">{description}</DialogDescription>}
           </DialogHeader>

@@ -65,12 +65,12 @@ export const ROUTE_SEMANTIC_TAGS: Record<string, { category: SemanticSearchItem[
   "/admin/sessions/tahfidz": {
     category: "Navigasi",
     keywords: ["ujian hafalan", "tes quran", "juz", "surah", "tajwid", "penguji tahfidz", "simakan", "jadwal ujian"],
-    desc: "Penjadwalan dan penilaian sesi ujian 1:1 Tahfidz Qur'an",
+    desc: "Penjadwalan dan penilaian sesi ujian Tahfidz Qur'an",
   },
   "/admin/sessions/wawancara": {
     category: "Navigasi",
     keywords: ["interview", "pewawancara", "wali santri", "orang tua", "kesiapan", "bk", "psikotes", "jadwal wawancara"],
-    desc: "Penjadwalan dan penilaian sesi 1:1 wawancara calon santri & wali",
+    desc: "Penjadwalan dan penilaian sesi wawancara calon santri & wali",
   },
   "/admin/penilaian": {
     category: "Navigasi",

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { cbtService, type CandidateMonitoring } from '@/services/cbtService'
 import { useToast } from '@/components/Toast'
+import MoveSessionDialog from '@/components/shared/MoveSessionDialog'
 import { DocTrigger } from '@repo/ui'
 import {
   Card,
@@ -17,13 +18,6 @@ import {
   TableBody,
   TableCell,
   TableSkeletonRows,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  Textarea,
 } from '@/components/ui'
 import {
   ArrowLeft,
@@ -69,37 +63,14 @@ export default function PemantauanUjianPage() {
     completed: 0,
   }
 
-  // Reschedule State (Pindah Sesi)
-  const [rescheduleCandidate, setRescheduleCandidate] = useState<CandidateMonitoring | null>(null)
-  const [targetScheduleId, setTargetScheduleId] = useState('')
-  const [rescheduleReason, setRescheduleReason] = useState('')
+  // Reschedule State (Pindah Sesi Massal)
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false)
 
   // Query other schedules for this category
   const { data: allSchedules = [] } = useQuery({
     queryKey: ['cbt-schedules', category, schedule?.wave_id],
     queryFn: () => (category ? cbtService.getSchedules(category as any, schedule?.wave_id) : []),
     enabled: !!category,
-  })
-
-  // Reschedule Mutation
-  const rescheduleMutation = useMutation({
-    mutationFn: async () => {
-      if (!rescheduleCandidate || !targetScheduleId || !scheduleId) return
-      return await cbtService.moveCandidateSchedule(scheduleId, rescheduleCandidate.applicant_id, {
-        target_schedule_id: targetScheduleId,
-        reason: rescheduleReason.trim() || undefined,
-      })
-    },
-    onSuccess: (res) => {
-      toast('success', res?.message || 'Berhasil memindahkan jadwal peserta!')
-      setRescheduleCandidate(null)
-      setTargetScheduleId('')
-      setRescheduleReason('')
-      queryClient.invalidateQueries({ queryKey: ['cbt-monitoring', scheduleId] })
-    },
-    onError: (err: any) => {
-      toast('error', err.message || 'Gagal memindahkan jadwal peserta.')
-    },
   })
 
   // Unfreeze Mutation
@@ -150,6 +121,21 @@ export default function PemantauanUjianPage() {
     const m = Math.floor(seconds / 60)
     const s = seconds % 60
     return `${m}m ${s < 10 ? '0' : ''}${s}d`
+  }
+
+  const statusLabel = (status: string) => {
+    switch (status) {
+      case 'not_started':
+        return 'Belum Masuk'
+      case 'in_progress':
+        return 'Mengerjakan'
+      case 'locked':
+        return 'Terkunci'
+      case 'completed':
+        return 'Selesai'
+      default:
+        return status
+    }
   }
 
   return (
@@ -316,6 +302,7 @@ export default function PemantauanUjianPage() {
       {/* Candidate Table & Filters */}
       <Card>
         <CardContent className="p-5 space-y-4">
+          {/* Filter, Search & CTA Pindah Sesi */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
             <div className="relative w-full md:w-72">
               <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
@@ -345,6 +332,17 @@ export default function PemantauanUjianPage() {
                   {f.label}
                 </Button>
               ))}
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMoveDialogOpen(true)}
+                disabled={candidates.filter((c) => c.status !== 'completed').length === 0}
+                className="h-8 text-xs gap-1.5 border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold"
+                title="Pindahkan peserta ke jadwal CBT lain jika berhalangan"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                Pindah Sesi
+              </Button>
             </div>
           </div>
 
@@ -352,40 +350,43 @@ export default function PemantauanUjianPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-12 text-center text-xs">No</TableHead>
-                  <TableHead className="text-xs">No. Registrasi</TableHead>
-                  <TableHead className="text-xs">Nama Calon Santri</TableHead>
-                  <TableHead className="text-xs">Status Pengerjaan</TableHead>
+                  <TableHead className="text-xs">No. Regis</TableHead>
+                  <TableHead className="text-xs">Calon Santri</TableHead>
+                  <TableHead className="text-xs">Status CBT</TableHead>
                   <TableHead className="text-xs text-center">Terjawab</TableHead>
                   <TableHead className="text-xs text-center">Pelanggaran</TableHead>
-                  <TableHead className="text-xs text-center">Nilai Akhir</TableHead>
-                  <TableHead className="text-xs text-right">Aksi Pengawas</TableHead>
+                  <TableHead className="text-xs text-center">Nilai</TableHead>
+                  <TableHead className="text-xs text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
-                  <TableSkeletonRows cols={8} rows={5} />
+                  <TableSkeletonRows cols={7} rows={5} />
                 ) : filteredCandidates.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-8 text-center text-xs text-muted-foreground">
+                    <TableCell colSpan={7} className="py-8 text-center text-xs text-muted-foreground">
                       Tidak ada peserta yang cocok dengan filter.
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredCandidates.map((c, idx) => (
+                  filteredCandidates.map((c) => (
                     <TableRow
                       key={c.applicant_id}
                       className={c.status === 'locked' ? 'bg-red-50/50' : undefined}
                     >
-                      <TableCell className="text-center text-xs text-muted-foreground font-mono">
-                        {idx + 1}
-                      </TableCell>
                       <TableCell className="text-xs font-mono font-semibold text-foreground">
                         {c.registration_number || '-'}
                       </TableCell>
                       <TableCell className="text-xs">
-                        <div className="font-semibold text-foreground">{c.full_name}</div>
-                        <div className="text-[11px] text-muted-foreground">{c.phone}</div>
+                        <div
+                          className="font-semibold text-foreground max-w-[180px] truncate"
+                          title={c.full_name}
+                        >
+                          {c.full_name}
+                        </div>
+                        <div className="text-[11px] text-muted-foreground font-mono max-w-[180px] truncate">
+                          {c.phone}
+                        </div>
                       </TableCell>
                       <TableCell className="text-xs">
                         {c.status === 'not_started' && (
@@ -444,18 +445,6 @@ export default function PemantauanUjianPage() {
                               Buka Kunci
                             </Button>
                           )}
-                          {c.status !== 'completed' && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => setRescheduleCandidate(c)}
-                              className="h-7 px-2 text-[11px] font-semibold text-amber-900 border-amber-300 bg-amber-50 hover:bg-amber-100"
-                              title="Pindahkan peserta ke jadwal CBT lain jika berhalangan"
-                            >
-                              <Calendar className="w-3 h-3 mr-1" />
-                              Pindah Sesi
-                            </Button>
-                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -467,69 +456,38 @@ export default function PemantauanUjianPage() {
         </CardContent>
       </Card>
 
-      {/* ── Modal Pindah Sesi Peserta CBT (Reschedule) ── */}
-      <Dialog open={!!rescheduleCandidate} onOpenChange={(open) => !open && setRescheduleCandidate(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-base font-bold text-slate-900">Pindah Sesi / Ganti Jadwal Ujian</DialogTitle>
-            <DialogDescription className="text-xs">
-              Pindahkan peserta <strong>{rescheduleCandidate?.full_name}</strong> ke jadwal sesi CBT yang lain karena berhalangan hadir.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2 text-xs">
-            <div className="space-y-1">
-              <label className="font-semibold text-slate-700">Pilih Jadwal Sesi Target *</label>
-              <select
-                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-xs shadow-xs focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                value={targetScheduleId}
-                onChange={(e) => setTargetScheduleId(e.target.value)}
-                required
-              >
-                <option value="">-- Pilih Jadwal Pengganti --</option>
-                {allSchedules
-                  .filter((s) => s.id !== scheduleId && s.status !== 'cancelled')
-                  .map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.session_date} · {s.start_time} - {s.end_time} WIB) [{s.mode.toUpperCase()}]
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            <div className="space-y-1">
-              <label className="font-semibold text-slate-700">Alasan Pindah Sesi (Opsional)</label>
-              <Textarea
-                placeholder="Contoh: Peserta berhalangan hadir pada jam sesi ini karena sakit / ada keperluan mendadak."
-                value={rescheduleReason}
-                onChange={(e) => setRescheduleReason(e.target.value)}
-                rows={2}
-                className="text-xs resize-none"
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="gap-2 sm:gap-0">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setRescheduleCandidate(null)}
-            >
-              Batal
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              onClick={() => rescheduleMutation.mutate()}
-              disabled={!targetScheduleId || rescheduleMutation.isPending}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
-            >
-              {rescheduleMutation.isPending ? 'Memindahkan...' : 'Konfirmasi Pindah Sesi'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* ── Modal Pindah Sesi Peserta CBT (Reschedule Massal) ── */}
+      <MoveSessionDialog
+        open={moveDialogOpen}
+        onOpenChange={setMoveDialogOpen}
+        sourceSessionId={scheduleId || null}
+        sourceSessionLabel={
+          schedule?.name
+            ? `${schedule.name} (${schedule?.session_date} · ${schedule?.start_time} - ${schedule?.end_time} WIB)`
+            : null
+        }
+        applicants={candidates.map((c: CandidateMonitoring) => ({
+          applicant_id: c.applicant_id,
+          full_name: c.full_name,
+          phone: c.phone,
+          extra_label: c.registration_number
+            ? `No. Regis: ${c.registration_number}`
+            : null,
+          status_label: statusLabel(c.status),
+          moves_disabled: c.status === 'completed',
+        }))}
+        targets={allSchedules
+          .filter((s) => s.id !== scheduleId && s.status !== 'cancelled')
+          .map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            session_date: s.session_date,
+            start_time: s.start_time,
+            end_time: s.end_time,
+            tag: s.mode === 'online' ? 'Online' : 'Offline',
+          }))}
+        onMoved={() => queryClient.invalidateQueries({ queryKey: ['cbt-monitoring', scheduleId] })}
+      />
     </div>
   )
 }

@@ -1499,8 +1499,10 @@ class CBTService:
             pass
 
         return {
-            "message": f"Berhasil memindahkan peserta {applicant.full_name} ke "
-            "{target_sched.name}",
+            "message": (
+                "Berhasil memindahkan peserta "
+                f"{applicant.full_name} ke {target_sched.name}"
+            ),
             "target_schedule_id": target_sched.id,
             "target_schedule_name": target_sched.name,
         }

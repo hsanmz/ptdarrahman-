@@ -2,10 +2,18 @@ import { forwardRef, useState, useEffect } from 'react'
 import { ShieldCheck, Award } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { API_BASE } from '@/api/client'
+import { resultStatusDecision } from '@/lib/selectionStatus'
 
 export interface OfficialAssessmentSheetProps {
   applicant: any
   categories: any[]
+  cbtResults?: { akademik?: any | null; psikologi?: any | null }
+  resultNotes?: {
+    notes_akademik?: string
+    notes_psikologi?: string
+    notes_tahfidz?: string
+    notes_wawancara?: string
+  } | null
   evaluatorNotes?: string | null
   graduationStatus?: string | null
   logoUrl?: string | null
@@ -16,6 +24,8 @@ const OfficialAssessmentSheet = forwardRef<HTMLDivElement, OfficialAssessmentShe
     {
       applicant,
       categories = [],
+      cbtResults,
+      resultNotes,
       evaluatorNotes,
       graduationStatus,
       logoUrl: logoUrlProp,
@@ -60,7 +70,10 @@ const OfficialAssessmentSheet = forwardRef<HTMLDivElement, OfficialAssessmentShe
     }, [logoUrlProp])
 
     const tahfidzCat = categories.find((c) => c.category_name?.toLowerCase().includes('tahfidz'))
-    const wawancaraCat = categories.find((c) => c.category_name?.toLowerCase().includes('wawancara'))
+    const wawancaraCat = categories.find(
+      (c) => (c.category_name || '').toLowerCase().includes('wawancara') ||
+        (c.category_name || '').toLowerCase().includes('interview')
+    )
     const otherCats = categories.filter((c) => c !== tahfidzCat && c !== wawancaraCat)
 
     const calculateAvg = (criteriaList?: any[]) => {
@@ -80,26 +93,10 @@ const OfficialAssessmentSheet = forwardRef<HTMLDivElement, OfficialAssessmentShe
       year: 'numeric',
     })
 
-    const statusUpper = (graduationStatus || applicant?.status || 'selection').toLowerCase()
-    const isPassed = statusUpper === 'passed'
-    const isFailed = statusUpper === 'failed'
-
-    const regNo = applicant?.registration_number || applicant?.id?.slice(0, 8).toUpperCase() || 'REG-PENDARRAHMAN'
-    const officialVerifyUrl = typeof window !== 'undefined'
-      ? `${window.location.origin}/loa/${regNo}?verify=official`
-      : `https://ptdarrahman.sch.id/loa/${regNo}?verify=official`
-
-    // Info kontak dari database companyprofile
-    const schoolAddress =
-      contactInfo.address || 'Rukan Hexa Green Kalimalang, Jl. Inspeksi Kalimalang C8-C9, Jatimulya, Tambun Selatan, Bekasi 17510'
-    const schoolEmail =
-      contactInfo.email_admission || contactInfo.email_primary || 'ppdb@ptdarrahman.sch.id'
-    const activeDomain = typeof window !== 'undefined' ? window.location.host : 'ptdarrahman.sch.id'
-
-    // Parsing catatan tim evaluator agar catatan Tahfidz dan Wawancara terpisah rapi atau tergabung
-    const parseNotes = (raw?: string | null) => {
-      if (!raw) return { tahfidz: '', wawancara: '', general: '' }
-      const text = raw.trim()
+    // Fallback data lama: catatan komponen terlabel [Tahfidz]: / [Wawancara]: dalam satu teks.
+    const parseLegacyNotes = (raw?: string | null) => {
+      const text = (raw || '').trim()
+      if (!text) return { tahfidz: '', wawancara: '', general: '' }
       const tahfidzMatch = text.match(/(?:^|\n)\[Tahfidz\]:\s*([\s\S]*?)(?=(?:\n\[|$))/i)
       const wawancaraMatch = text.match(/(?:^|\n)\[Wawancara\]:\s*([\s\S]*?)(?=(?:\n\[|$))/i)
       if (tahfidzMatch || wawancaraMatch) {
@@ -112,8 +109,55 @@ const OfficialAssessmentSheet = forwardRef<HTMLDivElement, OfficialAssessmentShe
       return { tahfidz: '', wawancara: '', general: text }
     }
 
-    const parsedNotes = parseNotes(evaluatorNotes)
-    const hasNotes = Boolean(parsedNotes.tahfidz || parsedNotes.wawancara || parsedNotes.general)
+    const legacyNotes = parseLegacyNotes(evaluatorNotes)
+    const componentNotes = [
+      {
+        label: 'Ujian Akademik (CBT)',
+        value: (resultNotes?.notes_akademik || '').trim(),
+      },
+      {
+        label: 'Ujian Psikologi (CBT)',
+        value: (resultNotes?.notes_psikologi || '').trim(),
+      },
+      {
+        label: 'Ujian Tahfidz',
+        value: (resultNotes?.notes_tahfidz || legacyNotes.tahfidz || '').trim(),
+      },
+      {
+        label: 'Ujian Wawancara',
+        value: (resultNotes?.notes_wawancara || legacyNotes.wawancara || '').trim(),
+      },
+    ].filter((n) => n.value)
+    const generalNote = legacyNotes.general
+    const hasNotes =
+      componentNotes.length > 0 || Boolean(generalNote)
+
+    // Keterangan per attempt CBT pada kolom ringkasan
+    const cbtRow = (result?: any | null) => {
+      if (result == null) return { score: null, note: 'Belum ada jadwal ujian' }
+      if (result.attempt_status === 'completed' && result.score != null) {
+        return { score: Number(result.score), note: 'Dinilai otomatis oleh sistem CBT' }
+      }
+      if (result.attempt_status === 'in_progress') return { score: null, note: 'Sedang dikerjakan' }
+      if (result.attempt_status === 'locked') return { score: null, note: 'Terkunci — perlu pembukaan panitia' }
+      return { score: null, note: 'Belum dikerjakan' }
+    }
+    const akademikRow = cbtRow(cbtResults?.akademik)
+    const psikologiRow = cbtRow(cbtResults?.psikologi)
+
+    const decision = resultStatusDecision(graduationStatus)
+
+    const regNo = applicant?.registration_number || applicant?.id?.slice(0, 8).toUpperCase() || 'REG-PENDARRAHMAN'
+    const officialVerifyUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}/loa/${regNo}?verify=official`
+      : `https://ptdarrahman.sch.id/loa/${regNo}?verify=official`
+
+    // Info kontak dari database companyprofile
+    const schoolAddress =
+      contactInfo.address || 'Rukan Hexa Green Kalimalang, Jl. Inspeksi Kalimalang C8-C9, Jatimulya, Tambun Selatan, Bekasi 17510'
+    const schoolEmail =
+      contactInfo.email_admission || contactInfo.email_primary || 'ppdb@ptdarrahman.sch.id'
+    const activeDomain = typeof window !== 'undefined' ? window.location.host : 'ptdarrahman.sch.id'
 
     return (
       <div
@@ -243,9 +287,47 @@ const OfficialAssessmentSheet = forwardRef<HTMLDivElement, OfficialAssessmentShe
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {/* Tahfidz */}
+                {/* CBT Akademik */}
                 <tr>
                   <td className="py-1.5 px-2.5 text-center font-bold text-slate-600 border-r border-slate-200">1</td>
+                  <td className="py-1.5 px-2.5 font-semibold text-slate-900 border-r border-slate-200">
+                    Ujian Akademik (CBT)
+                  </td>
+                  <td className="py-1.5 px-2.5 text-slate-600 border-r border-slate-200">
+                    {cbtResults?.akademik?.schedule_name || 'Ujian CBT Terkomputerisasi'}
+                  </td>
+                  <td className="py-1.5 px-2.5 text-center font-bold text-slate-900 border-r border-slate-200">
+                    {akademikRow.score != null ? (
+                      <span className="text-emerald-800 font-black">{akademikRow.score} <span className="text-slate-400 font-normal">/ 100</span></span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+                  <td className="py-1.5 px-2.5 text-slate-600 text-[9.5px]">{akademikRow.note}</td>
+                </tr>
+
+                {/* CBT Psikologi */}
+                <tr>
+                  <td className="py-1.5 px-2.5 text-center font-bold text-slate-600 border-r border-slate-200">2</td>
+                  <td className="py-1.5 px-2.5 font-semibold text-slate-900 border-r border-slate-200">
+                    Ujian Psikologi (CBT)
+                  </td>
+                  <td className="py-1.5 px-2.5 text-slate-600 border-r border-slate-200">
+                    {cbtResults?.psikologi?.schedule_name || 'Ujian CBT Terkomputerisasi'}
+                  </td>
+                  <td className="py-1.5 px-2.5 text-center font-bold text-slate-900 border-r border-slate-200">
+                    {psikologiRow.score != null ? (
+                      <span className="text-emerald-800 font-black">{psikologiRow.score} <span className="text-slate-400 font-normal">/ 100</span></span>
+                    ) : (
+                      <span className="text-slate-400">—</span>
+                    )}
+                  </td>
+                  <td className="py-1.5 px-2.5 text-slate-600 text-[9.5px]">{psikologiRow.note}</td>
+                </tr>
+
+                {/* Tahfidz */}
+                <tr>
+                  <td className="py-1.5 px-2.5 text-center font-bold text-slate-600 border-r border-slate-200">3</td>
                   <td className="py-1.5 px-2.5 font-semibold text-slate-900 border-r border-slate-200">
                     Ujian Tahfidz Al-Qur&apos;an
                   </td>
@@ -266,7 +348,7 @@ const OfficialAssessmentSheet = forwardRef<HTMLDivElement, OfficialAssessmentShe
 
                 {/* Wawancara */}
                 <tr>
-                  <td className="py-1.5 px-2.5 text-center font-bold text-slate-600 border-r border-slate-200">2</td>
+                  <td className="py-1.5 px-2.5 text-center font-bold text-slate-600 border-r border-slate-200">4</td>
                   <td className="py-1.5 px-2.5 font-semibold text-slate-900 border-r border-slate-200">
                     Ujian Wawancara Santri &amp; Wali
                   </td>
@@ -290,7 +372,7 @@ const OfficialAssessmentSheet = forwardRef<HTMLDivElement, OfficialAssessmentShe
                   const catAvg = calculateAvg(cat.criteria)
                   return (
                     <tr key={idx}>
-                      <td className="py-1.5 px-2.5 text-center font-bold text-slate-600 border-r border-slate-200">{4 + idx}</td>
+                      <td className="py-1.5 px-2.5 text-center font-bold text-slate-600 border-r border-slate-200">{5 + idx}</td>
                       <td className="py-1.5 px-2.5 font-semibold text-slate-900 border-r border-slate-200">
                         {cat.category_name}
                       </td>
@@ -393,26 +475,20 @@ const OfficialAssessmentSheet = forwardRef<HTMLDivElement, OfficialAssessmentShe
           </div>
 
           {/* ═══════════════════════════════════════════
-              3. CATATAN TIM EVALUATOR (GABUNGAN TAHFIDZ & WAWANCARA)
+              3. CATATAN HASIL PER KOMPONEN + CATATAN EVALUATOR
               ═══════════════════════════════════════════ */}
           {hasNotes && (
-            <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg text-[10px] text-slate-700 space-y-1">
+            <div className="p-2 bg-slate-50 border border-slate-200 rounded-lg text-[10px] text-slate-700 space-y-0.5">
               <span className="font-bold text-slate-900 block text-[10px]">Catatan Tim Evaluator / Penguji:</span>
               <div className="space-y-0.5 pl-1 leading-snug">
-                {parsedNotes.tahfidz && (
-                  <p>
-                    <strong className="text-slate-800">Ujian Tahfidz:</strong>{' '}
-                    <span className="italic">{parsedNotes.tahfidz}</span>
+                {componentNotes.map((n, i) => (
+                  <p key={i}>
+                    <strong className="text-slate-800">{n.label}:</strong>{' '}
+                    <span className="italic">{n.value}</span>
                   </p>
-                )}
-                {parsedNotes.wawancara && (
-                  <p>
-                    <strong className="text-slate-800">Ujian Wawancara:</strong>{' '}
-                    <span className="italic">{parsedNotes.wawancara}</span>
-                  </p>
-                )}
-                {parsedNotes.general && !parsedNotes.tahfidz && !parsedNotes.wawancara && (
-                  <p className="italic">{parsedNotes.general}</p>
+                ))}
+                {generalNote && (
+                  <p><strong className="text-slate-800">Catatan Evaluator (Keputusan Hasil):</strong> <span className="italic">{generalNote}</span></p>
                 )}
               </div>
             </div>
@@ -422,24 +498,12 @@ const OfficialAssessmentSheet = forwardRef<HTMLDivElement, OfficialAssessmentShe
               4. KEPUTUSAN HASIL AKHIR SELEKSI
               (Rata tengah, tanpa badge ekstra di samping)
               ═══════════════════════════════════════════ */}
-          <div
-            className={`p-2 rounded-lg border text-center ${
-              isPassed
-                ? 'bg-emerald-50/80 border-emerald-300 text-emerald-950'
-                : isFailed
-                ? 'bg-rose-50/80 border-rose-300 text-rose-950'
-                : 'bg-amber-50/80 border-amber-300 text-amber-950'
-            }`}
-          >
+          <div className={`p-2 rounded-lg border text-center ${decision.wrap}`}>
             <span className="text-[9.5px] font-bold uppercase tracking-wider block text-slate-600 mb-0.5">
               KEPUTUSAN HASIL AKHIR SELEKSI:
             </span>
-            <span
-              className={`text-xs font-black tracking-wide uppercase ${
-                isPassed ? 'text-emerald-800' : isFailed ? 'text-rose-800' : 'text-amber-800'
-              }`}
-            >
-              {isPassed ? 'LULUS SELEKSI CALON SANTRI' : isFailed ? 'TIDAK LULUS SELEKSI' : 'DALAM PROSES SELEKSI'}
+            <span className={`text-xs font-black tracking-wide uppercase ${decision.text}`}>
+              {decision.title}
             </span>
           </div>
         </div>

@@ -141,7 +141,7 @@ Sistem PPDB mengintegrasikan modul Computer Based Test (CBT) mandiri dan sesi ta
 - **Live Monitoring Panitia:** Pengawas ujian memantau progres seluruh peserta secara real-time dari halaman `/admin/monitoring/:category/:scheduleId`. Pengawas berwenang membuka kembali status ujian peserta yang terkunci via tombol **Unfreeze Peserta** (`POST /cbt/schedules/{id}/unfreeze/{applicant_id}`).
 - **Auto-Submit & Auto-Grading:** Saat durasi timer habis atau peserta klik selesai (`POST /cbt/finish/{schedule_id}`), sistem otomatis menutup ujian, mengunci jawaban, dan menghitung skor akhir pendaftar.
 
-### 4. Sesi 1:1 Tahfidz & Wawancara Terpadu (Santri dan Orang Tua/Wali)
+### 4. Sesi Seleksi Tahfidz & Wawancara Terpadu (Santri dan Orang Tua/Wali)
 - **Sesi Seleksi Tahfidz:** Evaluasi tartil, tahsin, dan kemampuan hafalan Al-Qur'an bersama asatidz penguji dengan lembar rubrik berbobot resmi.
 - **Sesi Wawancara Terpadu Calon Santri & Orang Tua/Wali:** Dilaksanakan terpadu dalam satu jadwal bersamaan untuk menggali motivasi santri serta komitmen pengasuhan dan keselarasan visi orang tua/wali santri.
 - Format workspace penilaian evaluator: Layar kerja dua kolom dengan formulir rubrik terbobot di kolom kiri dan dossier lengkap santri di kolom kanan.

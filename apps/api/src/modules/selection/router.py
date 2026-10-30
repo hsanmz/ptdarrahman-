@@ -20,7 +20,6 @@ Endpoint coverage:
 
   Applicant:
     GET  /selection/applicants/me/sessions    - info sesi milik applicant yang login
-    POST /selection/applicants/me/book        - pilih/booking sesi
     GET  /selection/applicants/me/results     - nilai dinamis milik applicant yang login
 """
 
@@ -35,11 +34,12 @@ from src.core.dependencies import (
     require_ppdb_read,
 )
 from src.modules.selection.schemas import (
+    ApplicantResultNotesUpdate,
     ApplicantScoreSave,
     ApplicantStatusUpdate,
-    BookSession,
     BroadcastSession,
     BulkApplicantScoreSave,
+    BulkMoveApplicantsSession,
     CategoryCreate,
     CriteriaCreate,
     CriteriaUpdate,
@@ -246,6 +246,16 @@ def update_applicant_selection_status(
     return svc.update_applicant_status(applicant_id, body)
 
 
+@router.put("/applicants/{applicant_id}/result-notes")
+def update_applicant_result_notes(
+    applicant_id: str,
+    body: ApplicantResultNotesUpdate,
+    user: dict = Depends(require_ppdb_admin),
+    svc: SelectionService = Depends(get_selection_service),
+):
+    return svc.update_applicant_result_notes(applicant_id, body)
+
+
 @router.post("/applicants/{applicant_id}/move-session")
 def move_applicant_session(
     applicant_id: str,
@@ -256,8 +266,22 @@ def move_applicant_session(
     return svc.move_applicant_session(applicant_id, body.target_session_id, body.reason)
 
 
+@router.post("/applicants/move-session-bulk")
+def move_applicants_session_bulk(
+    body: BulkMoveApplicantsSession,
+    user: dict = Depends(require_ppdb_admin),
+    svc: SelectionService = Depends(get_selection_service),
+):
+    return svc.move_applicants_session_bulk(
+        body.applicant_ids,
+        body.target_session_id,
+        body.current_session_id,
+        body.reason,
+    )
+
+
 # ---------------------------------------------------------------------------
-# Applicant Endpoints (Booking & View)
+# Applicant Endpoints (View)
 # ---------------------------------------------------------------------------
 
 
@@ -269,31 +293,12 @@ def applicant_get_my_session(
     return svc.applicant_get_my_session(user["id"])
 
 
-@router.post("/applicants/me/book")
-def applicant_book_session(
-    body: BookSession,
-    user: dict = Depends(get_current_user),
-    svc: SelectionService = Depends(get_selection_service),
-):
-    return svc.applicant_book_session(user["id"], body.session_id)
-
-
 @router.get("/applicants/me/results")
 def applicant_get_my_results(
     user: dict = Depends(get_current_user),
     svc: SelectionService = Depends(get_selection_service),
 ):
     return svc.applicant_get_my_results(user["id"])
-
-
-@router.post("/cron/auto-assign-sessions")
-def auto_assign_sessions(
-    x_cron_secret: str = Header(None),
-    svc: SelectionService = Depends(get_selection_service),
-):
-    if x_cron_secret != settings.cron_secret:
-        raise HTTPException(status_code=401, detail="Unauthorized cron request")
-    return svc.auto_assign_sessions()
 
 
 @router.post("/cron/h1-reminders")

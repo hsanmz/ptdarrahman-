@@ -58,12 +58,16 @@ class SelectionResult(Base):
     current_stage: Mapped[int] = mapped_column(
         Integer, nullable=False, server_default="0", default=0
     )
-    last_stage_sent_at: Mapped[datetime | None] = mapped_column(
-        DateTime, nullable=True
-    )
+    last_stage_sent_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    # graduation: None = belum ditentukan, 'passed' = lulus, 'failed' = tidak lulus
+    # Catatan hasil per komponen seleksi (opsional, agar tidak menumpuk satu teks).
+    notes_akademik: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notes_psikologi: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notes_tahfidz: Mapped[str | None] = mapped_column(Text, nullable=True)
+    notes_wawancara: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # graduation: None = dalam proses, 'passed'/'conditional'/
+    # 'waitlist'/'failed' = hasil final
     graduation_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     graduation_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)

@@ -27,10 +27,10 @@ from src.core.pakasir import (
     normalize_create_response,
     normalize_status_response,
 )
-from src.core.scheduler import run_installment_reminders
 from src.models.ppdb import (
     PPDBApplicant,
     PPDBPaymentTransaction,
+    PPDBPeriod,
     PPDBWave,
 )
 from src.services.payment_service import (
@@ -257,7 +257,12 @@ def test_credentials_are_redacted_from_error_details():
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def test_financial_calculation_and_lunas_status():
+def test_financial_calculation_neutralizes_stage2_obligation():
+    """Biaya pendidikan kini dibayar di luar aplikasi.
+
+    Kalkulasi tagihan tahap 2 sengaja dinetralkan agar portal PPDB tidak
+    menagih pembayaran yang tidak lagi ditangani sistem.
+    """
     mock_repo = MagicMock()
     app = PPDBApplicant(
         id="app-1",
@@ -265,137 +270,47 @@ def test_financial_calculation_and_lunas_status():
         wave_id="w-1",
         status="passed",
         is_loa_signed=True,
-        dp_status="paid",
-    )
-    wave = PPDBWave(
-        id="w-1",
-        minimum_dp=5000000,
-        second_stage_fee=15000000,
-        early_discount_quota=0,
     )
     mock_repo.get_applicant_by_id.return_value = app
-    mock_repo.get_wave_by_id.return_value = wave
-    mock_repo.get_paid_form_payment_rank.return_value = None
-    mock_repo.get_wave_fee_items_with_discounts.return_value = [
-        {"name": "Biaya DP3 & SPP", "final_amount": 15000000}
-    ]
 
-    # Scenario A: DP paid, 0 installments -> remaining 10,000,000, not lunas
-    dp_tx = PPDBPaymentTransaction(
-        id="tx-dp",
-        applicant_id="app-1",
-        payment_type="dp",
-        status="success",
-        amount=5000000,
-    )
-    mock_repo.get_applicant_transactions.return_value = [dp_tx]
-
-    service = PaymentService(mock_repo)
-    fin = service.calculate_applicant_financials("app-1")
-    assert fin["total_obligation"] == 15000000
+    fin = PaymentService(mock_repo).calculate_applicant_financials("app-1")
+    assert fin["total_obligation"] == 0
+    assert fin["remaining_balance"] == 0
     assert fin["dp_paid"] is True
-    assert fin["dp_amount_paid"] == 5000000
-    assert fin["total_paid"] == 5000000
-    assert fin["remaining_balance"] == 10000000
-    assert fin["is_lunas"] is False
-
-    # Scenario B: DP paid + Installment 1 (Rp 5,000,000)
-    # + Installment 2 (Rp 5,000,000) -> LUNAS
-    inst_1 = PPDBPaymentTransaction(
-        id="tx-i1",
-        applicant_id="app-1",
-        payment_type="installment",
-        status="success",
-        amount=5000000,
-        installment_number=1,
-    )
-    inst_2 = PPDBPaymentTransaction(
-        id="tx-i2",
-        applicant_id="app-1",
-        payment_type="installment",
-        status="success",
-        amount=5000000,
-        installment_number=2,
-    )
-    mock_repo.get_applicant_transactions.return_value = [dp_tx, inst_1, inst_2]
-
-    fin_lunas = service.calculate_applicant_financials("app-1")
-    assert fin_lunas["total_paid"] == 15000000
-    assert fin_lunas["remaining_balance"] == 0
-    assert fin_lunas["is_lunas"] is True
-    assert fin_lunas["successful_installments_count"] == 2
+    assert fin["is_lunas"] is True
 
 
-def test_qris_creation_validations_dp_and_installment():
+def test_qris_rejects_non_form_payment_types():
+    """QRIS hanya untuk biaya formulir; DP & cicilan dibayar di luar aplikasi."""
     mock_repo = MagicMock()
-    app = PPDBApplicant(
-        id="app-1",
-        user_id="u-1",
-        wave_id="w-1",
-        status="passed",
-        is_loa_signed=False,  # Not signed yet
-        dp_status="pending",
-    )
-    wave = PPDBWave(
-        id="w-1",
-        minimum_dp=5000000,
-        second_stage_fee=15000000,
-        quota=100,
-    )
-    mock_repo.get_applicant_by_user_id.return_value = app
-    mock_repo.get_applicant_by_id.return_value = app
-    mock_repo.get_wave_by_id.return_value = wave
-    mock_repo.get_active_transaction.return_value = None
-    mock_repo.get_applicant_transactions.return_value = []
-    mock_repo.get_wave_fee_items_with_discounts.return_value = []
-
     service = PaymentService(mock_repo)
 
-    # 1. DP requires LoA signed
-    with pytest.raises(HTTPException) as exc:
-        service.create_qris_transaction("u-1", payment_type="dp")
-    assert "Dokumen LoA harus ditandatangani" in str(exc.value.detail)
+    for payment_type in ("dp", "installment"):
+        with pytest.raises(HTTPException) as exc:
+            service.create_qris_transaction("u-1", payment_type=payment_type)
+        assert "Hanya pembayaran formulir" in str(exc.value.detail)
 
-    # 2. Stage 2 requires DP paid first
-    app.is_loa_signed = True
-    with pytest.raises(HTTPException) as exc:
-        service.create_qris_transaction(
-            "u-1", payment_type="installment", amount=1000000
-        )
-    assert "Pembayaran DP harus diselesaikan" in str(exc.value.detail)
-
-    # 3. When DP is paid, cannot exceed remaining balance
-    dp_tx = PPDBPaymentTransaction(
-        id="tx-dp",
-        applicant_id="app-1",
-        payment_type="dp",
-        status="success",
-        amount=5000000,
-    )
-    app.dp_status = "paid"
-    mock_repo.get_applicant_transactions.return_value = [dp_tx]
-
-    # Remaining is 10,000,000. Trying to pay 12,000,000 must fail:
-    with pytest.raises(HTTPException) as exc:
-        service.create_qris_transaction(
-            "u-1", payment_type="installment", amount=12000000
-        )
-    assert "melebihi sisa tagihan" in str(exc.value.detail)
+    # Tidak ada transaksi yang boleh tersimpan untuk tipe yang ditolak.
+    mock_repo.save_transaction.assert_not_called()
 
 
 def test_active_transaction_restoration_on_reload():
     mock_repo = MagicMock()
     app = PPDBApplicant(
-        id="app-1", user_id="u-1", wave_id="w-1", status="passed", is_loa_signed=True
+        id="app-1",
+        user_id="u-1",
+        wave_id="w-1",
+        status="pending_payment",
+        payment_status="pending",
     )
     future_time = datetime.now(WIB) + timedelta(minutes=10)
     active_tx = PPDBPaymentTransaction(
         id="tx-active",
         applicant_id="app-1",
-        order_id="PPDB-DP-APP1-12345",
+        order_id="PPDB-FORM-APP1-12345",
         txn_id="tx_gw_123",
-        payment_type="dp",
-        amount=5000000,
+        payment_type="form",
+        amount=250000,
         status="pending",
         provider_status="pending",
         qr_string="000201...",
@@ -407,7 +322,7 @@ def test_active_transaction_restoration_on_reload():
     service = PaymentService(mock_repo)
     # Calling create_qris_transaction with same payment_type returns
     # existing active without duplicate
-    res = service.create_qris_transaction("u-1", payment_type="dp")
+    res = service.create_qris_transaction("u-1", payment_type="form")
     assert res["id"] == "tx-active"
     assert res["status"] == "pending"
     assert res["expires_in_seconds"] > 0
@@ -428,10 +343,12 @@ def _form_service(mock_repo):
         status="pending_payment",
         payment_status="pending",
     )
-    wave = PPDBWave(id="w-1", registration_fee=250000, quota=0)
+    wave = PPDBWave(id="w-1", quota=0)
+    period = PPDBPeriod(id="p-1", form_fee=250000, minimum_dp=0)
     mock_repo.get_applicant_by_user_id.return_value = app
     mock_repo.get_applicant_by_id.return_value = app
     mock_repo.get_wave_by_id.return_value = wave
+    mock_repo.get_period_by_id.return_value = period
     mock_repo.get_active_transaction.return_value = None
     mock_repo.count_paid_form_payments_in_wave.return_value = 0
     return PaymentService(mock_repo)
@@ -832,85 +749,6 @@ def test_cancel_without_txn_id_cancels_locally():
     assert tx.status == "cancelled"
 
 
-def test_sequential_atomic_installment_numbering():
-    mock_repo = MagicMock()
-    mock_db = MockDb()
-    mock_repo.db = mock_db
-
-    app = PPDBApplicant(
-        id="app-1",
-        user_id="u-1",
-        wave_id="w-1",
-        status="passed",
-        is_loa_signed=True,
-        dp_status="paid",
-    )
-    wave = PPDBWave(id="w-1", minimum_dp=5000000, second_stage_fee=15000000)
-    mock_repo.get_applicant_by_id.return_value = app
-    mock_repo.get_wave_by_id.return_value = wave
-    mock_repo.get_wave_fee_items_with_discounts.return_value = []
-
-    # Suppose there are already 2 successful installments
-    mock_repo.count_successful_installments.return_value = 2
-
-    # New pending installment transaction being confirmed
-    tx = PPDBPaymentTransaction(
-        id="tx-inst-3",
-        applicant_id="app-1",
-        order_id="PPDB-INST-APP1-3333",
-        payment_type="installment",
-        status="pending",
-        amount=3000000,
-    )
-    mock_repo.get_transaction_by_id.return_value = None
-    mock_repo.get_transaction_by_order_id.return_value = tx
-    mock_repo.get_applicant_transactions.return_value = [
-        PPDBPaymentTransaction(
-            id="tx-dp",
-            applicant_id="app-1",
-            payment_type="dp",
-            status="success",
-            amount=5000000,
-        ),
-        PPDBPaymentTransaction(
-            id="tx-i1",
-            applicant_id="app-1",
-            payment_type="installment",
-            status="success",
-            amount=2000000,
-        ),
-        PPDBPaymentTransaction(
-            id="tx-i2",
-            applicant_id="app-1",
-            payment_type="installment",
-            status="success",
-            amount=2000000,
-        ),
-    ]
-
-    service = PaymentService(mock_repo)
-    with patch.object(service, "_send_installment_success_notification"):
-        res = service.process_pakkasir_webhook(
-            {
-                "order_id": "PPDB-INST-APP1-3333",
-                "status": "completed",
-                "amount": 3000000,
-            }
-        )
-
-    assert res["success"] is True
-    assert tx.status == "success"
-    # Atomic sequential numbering check: exactly 2 + 1 = 3!
-    assert tx.installment_number == 3
-    # Check financial snapshot was stamped
-    assert tx.total_obligation == 15000000
-    assert tx.total_paid_before == 9000000  # 5M DP + 4M installments
-    assert tx.remaining_before == 6000000
-    assert tx.total_paid_after == 12000000
-    assert tx.remaining_after == 3000000
-    assert tx.receipt_number.startswith("KUI-PPDB-")
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # 6. Kuitansi & HMAC Signed URLs
 # ─────────────────────────────────────────────────────────────────────────────
@@ -927,16 +765,15 @@ def test_immutable_receipt_and_secure_tokens():
     tx_success = PPDBPaymentTransaction(
         id="12345678-1234-5678-1234-567812345678",
         applicant_id="app-1",
-        order_id="PPDB-INST-001",
-        payment_type="installment",
-        installment_number=1,
-        amount=2500000,
+        order_id="PPDB-FORM-001",
+        payment_type="form",
+        amount=250000,
         status="success",
-        total_obligation=15000000,
-        total_paid_before=5000000,
-        remaining_before=10000000,
-        total_paid_after=7500000,
-        remaining_after=7500000,
+        total_obligation=250000,
+        total_paid_before=0,
+        remaining_before=250000,
+        total_paid_after=250000,
+        remaining_after=0,
         receipt_number="KUI-PPDB-123456781234",
     )
     tx_pending = PPDBPaymentTransaction(
@@ -962,8 +799,11 @@ def test_immutable_receipt_and_secure_tokens():
     receipt = service.get_receipt(tx_success.id, token=token)
     assert receipt["receipt_no"] == "KUI-PPDB-123456781234"
     assert receipt["applicant_name"] == "Muhammad Fatih"
-    assert receipt["financial_snapshot"]["total_obligation"] == 15000000
-    assert receipt["financial_snapshot"]["remaining_after"] == 7500000
+    assert receipt["payment_type_label"] == "Biaya Formulir Pendaftaran"
+    assert receipt["amount"] == 250000
+    assert receipt["financial_snapshot"]["amount_paid"] == 250000
+    assert receipt["financial_snapshot"]["remaining_after"] == 0
+    assert receipt["financial_snapshot"]["is_lunas"] is True
 
     # 3. Pending/failed transaction strictly rejected
     with pytest.raises(HTTPException) as exc:
@@ -977,40 +817,3 @@ def test_immutable_receipt_and_secure_tokens():
     with pytest.raises(HTTPException) as exc:
         verify_secure_doc_token(tampered_token, "receipt")
     assert exc.value.status_code == 403
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# 7. Background Scheduler & Asia/Jakarta Idempotency
-# ─────────────────────────────────────────────────────────────────────────────
-
-
-def test_installment_reminder_scheduler_logic():
-    mock_db = MagicMock()
-    app = PPDBApplicant(
-        id="app-1",
-        user_id="u-1",
-        full_name="Ahmad Santri",
-        status="passed",
-        dp_status="paid",
-    )
-    mock_db.scalars.return_value.all.return_value = [app]
-
-    with (
-        patch(
-            "src.services.payment_service.PaymentService.calculate_applicant_financials"
-        ) as mock_calc,
-        patch("src.core.scheduler.send_notification") as mock_notif,
-    ):
-        mock_calc.return_value = {
-            "dp_paid": True,
-            "is_lunas": False,
-            "remaining_balance": 5000000,
-            "total_obligation": 15000000,
-            "total_paid": 10000000,
-        }
-
-        # Run scheduler job with db=mock_db and force=True
-        stats = run_installment_reminders(db=mock_db, dry_run=False, force=True)
-        assert stats["sent"] == 1
-        assert stats["total_eligible"] == 1
-        mock_notif.assert_called_once()

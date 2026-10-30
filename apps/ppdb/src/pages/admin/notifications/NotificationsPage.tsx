@@ -155,8 +155,10 @@ const SPEC_EVENT_KEYS: Array<{ key: string; label: string; phase: string }> = [
   { key: 'session_confirmed',            label: 'Jadwal Seleksi Ditetapkan atau Diubah',   phase: '3 – Penilaian' },
   { key: 'assessment_stage_completed',   label: 'Tahap Penilaian Selesai',                phase: '3 – Penilaian' },
   // Fase 4
-  { key: 'registration_result_passed',   label: 'Hasil Pendaftaran: Lulus',               phase: '4 – Hasil Pendaftaran' },
-  { key: 'registration_result_failed',   label: 'Hasil Pendaftaran: Tidak Lulus',         phase: '4 – Hasil Pendaftaran' },
+  { key: 'registration_result_passed',   label: 'Hasil Pendaftaran: Diterima',            phase: '4 – Hasil Pendaftaran' },
+  { key: 'registration_result_conditional', label: 'Hasil Pendaftaran: Diterima Bersyarat', phase: '4 – Hasil Pendaftaran' },
+  { key: 'registration_result_waitlist', label: 'Hasil Pendaftaran: Cadangan',            phase: '4 – Hasil Pendaftaran' },
+  { key: 'registration_result_failed',   label: 'Hasil Pendaftaran: Tidak Diterima',      phase: '4 – Hasil Pendaftaran' },
   { key: 'loa_signed',                   label: 'LoA Ditandatangani — PPDB Selesai',    phase: '4 – Hasil Pendaftaran' },
   // Fase 5
   { key: 'reminder_upload_docs_h3',      label: 'Pengingat Submit Dokumen H+3',           phase: '5 – Pengingat' },

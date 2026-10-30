@@ -476,7 +476,7 @@ export default function ApplicantsPage() {
           {detail && (
             <>
               {/* Header bergaya modal PPDB */}
-              <div className="border-b border-border bg-emerald-light/40 p-5 pr-12 sm:p-6 sm:pr-14">
+              <div className="border-b border-border bg-emerald-light/40 p-5 pr-16 sm:p-6 sm:pr-16">
                 <div className="flex items-start gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-primary text-white shadow-sm">
                     {isEditing ? (

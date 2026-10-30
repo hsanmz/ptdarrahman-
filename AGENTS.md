@@ -34,8 +34,8 @@ Sistem PPDB Pesantren Tahfidz Qur'an dan Digital Ar-Rahman menaungi **Konfiguras
 
 Admin/Panitia menyiapkan komponen operasional sebelum pendaftaran dibuka:
 
-- **Periode:** nama periode, tahun ajaran, dan master komponen biaya pendidikan (uang pangkal, SPP, seragam, matrikulasi, dll.) yang berlaku standar untuk seluruh gelombang di bawahnya.
-- **Gelombang:** tanggal buka/tutup, harga formulir, kuota pendaftar, diskon X pendaftar pertama formulir, dan diskonasi per komponen biaya master (diskon reguler dan diskon pendaftar awal).
+- **Periode:** nama periode, tahun ajaran, master komponen biaya pendidikan (uang pangkal, SPP, seragam, matrikulasi, dll.), biaya formulir (QRIS pendaftaran), dan minimal DP biaya pendidikan — berlaku standar untuk seluruh gelombang di bawahnya.
+- **Gelombang:** tanggal buka/tutup, kuota pendaftar, kuota diskon pendaftar awal, dan diskonasi per komponen biaya master (diskon reguler dan diskon pendaftar awal). Gelombang tidak menyimpan komponen biaya, biaya formulir, maupun minimal DP.
 - **Template dan LoA:** generate dan preview LoA sebelum publish serta klausul dana formulir tidak dapat dikembalikan (*non-refundable*).
 - **Rubrik Penilaian:** kriteria, bobot, dan formulir evaluator Tahfidz serta Wawancara.
 - **Bank Soal CBT (Akademik & Psikologi):** kelola bank soal per periode, kategori akademik dan psikologi, daftar soal pilihan ganda (MCQ A-E), kunci jawaban, bobot poin, dan durasi pengerjaan.
@@ -76,14 +76,14 @@ Pendaftar melewati tahapan pendaftaran secara berurutan dan terstruktur, yang **
 
 ### Master Biaya Periode & Diskonasi Gelombang
 
-- **Master Biaya di Periode:** Seluruh master komponen biaya masuk / biaya pendidikan (uang pangkal, SPP, seragam, dll.) dikonfigurasi di level Periode (`ppdb_period_fee_items`). Setiap gelombang dalam periode otomatis mewarisi komponen biaya standar yang sama.
+- **Master Biaya di Periode:** Seluruh master komponen biaya masuk / biaya pendidikan (uang pangkal, SPP, seragam, dll.) dikonfigurasi di level Periode (`ppdb_period_fee_items`). Setiap gelombang dalam periode otomatis mewarisi komponen biaya standar yang sama. Biaya formulir (`ppdb_periods.form_fee`) dan minimal DP (`ppdb_periods.minimum_dp`) juga master tingkat Periode, bukan per gelombang.
 - **Gelombang Cukup Diskonasi:** Gelombang (`ppdb_waves`) tidak membuat komponen biaya dari nol, melainkan hanya mengatur diskonasi per komponen biaya periode (`ppdb_wave_fee_discounts`): Diskon Reguler (persen/nominal), Diskon Pendaftar Awal (Early Bird persen/nominal), serta kuota diskon pendaftar awal (`early_discount_quota`).
 - **Biaya Pendidikan Sebagai Informasi:** Biaya pendidikan dihitung dan disajikan secara transparan sebagai rincian resmi pada Letter of Acceptance (LoA) calon santri yang lulus.
 - **Pembayaran di Luar Aplikasi:** Penyetoran biaya pendidikan dilakukan **di luar aplikasi** (transfer rekening resmi PTDARRAHMAN / tunai ke kantor bendahara pesantren). Di dalam portal PPDB pendaftar **tidak ada** pembayaran online tahap 2, dan alur pendaftaran tuntas saat penandatanganan LoA.
 
 ### Kuota Atomik & Penutupan Otomatis
 
-- Kuota dan diskon X pendaftar awal dihitung dari pembayaran formulir yang **sukses** (bukan dari pendaftaran akun).
+- Kuota dan diskon X pendaftar awal dihitung dari pembayaran formulir yang **sukses** (bukan dari pendaftaran akun). Slotnya kualifikasi per pendaftar: flag `ppdb_applicants.early_discount_eligible` ditandai saat webhook mengonfirmasi bayar formulir sukses; LoA dan halaman Diskonasi membaca flag ini, bukan memberi early bird ke seluruh gelombang.
 - Saat kuota tercapai: gelombang ditutup otomatis, invoice pending dibatalkan, dan WA reminder dihentikan.
 - **Pengecualian pembayaran terlambat:** jika webhook sukses tiba setelah kuota habis dan invoice dibatalkan → tandai sebagai *exception* (`late_payment_exception`) untuk pemeriksaan admin. **Jangan** memindahkan pendaftar ke gelombang lain secara otomatis.
 

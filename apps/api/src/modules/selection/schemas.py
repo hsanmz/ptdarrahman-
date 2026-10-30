@@ -15,7 +15,7 @@ class SessionFields(BaseModel):
     start_time: str = Field(pattern=r"^\d{2}:\d{2}$")
     end_time: str | None = Field(default=None)
     mode: Literal["online", "offline"]
-    officer_name: str = Field(min_length=1, max_length=150)
+    officer_name: str | None = Field(default=None, max_length=150)
     location: str | None = Field(None, max_length=200)
     meeting_url: AnyHttpUrl | None = None
     description: str | None = None
@@ -40,13 +40,21 @@ class SessionFields(BaseModel):
             raise ValueError("Lokasi wajib diisi untuk sesi offline")
         return self
 
-    @field_validator("name", "officer_name")
+    @field_validator("name")
     @classmethod
     def trim_required_text(cls, value: str) -> str:
         value = value.strip()
         if not value:
             raise ValueError("Wajib diisi")
         return value
+
+    @field_validator("officer_name")
+    @classmethod
+    def trim_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        value = value.strip()
+        return value or None
 
 
 class SessionCreate(SessionFields):
@@ -57,12 +65,16 @@ class SessionUpdate(SessionFields):
     pass
 
 
-class BookSession(BaseModel):
-    session_id: str
-
-
 class RescheduleApplicantSession(BaseModel):
     target_session_id: str
+    reason: str | None = None
+
+
+class BulkMoveApplicantsSession(BaseModel):
+    applicant_ids: list[str] = Field(min_length=1)
+    target_session_id: str = Field(min_length=1)
+    # Wajib saat target berupa jadwal CBT (ExamSchedule)
+    current_session_id: str | None = None
     reason: str | None = None
 
 
@@ -102,5 +114,16 @@ class BulkApplicantScoreSave(BaseModel):
 
 
 class ApplicantStatusUpdate(BaseModel):
-    status: str
+    # Kategori hasil: passed=Diterima, conditional=Diterima Bersyarat,
+    # waitlist=Cadangan, failed=Tidak Diterima, selection=Dalam Proses.
+    status: Literal["passed", "failed", "conditional", "waitlist", "selection"]
     reason: str | None = None
+
+
+class ApplicantResultNotesUpdate(BaseModel):
+    """Catatan hasil opsional per komponen seleksi."""
+
+    notes_akademik: str | None = Field(default=None, max_length=2000)
+    notes_psikologi: str | None = Field(default=None, max_length=2000)
+    notes_tahfidz: str | None = Field(default=None, max_length=2000)
+    notes_wawancara: str | None = Field(default=None, max_length=2000)

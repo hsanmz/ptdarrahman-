@@ -22,10 +22,11 @@ export default function ApplicantReceiptPage() {
 
   // Kuitansi hanya boleh dirakit dari transaksi yang benar-benar ada.
   // Versi lama tetap merakitnya dari data pendaftar saja: nominal dipatok
-  // Rp250.000 (mengabaikan `registration_fee` per gelombang), metode ditebak
-  // "QRIS", status kosong menjadi "paid", dan `is_paid` dipatok `true` —
-  // sehingga OfficialReceiptCard menampilkan badge "LUNAS" untuk pembayaran
-  // yang tidak pernah terjadi, lalu bisa dibagikan ke orang tua lewat WA.
+  // Rp250.000 (mengabaikan biaya formulir master periode `form_fee`), metode
+  // ditebak "QRIS", status kosong menjadi "paid", dan `is_paid` dipatok
+  // `true` — sehingga OfficialReceiptCard menampilkan badge "LUNAS" untuk
+  // pembayaran yang tidak pernah terjadi, lalu bisa dibagikan ke orang tua
+  // lewat WA.
   const hasPayment = !!transaction
 
   const transactionId = transaction?.id ?? ''

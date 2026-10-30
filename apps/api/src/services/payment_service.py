@@ -21,9 +21,11 @@ from src.core.pakasir import (
 )
 from src.models.ppdb import (
     PPDBApplicant,
+    PPDBApplicantDiscount,
     PPDBPaymentTransaction,
-    PPDBWave,
+    PPDBStage2Bill,
 )
+from src.modules.payment.schemas import Stage2DiscountsPayload
 from src.repositories.payment_repository import PaymentRepository
 from src.repositories.ppdb_scope import get_active_period_info
 
@@ -507,6 +509,11 @@ class PaymentService:
         wave = (
             self.repo.get_wave_by_id(applicant.wave_id) if applicant.wave_id else None
         )
+        period = (
+            self.repo.get_period_by_id(wave.period_id)
+            if wave and wave.period_id
+            else None
+        )
 
         if applicant.payment_status == "paid":
             raise HTTPException(
@@ -525,9 +532,7 @@ class PaymentService:
                     ),
                 )
         final_amount = int(
-            wave.registration_fee
-            if (wave and wave.registration_fee is not None)
-            else 250000
+            period.form_fee if (period and period.form_fee is not None) else 250000
         )
 
         # 3. Generate unique internal order_id
@@ -809,6 +814,13 @@ class PaymentService:
             self.repo.update_transaction(tx)
             return {"status": "exception", "message": "Marked as admin exception"}
 
+        # Slot early bird ditentukan sebelum transaksi masuk status success:
+        # hitungan slot belum memasukkan transaksi ini, sehingga klaim
+        # "X pembayar pertama" mengikuti urutan konfirmasi pembayaran,
+        # bukan urutan pendaftaran akun.
+        if (tx.payment_type or "form") == "form":
+            self._assign_early_bird_slot(applicant)
+
         tx.status = "success"
         tx.provider_status = "completed"
         tx.paid_at = now_wib
@@ -851,6 +863,200 @@ class PaymentService:
 
         self.check_wave_quota_and_close_if_full(applicant.wave_id)
         return {"status": "success", "transaction_id": tx.id}
+
+    def _assign_early_bird_slot(self, applicant: PPDBApplicant) -> bool:
+        """Tempatkan pendaftar ke slot diskon "X pendaftar awal" bila tersisa.
+
+        Slot dihitung dari jumlah pembayaran formulir sukses sebelum
+        transaksi ini: dipanggil sebelum transaksi berubah menjadi success
+        sehingga urutan slot mengikuti konfirmasi pembayaran yang sebenarnya,
+        bukan urutan pendaftaran akun.
+        """
+        wave = (
+            self.repo.get_wave_by_id(applicant.wave_id) if applicant.wave_id else None
+        )
+        quota: int = wave.early_discount_quota if wave else 0
+        if not wave or quota <= 0:
+            return False
+
+        prior_paid: int = self.repo.count_paid_form_payments_in_wave(wave.id)
+        eligible: bool = prior_paid < quota
+        applicant.early_discount_eligible = eligible
+        return eligible
+
+    # ── Stage 2: diskonasi & tagihan biaya pendidikan (bayar di luar aplikasi)
+    @staticmethod
+    def _split_installments(total: int, count: int) -> list[int]:
+        """Bagi total jadi tagihan cicilan: termasuk remainder di tagihan awal."""
+        if total <= 0:
+            return []
+        if count <= 1:
+            return [total]
+        base = total // count
+        remainder = total - base * count
+        return [base + remainder] + [base] * (count - 1)
+
+    def get_stage2_overview(self) -> dict[str, Any]:
+        """Daftar pendaftar lulus di gelombang aktif untuk halaman diskonasi."""
+        wave_id = self.repo.get_active_wave_id()
+        if not wave_id:
+            return {"active_wave": None, "data": []}
+        wave = self.repo.get_wave_by_id(wave_id)
+        if not wave:
+            return {"active_wave": None, "data": []}
+
+        applicants = self.repo.get_stage2_applicants(wave_id)
+        counts = self.repo.get_stage2_bill_counts(wave_id)
+        configured = self.repo.get_stage2_discount_configured_ids(wave_id)
+        rows = []
+        for applicant in applicants:
+            total_bills, paid_bills = counts.get(applicant.id, (0, 0))
+            rows.append(
+                {
+                    "id": applicant.id,
+                    "full_name": applicant.full_name,
+                    "email": applicant.email,
+                    "status": applicant.status,
+                    "early_discount_eligible": bool(applicant.early_discount_eligible),
+                    "total_bills": total_bills,
+                    "total_paid_bills": paid_bills,
+                    "discount_configured": applicant.id in configured
+                    or total_bills > 0,
+                }
+            )
+        return {
+            "active_wave": {"id": wave.id, "name": wave.name},
+            "data": rows,
+        }
+
+    def get_stage2_applicant_discounts(self, applicant_id: str) -> dict[str, Any]:
+        """Konfig diskon tahap 2 pendaftar + status slot early bird."""
+        applicant = self.repo.get_applicant_by_id(applicant_id)
+        if not applicant:
+            raise HTTPException(status_code=404, detail="Pendaftar tidak ditemukan")
+
+        wave = (
+            self.repo.get_wave_by_id(applicant.wave_id) if applicant.wave_id else None
+        )
+        items = self.repo.get_period_fee_items_ordered(wave.period_id if wave else None)
+        discounts = {
+            d.fee_item_id: d for d in self.repo.get_applicant_discounts(applicant_id)
+        }
+        fee_items = []
+        for item in items:
+            discount = discounts.get(item.id)
+            fee_items.append(
+                {
+                    "id": item.id,
+                    "name": item.name,
+                    "nominal": int(item.nominal),
+                    "description": item.description,
+                    "discount": None
+                    if discount is None
+                    else {
+                        "discount_type": discount.discount_type,
+                        "discount_value": (
+                            float(discount.discount_value)
+                            if discount.discount_value is not None
+                            else None
+                        ),
+                        "installment_count": int(discount.installment_count or 0),
+                    },
+                }
+            )
+
+        rank = (
+            self.repo.get_form_payment_rank(applicant.wave_id, applicant_id)
+            if applicant.wave_id
+            else None
+        )
+        return {
+            "applicant": {
+                "id": applicant.id,
+                "full_name": applicant.full_name,
+                "early_discount_eligible": bool(applicant.early_discount_eligible),
+                "early_discount_quota": wave.early_discount_quota if wave else 0,
+                "form_payment_rank": rank,
+            },
+            "fee_items": fee_items,
+        }
+
+    def save_stage2_discounts(
+        self, applicant_id: str, payload: Stage2DiscountsPayload
+    ) -> dict[str, Any]:
+        """Simpan diskon/cicilan per komponen & bangun ulang tagihan tahap 2."""
+        applicant = self.repo.get_applicant_by_id(applicant_id)
+        if not applicant:
+            raise HTTPException(status_code=404, detail="Pendaftar tidak ditemukan")
+        wave = (
+            self.repo.get_wave_by_id(applicant.wave_id) if applicant.wave_id else None
+        )
+        if not wave:
+            raise HTTPException(
+                status_code=400, detail="Pendaftar tidak terkait dengan gelombang PPDB."
+            )
+        fee_map = {
+            item.id: item
+            for item in self.repo.get_period_fee_items_ordered(wave.period_id)
+        }
+
+        now = datetime.now(WIB)
+        discount_rows: list[PPDBApplicantDiscount] = []
+        bill_rows: list[PPDBStage2Bill] = []
+        for item in payload.items:
+            fee_item = fee_map.get(item.fee_item_id)
+            if not fee_item:
+                raise HTTPException(
+                    status_code=400,
+                    detail=(
+                        f"Komponen biaya {item.fee_item_id} bukan master "
+                        "komponen biaya periode ini."
+                    ),
+                )
+            nominal = int(fee_item.nominal)
+            discount_amount = 0
+            if item.discount_type and item.discount_value is not None:
+                if item.discount_type == "percent":
+                    discount_amount = int(nominal * (item.discount_value / 100))
+                else:
+                    discount_amount = min(int(item.discount_value), nominal)
+            final_amount = max(0, nominal - discount_amount)
+            installment_count = max(0, item.installment_count)
+
+            discount_rows.append(
+                PPDBApplicantDiscount(
+                    id=str(uuid.uuid4()),
+                    applicant_id=applicant.id,
+                    fee_item_id=fee_item.id,
+                    discount_type=item.discount_type,
+                    discount_value=item.discount_value,
+                    discount_amount=discount_amount,
+                    final_amount=final_amount,
+                    installment_count=installment_count,
+                    created_at=now,
+                    updated_at=now,
+                )
+            )
+
+            has_schedule = installment_count > 1
+            for idx, amount in enumerate(
+                self._split_installments(final_amount, installment_count)
+            ):
+                bill_rows.append(
+                    PPDBStage2Bill(
+                        id=str(uuid.uuid4()),
+                        applicant_id=applicant.id,
+                        fee_item_id=fee_item.id,
+                        installment_number=idx + 1 if has_schedule else 0,
+                        amount=amount,
+                        status="pending",
+                        created_at=now,
+                        updated_at=now,
+                    )
+                )
+
+        self.repo.save_stage2_plan(applicant.id, discount_rows, bill_rows)
+        return {"success": True, "bills_created": len(bill_rows)}
 
     def get_applicant_transactions(self, applicant_id: str) -> dict:
         applicant = self.repo.get_applicant_by_id(applicant_id)
@@ -969,7 +1175,8 @@ class PaymentService:
                 )
             except Exception:
                 logger.exception(
-                    "Gagal mengirim notifikasi wave_closed_pending_payment untuk user %s",
+                    "Gagal mengirim notifikasi wave_closed_pending_payment "
+                    "untuk user %s",
                     app.user_id,
                 )
 
@@ -1183,7 +1390,8 @@ class PaymentService:
                 lock_acquired = bool(r.set(lock_key, lock_token, nx=True, ex=30))
                 if not lock_acquired:
                     logger.info(
-                        "Webhook Pakasir untuk tx %s sedang diproses konkuren - menunggu",
+                        "Webhook Pakasir untuk tx %s sedang diproses konkuren "
+                        "- menunggu",
                         tx.id,
                     )
                     for _ in range(5):
@@ -1202,7 +1410,8 @@ class PaymentService:
 
                     if not lock_acquired:
                         logger.warning(
-                            "Webhook Pakasir untuk tx %s ditolak: masih dikunci proses lain",
+                            "Webhook Pakasir untuk tx %s ditolak: masih dikunci "
+                            "proses lain",
                             tx.id,
                         )
                         raise HTTPException(
@@ -1231,7 +1440,8 @@ class PaymentService:
                     amt_int = int(amount)
                     if amt_int != tx.amount:
                         logger.warning(
-                            "Webhook nominal tidak cocok untuk tx %s: DB=%s, Payload=%s",
+                            "Webhook nominal tidak cocok untuk tx %s: "
+                            "DB=%s, Payload=%s",
                             tx.id,
                             tx.amount,
                             amt_int,

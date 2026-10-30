@@ -6,12 +6,12 @@ import {
   Card, CardContent,
   Table, TableHeader, TableRow, TableHead, TableBody, TableCell,
   Badge, Button, Input, Label, Dialog, DialogContent, DialogHeader, DialogTitle,
-  DialogFooter, ConfirmDialog, EmptyState
+  DialogFooter, ConfirmDialog, EmptyState, CurrencyInput
 } from '@/components/ui'
 import { TableSkeletonRows } from "@/components/ui"
 import { Plus, Edit, Trash2, CheckCircle, XCircle, Layers, CalendarX2, Activity, Banknote } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import WavesSheet from './components/WavesSheet'
@@ -24,6 +24,9 @@ const periodSchema = z.object({
   description: z.string().optional(),
   wa_group_link: z.string().optional(),
   head_of_committee: z.string().optional(),
+  // Master tingkat periode — gelombang tidak lagi menyimpan biaya/diskon DP.
+  form_fee: z.number().min(0, 'Biaya tidak boleh negatif'),
+  minimum_dp: z.number().min(0, 'Minimal DP tidak boleh negatif'),
 })
 
 type PeriodFormData = z.infer<typeof periodSchema>
@@ -51,10 +54,13 @@ export default function PeriodsPage() {
   const [selectedPeriod, setSelectedPeriod] = useState<any>(null)
   const [feePeriod, setFeePeriod] = useState<any>(null)
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<PeriodFormData>({
+  const { register, handleSubmit, reset, setValue, control, formState: { errors, isSubmitting } } = useForm<PeriodFormData>({
     resolver: zodResolver(periodSchema),
-    defaultValues: { name: '', academic_year: '', description: '', wa_group_link: '', head_of_committee: '' }
+    defaultValues: { name: '', academic_year: '', description: '', wa_group_link: '', head_of_committee: '', form_fee: 0, minimum_dp: 0 }
   })
+
+  const formFee = useWatch({ control, name: 'form_fee' })
+  const minimumDp = useWatch({ control, name: 'minimum_dp' })
 
   const invalidateWaveScoped = () => {
     return Promise.all([
@@ -116,7 +122,7 @@ export default function PeriodsPage() {
 
   const openCreate = () => {
     setEditingPeriod(null)
-    reset({ name: '', academic_year: '', description: '', wa_group_link: '', head_of_committee: '' })
+    reset({ name: '', academic_year: '', description: '', wa_group_link: '', head_of_committee: '', form_fee: 0, minimum_dp: 0 })
     setShowForm(true)
   }
 
@@ -127,7 +133,9 @@ export default function PeriodsPage() {
       academic_year: p.academic_year || '',
       description: p.description || '',
       wa_group_link: p.wa_group_link || '',
-      head_of_committee: p.head_of_committee || ''
+      head_of_committee: p.head_of_committee || '',
+      form_fee: p.form_fee ?? 0,
+      minimum_dp: p.minimum_dp ?? 0,
     })
     setShowForm(true)
   }
@@ -293,6 +301,38 @@ export default function PeriodsPage() {
                 disabled={!canCrud || isSubmitting}
               />
               {errors.head_of_committee && <p className="text-xs text-red-500">{errors.head_of_committee.message}</p>}
+            </div>
+            <div className="space-y-3 rounded-xl border border-slate-100 bg-slate-50/60 p-3">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                <Banknote className="h-3.5 w-3.5" /> Master Biaya Periode
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="period-form-fee">Biaya Formulir (Rp)</Label>
+                  <CurrencyInput
+                    id="period-form-fee"
+                    value={formFee}
+                    onValueChange={(v: number) => setValue('form_fee', v)}
+                    placeholder="Contoh: 350.000"
+                    disabled={!canCrud || isSubmitting}
+                  />
+                  <p className="text-[11px] text-muted-foreground">Dibayar pendaftar via QRIS saat mendaftar. Berlaku untuk semua gelombang.</p>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="period-min-dp">Minimal DP (Rp)</Label>
+                  <CurrencyInput
+                    id="period-min-dp"
+                    value={minimumDp}
+                    onValueChange={(v: number) => setValue('minimum_dp', v)}
+                    placeholder="Contoh: 5.000.000"
+                    disabled={!canCrud || isSubmitting}
+                  />
+                  <p className="text-[11px] text-muted-foreground">Uang muka minimal yang dicantumkan pada dokumen LoA.</p>
+                </div>
+              </div>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Rincian biaya pendidikan semester/instalasi dikelola lewat tombol <strong>Komponen Biaya</strong> pada tabel periode.
+              </p>
             </div>
             <p className="text-[11px] text-muted-foreground leading-snug pt-2 border-t border-dashed">
               Catatan: Nama ketua panitia akan dicantumkan secara resmi pada tanda tangan Letter of Acceptance (LoA).

@@ -18,13 +18,17 @@ import {
   MessageSquare,
   Info,
   UserCheck,
-  ThumbsUp,
   ThumbsDown,
   RotateCcw,
   Download,
   FileText,
   Image as ImageIcon,
   ChevronDown,
+  Brain,
+  Monitor,
+  Save,
+  ShieldAlert,
+  CalendarDays,
 } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import type { Applicant } from '@/types/ppdb'
@@ -37,26 +41,33 @@ import { downloadAssessmentDoc } from '@/utils/exportAssessment'
 import { useToast } from '@/components/Toast'
 import { useCanPage } from '@/hooks/useCan'
 import { cn } from '@/lib/utils'
+import {
+  resultStatusMeta,
+  resultStatusLabel,
+} from '@/lib/selectionStatus'
+
+type NoteField = 'notes_akademik' | 'notes_psikologi' | 'notes_tahfidz' | 'notes_wawancara'
+
+// Fallback untuk data lama: catatan komponen tersimpan tertimpa berlabel [Tahfidz]: / [Wawancara]: di satu teks.
+function parseLegacyComponentNotes(raw?: string | null): Partial<Record<NoteField, string>> {
+  const text = (raw || '').trim()
+  if (!text) return {}
+  const grab = (tag: string) => {
+    const m = text.match(new RegExp(`(?:^|\\n)\\[${tag}\\]:\\s*([\\s\\S]*?)(?=(?:\\n\\[|$))`, 'i'))
+    return m ? m[1].trim() : ''
+  }
+  const tahfidz = grab('Tahfidz')
+  const wawancara = grab('Wawancara')
+  if (tahfidz || wawancara) return { notes_tahfidz: tahfidz, notes_wawancara: wawancara }
+  return {}
+}
 
 function SelectionBadge({ status }: { status?: string }) {
-  if (status === 'passed')
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-        Lulus
-      </span>
-    )
-  if (status === 'failed')
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 ring-1 ring-inset ring-red-200">
-        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-        Tidak Lulus
-      </span>
-    )
+  const meta = resultStatusMeta(status)
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
-      <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-      Tahap Seleksi
+    <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold whitespace-nowrap', meta.cls)}>
+      <span className={cn('h-1.5 w-1.5 rounded-full shrink-0', meta.dot)} />
+      {meta.label}
     </span>
   )
 }
@@ -69,14 +80,122 @@ interface ScoreDetailModalProps {
   logoUrl?: string | null
 }
 
+interface CbtResultCardProps {
+  title: string
+  subtitle: string
+  icon: React.ComponentType<{ className?: string }>
+  iconWrap: string
+  result: any | null
+  noteValue: string
+  disabled: boolean
+  onNoteChange: (value: string) => void
+  onSaveNote: () => void
+  saving: boolean
+}
+
+function CbtResultCard({ title, subtitle, icon: Icon, iconWrap, result, noteValue, disabled, onNoteChange, onSaveNote, saving }: CbtResultCardProps) {
+  const completed = result?.attempt_status === 'completed' && result?.score != null
+  const statusLabel =
+    result == null
+      ? 'Belum Ada Jadwal'
+      : result.attempt_status === 'completed'
+      ? 'Selesai'
+      : result.attempt_status === 'in_progress'
+      ? 'Sedang Berlangsung'
+      : result.attempt_status === 'locked'
+      ? 'Terkunci (Perlu Unfreeze)'
+      : 'Belum Mulai'
+
+  return (
+    <div className="space-y-2 border rounded-xl p-4 bg-white shadow-sm">
+      <div className="flex items-center justify-between border-b pb-2">
+        <div className="flex items-center gap-2">
+          <div className={cn('p-1.5 rounded-lg', iconWrap)}>
+            <Icon className="h-4 w-4" />
+          </div>
+          <div>
+            <h4 className="font-semibold text-sm text-slate-800">{title}</h4>
+            <p className="text-[11px] text-muted-foreground">{subtitle}</p>
+          </div>
+        </div>
+        {completed ? (
+          <Badge variant="success" className="text-xs font-bold">
+            Nilai: {Number(result.score)} / 100
+          </Badge>
+        ) : (
+          <Badge variant="warning" className="text-xs font-semibold whitespace-nowrap">
+            {statusLabel}
+          </Badge>
+        )}
+      </div>
+
+      {result ? (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs pt-1">
+          <div>
+            <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Jadwal Ujian</span>
+            <span className="font-medium text-slate-700">{result.schedule_name || '-'}</span>
+          </div>
+          <div>
+            <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Batch / Tanggal</span>
+            <span className="font-medium text-slate-700">
+              {result.batch_name || '-'} · {result.session_date || '-'}
+            </span>
+          </div>
+          <div>
+            <span className="text-muted-foreground block text-[10px] uppercase font-semibold">Pelanggaran Tab</span>
+            <span className={cn('font-medium', (result.violations_count || 0) > 0 ? 'text-red-600 font-bold' : 'text-slate-700')}>
+              {result.violations_count || 0}x
+            </span>
+          </div>
+        </div>
+      ) : (
+        <div className="py-4 text-center text-xs text-muted-foreground border border-dashed rounded-lg bg-slate-50/50">
+          Belum ada jadwal atau nilai ujian CBT yang tersimpan untuk pendaftar ini.
+        </div>
+      )}
+
+      {/* Catatan hasil (opsional) */}
+      <div className="pt-1">
+        <div className="flex items-center justify-between gap-2">
+          <span className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-500 flex items-center gap-1">
+            <MessageSquare className="h-3 w-3" /> Catatan Hasil (Opsional)
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-[11px] gap-1 px-2 bg-white"
+            disabled={disabled || saving}
+            onClick={onSaveNote}
+          >
+            <Save className="h-3 w-3" /> Simpan Catatan
+          </Button>
+        </div>
+        <Textarea
+          value={noteValue}
+          onChange={(e) => onNoteChange(e.target.value)}
+          rows={2}
+          placeholder="Contoh: penguasaan materi perlu pendampingan tambahan di minggu pertama."
+          className="text-xs mt-1.5 resize-none"
+        />
+      </div>
+    </div>
+  )
+}
+
 function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logoUrl }: ScoreDetailModalProps) {
   const assessmentSheetRef = useRef<HTMLDivElement>(null)
   const { toast } = useToast()
   const { canCrud } = useCanPage('penilaian')
   const queryClient = useQueryClient()
-  const [verdictMode, setVerdictMode] = useState<'passed' | 'failed' | 'selection' | null>(null)
+  const [verdictMode, setVerdictMode] = useState<null | 'passed' | 'conditional' | 'waitlist' | 'failed' | 'selection'>(null)
   const [verdictReason, setVerdictReason] = useState('')
   const [isDownloading, setIsDownloading] = useState<'pdf' | 'image' | null>(null)
+  const [noteDrafts, setNoteDrafts] = useState<Record<NoteField, string>>({
+    notes_akademik: '',
+    notes_psikologi: '',
+    notes_tahfidz: '',
+    notes_wawancara: '',
+  })
 
   const { data, isLoading } = useQuery({
     queryKey: ['applicant-transcript-view', applicant?.id],
@@ -87,6 +206,18 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
     enabled: open && !!applicant?.id,
   })
 
+  useEffect(() => {
+    if (!open) return
+    const resultNotes = (data?.result_notes || {}) as Record<string, string | null>
+    const legacy = parseLegacyComponentNotes(data?.evaluator_notes)
+    setNoteDrafts({
+      notes_akademik: resultNotes.akademik || '',
+      notes_psikologi: resultNotes.psikologi || '',
+      notes_tahfidz: resultNotes.tahfidz || legacy.notes_tahfidz || '',
+      notes_wawancara: resultNotes.wawancara || legacy.notes_wawancara || '',
+    })
+  }, [open, data?.result_notes, data?.evaluator_notes])
+
   const verdictMutation = useMutation({
     mutationFn: (payload: { status: string; reason?: string }) =>
       api.apiFetch(`/selection/applicants/${applicant!.id}/status`, {
@@ -94,7 +225,7 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
         body: JSON.stringify(payload),
       }),
     onSuccess: () => {
-      toast('success', verdictMode === 'passed' ? 'Pendaftar dinyatakan LULUS seleksi' : 'Pendaftar dinyatakan TIDAK LULUS seleksi')
+      toast('success', `Hasil pendaftaran ditetapkan: ${resultStatusLabel(verdictMode)}`)
       queryClient.invalidateQueries({ queryKey: ['applicant-transcript-view', applicant?.id] })
       queryClient.invalidateQueries({ queryKey: ['applicants-selection-results'] })
       setVerdictMode(null)
@@ -104,32 +235,55 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
     onError: (e: any) => toast('error', e.message || 'Gagal menyimpan keputusan'),
   })
 
+  const notesMutation = useMutation({
+    mutationFn: (field: NoteField) => {
+      const value = noteDrafts[field].trim()
+      return api.apiFetch(`/selection/applicants/${applicant!.id}/result-notes`, {
+        method: 'PUT',
+        body: JSON.stringify({ [field]: value }),
+      })
+    },
+    onSuccess: () => {
+      toast('success', 'Catatan hasil seleksi tersimpan')
+      queryClient.invalidateQueries({ queryKey: ['applicant-transcript-view', applicant?.id] })
+    },
+    onError: (e: any) => toast('error', e.message || 'Gagal menyimpan catatan'),
+  })
+
   const handleConfirmVerdict = () => {
     if (!verdictMode) return
-    // Reset ke "selection" selalu diizinkan; keputusan lulus/tidak lulus
-    // menunggu seluruh nilai lengkap.
-    if (verdictMode !== 'selection' && !scoresComplete) {
+    // Kembali ke "Dalam Proses" selalu diizinkan.
+    if (verdictMode === 'selection') {
+      verdictMutation.mutate({ status: 'selection' })
+      return
+    }
+    if (!scoresComplete) {
       toast('error', `Nilai belum lengkap: ${missingScores.join(', ')}. Lengkapi nilai terlebih dahulu.`)
       return
     }
-    verdictMutation.mutate({ status: verdictMode, reason: verdictReason.trim() || undefined })
+    // Catatan evaluator wajib sebelum hasil pendaftaran diterbitkan.
+    if (!verdictReason.trim()) {
+      toast('error', 'Catatan evaluator wajib diisi sebelum menetapkan hasil pendaftaran.')
+      return
+    }
+    verdictMutation.mutate({ status: verdictMode, reason: verdictReason.trim() })
   }
 
   if (!applicant) return null
 
   const appData = data?.applicant || applicant
   const categories: any[] = data?.categories || []
+  const cbtResults = data?.cbt_results || {}
   const evaluatorNotes = data?.evaluator_notes
   const graduationStatus = data?.graduation_status || applicant.status
 
-  // Kelengkapan nilai — keputusan lulus/tidak lulus hanya aktif bila seluruh
-  // nilai (Tahfidz, Wawancara, rubrik lain) sudah masuk.
+  // Kelengkapan nilai — hasil pendaftaran hanya aktif bila seluruh nilai masuk.
+  // Backend menghitung sisi kelengkapannya; frontend menampilkan daftar gap-nya.
   const missingScores: string[] = Array.isArray(data?.missing_scores) ? data.missing_scores : []
   const scoresComplete = !isLoading && !!data && missingScores.length === 0
 
   const tahfidzCategory = categories.find(c => c.category_name?.toLowerCase().includes('tahfidz'))
-  const wawancaraCategory = categories.find(c => c.category_name?.toLowerCase().includes('wawancara'))
-  const otherCategories = categories.filter(c => c !== tahfidzCategory && c !== wawancaraCategory)
+  const wawancaraCategory = categories.find(c => (c.category_name || '').toLowerCase().includes('wawancara') || (c.category_name || '').toLowerCase().includes('interview'))
 
   const calculateAvg = (criteriaList?: any[]) => {
     if (!criteriaList || criteriaList.length === 0) return null
@@ -175,7 +329,7 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                   Hasil Pendaftaran Pendaftar
                 </DialogTitle>
                 <DialogDescription className="text-xs text-muted-foreground mt-0.5">
-                  Rekapitulasi hasil penilaian (evaluasi rubrik Tahfidz & Wawancara). Validasi kelulusan dilakukan oleh admin.
+                  Rekapitulasi seluruh hasil seleksi (CBT Akademik, CBT Psikologi, Tahfidz, Wawancara) dengan catatan opsional per komponen.
                 </DialogDescription>
               </div>
 
@@ -240,7 +394,7 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
             Memuat lembar hasil nilai seleksi...
           </div>
         ) : (
-          <div className="space-y-6 pt-2">
+          <div className="space-y-5 pt-2">
             {/* Kartu Profil Santri */}
             <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
               <div>
@@ -257,7 +411,35 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
               </div>
             </div>
 
-            {/* SEKSI 1: HASIL TES TAHFIDZ */}
+            {/* SEKSI 1: HASIL CBT AKADEMIK */}
+            <CbtResultCard
+              title="1. Hasil CBT Akademik"
+              subtitle="Ujian Seleksi Akademik Terkomputerisasi"
+              icon={Monitor}
+              iconWrap="bg-indigo-50 text-indigo-700"
+              result={cbtResults.akademik || null}
+              noteValue={noteDrafts.notes_akademik}
+              disabled={notesMutation.isPending}
+              saving={notesMutation.isPending}
+              onNoteChange={(v) => setNoteDrafts(s => ({ ...s, notes_akademik: v }))}
+              onSaveNote={() => notesMutation.mutate('notes_akademik')}
+            />
+
+            {/* SEKSI 2: HASIL CBT PSIKOLOGI */}
+            <CbtResultCard
+              title="2. Hasil CBT Psikologi"
+              subtitle="Ujian Seleksi Psikologi Terkomputerisasi"
+              icon={Brain}
+              iconWrap="bg-sky-50 text-sky-700"
+              result={cbtResults.psikologi || null}
+              noteValue={noteDrafts.notes_psikologi}
+              disabled={notesMutation.isPending}
+              saving={notesMutation.isPending}
+              onNoteChange={(v) => setNoteDrafts(s => ({ ...s, notes_psikologi: v }))}
+              onSaveNote={() => notesMutation.mutate('notes_psikologi')}
+            />
+
+            {/* SEKSI 3: HASIL TES TAHFIDZ */}
             <div className="space-y-2 border rounded-xl p-4 bg-white shadow-sm">
               <div className="flex items-center justify-between border-b pb-2">
                 <div className="flex items-center gap-2">
@@ -265,7 +447,7 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                     <BookOpen className="h-4 w-4" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-sm text-slate-800">1. Hasil Uji Tahfidz Al-Qur'an</h4>
+                    <h4 className="font-semibold text-sm text-slate-800">3. Hasil Uji Tahfidz Al-Qur&apos;an</h4>
                     <p className="text-[11px] text-muted-foreground">Penilaian Penguji Tahfidz Sesuai Rubrik</p>
                   </div>
                 </div>
@@ -304,9 +486,34 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                   Belum ada nilai ujian Tahfidz yang tersimpan untuk pendaftar ini.
                 </div>
               )}
+
+              {/* Catatan hasil (opsional) */}
+              <div className="pt-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-500 flex items-center gap-1">
+                    <MessageSquare className="h-3 w-3" /> Catatan Hasil (Opsional)
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-[11px] gap-1 px-2 bg-white"
+                    disabled={notesMutation.isPending}
+                    onClick={() => notesMutation.mutate('notes_tahfidz')}
+                  >
+                    <Save className="h-3 w-3" /> Simpan Catatan
+                  </Button>
+                </div>
+                <Textarea
+                  value={noteDrafts.notes_tahfidz}
+                  onChange={(e) => setNoteDrafts(s => ({ ...s, notes_tahfidz: e.target.value }))}
+                  rows={2}
+                  placeholder="Catatan kelancaran hafalan, target juz, mantra keplelian, dan rekomendasi kelas..."
+                  className="text-xs mt-1.5 resize-none"
+                />
+              </div>
             </div>
 
-            {/* SEKSI 2: HASIL TES WAWANCARA */}
+            {/* SEKSI 4: HASIL TES WAWANCARA */}
             <div className="space-y-2 border rounded-xl p-4 bg-white shadow-sm">
               <div className="flex items-center justify-between border-b pb-2">
                 <div className="flex items-center gap-2">
@@ -314,8 +521,8 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                     <MessageSquare className="h-4 w-4" />
                   </div>
                   <div>
-                    <h4 className="font-semibold text-sm text-slate-800">2. Hasil Uji Wawancara</h4>
-                    <p className="text-[11px] text-muted-foreground">Penilaian Pewawancara Sesuai Rubrik</p>
+                    <h4 className="font-semibold text-sm text-slate-800">4. Hasil Uji Wawancara</h4>
+                    <p className="text-[11px] text-muted-foreground">Penilaian Pewawancara (Santri &amp; Orang Tua/Wali)</p>
                   </div>
                 </div>
                 {wawancaraAvg && (
@@ -353,99 +560,75 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                   Belum ada nilai ujian Wawancara yang tersimpan untuk pendaftar ini.
                 </div>
               )}
+
+              {/* Catatan hasil (opsional) */}
+              <div className="pt-1">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-500 flex items-center gap-1">
+                    <MessageSquare className="h-3 w-3" /> Catatan Hasil (Opsional)
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-[11px] gap-1 px-2 bg-white"
+                    disabled={notesMutation.isPending}
+                    onClick={() => notesMutation.mutate('notes_wawancara')}
+                  >
+                    <Save className="h-3 w-3" /> Simpan Catatan
+                  </Button>
+                </div>
+                <Textarea
+                  value={noteDrafts.notes_wawancara}
+                  onChange={(e) => setNoteDrafts(s => ({ ...s, notes_wawancara: e.target.value }))}
+                  rows={2}
+                  placeholder="Catatan sikap wawancara, komitmen pendidikan, kesiapan keluarga, dan rekomendasi..."
+                  className="text-xs mt-1.5 resize-none"
+                />
+              </div>
             </div>
-
-            {/* SEKSI LAIN (JIKA ADA KATEGORI RUBRIK LAIN) */}
-            {otherCategories.map((cat, cIdx) => (
-              <div key={cIdx} className="space-y-2 border rounded-xl p-4 bg-white shadow-sm">
-                <div className="flex items-center justify-between border-b pb-2">
-                  <h4 className="font-semibold text-sm text-slate-800">{cat.category_name}</h4>
-                  {calculateAvg(cat.criteria) && (
-                    <Badge variant="outline" className="text-xs font-semibold">
-                      Rata-rata: {calculateAvg(cat.criteria)}
-                    </Badge>
-                  )}
-                </div>
-                <div className="overflow-x-auto pt-1">
-                  <table className="w-full text-xs">
-                    <thead>
-                      <tr className="border-b bg-slate-50 text-slate-500 text-[11px]">
-                        <th className="text-left py-2 px-3 font-semibold">Kriteria</th>
-                        <th className="text-center py-2 px-3 w-24 font-semibold">Bobot</th>
-                        <th className="text-right py-2 px-3 w-28 font-semibold">Skor</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {cat.criteria?.map((cr: any, idx: number) => (
-                        <tr key={idx}>
-                          <td className="py-2 px-3 font-medium text-slate-700">{cr.criteria_name}</td>
-                          <td className="py-2 px-3 text-center text-slate-500">{cr.weight ? `${cr.weight}%` : '—'}</td>
-                          <td className="py-2 px-3 text-right font-bold text-slate-900">{cr.score != null ? cr.score : '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            ))}
-
-            {/* CATATAN TIM EVALUATOR */}
-            {evaluatorNotes && (
-              <div className="p-3.5 bg-slate-50 border rounded-xl text-xs space-y-1.5">
-                <span className="font-semibold text-slate-800 block">Catatan Tim Evaluator:</span>
-                {(() => {
-                  const text = evaluatorNotes.trim()
-                  const tMatch = text.match(/(?:^|\n)\[Tahfidz\]:\s*([\s\S]*?)(?=(?:\n\[|$))/i)
-                  const wMatch = text.match(/(?:^|\n)\[Wawancara\]:\s*([\s\S]*?)(?=(?:\n\[|$))/i)
-                  if (tMatch || wMatch) {
-                    return (
-                      <div className="space-y-1 text-slate-700 pl-1">
-                        {tMatch && (
-                          <p>
-                            <strong className="text-slate-800">Ujian Tahfidz:</strong>{' '}
-                            <span className="italic">{tMatch[1].trim()}</span>
-                          </p>
-                        )}
-                        {wMatch && (
-                          <p>
-                            <strong className="text-slate-800">Ujian Wawancara:</strong>{' '}
-                            <span className="italic">{wMatch[1].trim()}</span>
-                          </p>
-                        )}
-                      </div>
-                    )
-                  }
-                  return <p className="text-slate-700 italic">{evaluatorNotes}</p>
-                })()}
-              </div>
-            )}
 
             {/* STATUS KEPUTUSAN & VALIDASI KELULUSAN */}
             <div className={cn(
               "border-2 rounded-xl overflow-hidden",
               graduationStatus === 'passed' ? 'border-emerald-200' :
+              graduationStatus === 'conditional' ? 'border-sky-200' :
+              graduationStatus === 'waitlist' ? 'border-violet-200' :
               graduationStatus === 'failed' ? 'border-red-200' : 'border-slate-200'
             )}>
               {/* Status Row */}
               <div className={cn(
                 "flex items-center justify-between p-4",
                 graduationStatus === 'passed' ? 'bg-emerald-50' :
+                graduationStatus === 'conditional' ? 'bg-sky-50' :
+                graduationStatus === 'waitlist' ? 'bg-violet-50' :
                 graduationStatus === 'failed' ? 'bg-red-50' : 'bg-slate-50'
               )}>
                 <div className="flex items-center gap-2">
                   <UserCheck className="h-5 w-5 text-slate-700" />
                   <div>
                     <span className="font-bold text-sm text-slate-900 block">Status Hasil Pendaftaran</span>
-                    <span className="text-[11px] text-muted-foreground">Keputusan kelulusan calon santri</span>
+                    <span className="text-[11px] text-muted-foreground">Keputusan hasil seleksi calon santri</span>
                   </div>
                 </div>
                 <Badge
-                  variant={graduationStatus === 'passed' ? 'success' : graduationStatus === 'failed' ? 'destructive' : 'warning'}
-                  className="text-xs uppercase px-3 py-1 font-bold"
+                  variant={
+                    graduationStatus === 'passed' ? 'success' :
+                    graduationStatus === 'failed' ? 'destructive' :
+                    graduationStatus === 'conditional' ? 'info' :
+                    graduationStatus === 'waitlist' ? 'gold' : 'warning'
+                  }
+                  className="text-xs uppercase px-3 py-1 font-bold whitespace-nowrap"
                 >
-                  {graduationStatus === 'passed' ? 'LULUS' : graduationStatus === 'failed' ? 'TIDAK LULUS' : 'DALAM PROSES'}
+                  {resultStatusLabel(graduationStatus)}
                 </Badge>
               </div>
+
+              {/* Catatan evaluator terakhir (hasil final) */}
+              {evaluatorNotes && graduationStatus !== 'selection' && (
+                <div className="px-4 py-2.5 bg-white border-t border-slate-100">
+                  <p className="text-[11px] text-slate-700"><span className="font-semibold text-slate-800">Catatan Evaluator:</span> <span className="italic">{evaluatorNotes}</span></p>
+                </div>
+              )}
 
               {/* Tombol Validasi — hanya tampil jika admin punya hak */}
               {canCrud && !verdictMode && (
@@ -461,37 +644,51 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                         <>
                           <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                           <span>
-                            Keputusan hanya dapat ditetapkan setelah seluruh nilai masuk. Nilai belum lengkap: {missingScores.join(', ')}.
+                            Hasil hanya dapat ditetapkan setelah seluruh nilai masuk. Nilai belum lengkap: {missingScores.join(', ')}.
                           </span>
                         </>
                       )
                     ) : graduationStatus === 'selection' || !graduationStatus
-                      ? 'Tentukan keputusan kelulusan pendaftar ini.'
-                      : 'Ubah keputusan yang sudah ditetapkan.'}
+                      ? 'Tetapkan hasil pendaftaran pendaftar ini.'
+                      : 'Ubah kategori hasil yang sudah ditetapkan.'}
                   </p>
                   <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto justify-start sm:justify-end">
-                    {graduationStatus !== 'passed' && (
-                      <Button
-                        size="sm"
-                        className="h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto"
-                        onClick={() => setVerdictMode('passed')}
-                        disabled={verdictMutation.isPending || !scoresComplete}
-                      >
-                        <ThumbsUp className="h-3.5 w-3.5" /> Lulus
-                      </Button>
-                    )}
-                    {graduationStatus !== 'failed' && (
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        className="h-8 text-xs gap-1.5 w-full sm:w-auto"
-                        onClick={() => setVerdictMode('failed')}
-                        disabled={verdictMutation.isPending || !scoresComplete}
-                      >
-                        <ThumbsDown className="h-3.5 w-3.5" /> Tidak Lulus
-                      </Button>
-                    )}
-                    {(graduationStatus === 'passed' || graduationStatus === 'failed') && (
+                    <Button
+                      size="sm"
+                      className="h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto"
+                      onClick={() => setVerdictMode('passed')}
+                      disabled={verdictMutation.isPending || !scoresComplete}
+                    >
+                      <CheckCircle2 className="h-3.5 w-3.5" /> Diterima
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs gap-1.5 bg-sky-50 border-sky-200 text-sky-800 hover:bg-sky-100 w-full sm:w-auto"
+                      onClick={() => setVerdictMode('conditional')}
+                      disabled={verdictMutation.isPending || !scoresComplete}
+                    >
+                      <Info className="h-3.5 w-3.5" /> Bersyarat
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 text-xs gap-1.5 bg-violet-50 border-violet-200 text-violet-800 hover:bg-violet-100 w-full sm:w-auto"
+                      onClick={() => setVerdictMode('waitlist')}
+                      disabled={verdictMutation.isPending || !scoresComplete}
+                    >
+                      <CalendarDays className="h-3.5 w-3.5" /> Cadangan
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="h-8 text-xs gap-1.5 w-full sm:w-auto"
+                      onClick={() => setVerdictMode('failed')}
+                      disabled={verdictMutation.isPending || !scoresComplete}
+                    >
+                      <ThumbsDown className="h-3.5 w-3.5" /> Tidak Diterima
+                    </Button>
+                    {(graduationStatus !== 'selection' && graduationStatus) && (
                       <Button
                         size="sm"
                         variant="outline"
@@ -499,7 +696,7 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                         onClick={() => setVerdictMode('selection')}
                         disabled={verdictMutation.isPending}
                       >
-                        <RotateCcw className="h-3.5 w-3.5" /> Reset ke Seleksi
+                        <RotateCcw className="h-3.5 w-3.5" /> Reset ke Dalam Proses
                       </Button>
                     )}
                   </div>
@@ -511,24 +708,38 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                 <div className={cn(
                   "px-4 py-4 border-t space-y-3",
                   verdictMode === 'passed' ? 'bg-emerald-50/60 border-emerald-200' :
+                  verdictMode === 'conditional' ? 'bg-sky-50/60 border-sky-200' :
+                  verdictMode === 'waitlist' ? 'bg-violet-50/60 border-violet-200' :
                   verdictMode === 'failed' ? 'bg-red-50/60 border-red-200' : 'bg-amber-50/60 border-amber-200'
                 )}>
+                  {verdictMode !== 'selection' && (
+                    <p className="text-[11px] font-semibold text-slate-700 flex items-center gap-1.5">
+                      <ShieldAlert className="h-3.5 w-3.5" />
+                      Catatan evaluator wajib diisi dan akan dikirim dalam notifikasi WhatsApp hasil.
+                    </p>
+                  )}
                   <p className={cn(
                     "text-xs font-semibold",
                     verdictMode === 'passed' ? 'text-emerald-800' :
+                    verdictMode === 'conditional' ? 'text-sky-800' :
+                    verdictMode === 'waitlist' ? 'text-violet-800' :
                     verdictMode === 'failed' ? 'text-red-800' : 'text-amber-800'
                   )}>
                     {verdictMode === 'passed'
-                      ? '✅ Konfirmasi: Nyatakan pendaftar ini LULUS seleksi?'
+                      ? '✅ Konfirmasi: Tetapkan hasil pendaftaran DITERIMA?'
+                      : verdictMode === 'conditional'
+                      ? '📋 Konfirmasi: Tetapkan hasil pendaftaran DITERIMA BERSYARAT?'
+                      : verdictMode === 'waitlist'
+                      ? '📌 Konfirmasi: Tetapkan hasil pendaftaran CADANGAN?'
                       : verdictMode === 'failed'
-                      ? '❌ Konfirmasi: Nyatakan pendaftar ini TIDAK LULUS seleksi?'
-                      : '↩️ Konfirmasi: Reset status ke Dalam Proses Seleksi?'}
+                      ? '❌ Konfirmasi: Tetapkan hasil pendaftaran TIDAK DITERIMA?'
+                      : '↩️ Konfirmasi: Reset status ke Dalam Proses?'}
                   </p>
                   <Textarea
                     placeholder={
-                      verdictMode === 'passed'
+                      verdictMode === 'selection'
                         ? 'Catatan tambahan (opsional)...'
-                        : 'Alasan tidak lulus / catatan evaluator (opsional)...'
+                        : 'Alasan / pertimbangan evaluator (wajib)...'
                     }
                     value={verdictReason}
                     onChange={e => setVerdictReason(e.target.value)}
@@ -549,6 +760,8 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                       size="sm"
                       className={cn("h-8 text-xs gap-1.5 w-full sm:w-auto",
                         verdictMode === 'passed' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' :
+                        verdictMode === 'conditional' ? 'bg-sky-600 hover:bg-sky-700 text-white' :
+                        verdictMode === 'waitlist' ? 'bg-violet-600 hover:bg-violet-700 text-white' :
                         verdictMode === 'failed' ? 'bg-destructive hover:bg-destructive/90 text-white' :
                         'bg-amber-600 hover:bg-amber-700 text-white'
                       )}
@@ -567,8 +780,8 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
 
           </div>
         )}
-      </DialogContent>
-    </Dialog>
+        </DialogContent>
+      </Dialog>
 
     {/* Hidden Container untuk Render Lembar Penilaian Resmi A4 (Presisi Tanpa Kotoran Modal) */}
     {open && appData && (
@@ -588,6 +801,8 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
           ref={assessmentSheetRef}
           applicant={appData}
           categories={categories}
+          cbtResults={cbtResults}
+          resultNotes={noteDrafts}
           evaluatorNotes={evaluatorNotes}
           graduationStatus={graduationStatus}
           logoUrl={logoUrl}
@@ -695,7 +910,7 @@ export default function PenilaianPage() {
           className="h-8 text-xs rounded-full gap-1.5"
           onClick={() => handleFilterChange('selection')}
         >
-          <Clock className="h-3.5 w-3.5" /> Dalam Seleksi
+          <Clock className="h-3.5 w-3.5" /> Dalam Proses
         </Button>
         <Button
           variant={statusFilter === 'passed' ? 'default' : 'outline'}
@@ -703,7 +918,23 @@ export default function PenilaianPage() {
           className="h-8 text-xs rounded-full gap-1.5"
           onClick={() => handleFilterChange('passed')}
         >
-          <CheckCircle2 className="h-3.5 w-3.5" /> Lulus
+          <CheckCircle2 className="h-3.5 w-3.5" /> Diterima
+        </Button>
+        <Button
+          variant={statusFilter === 'conditional' ? 'default' : 'outline'}
+          size="sm"
+          className="h-8 text-xs rounded-full gap-1.5"
+          onClick={() => handleFilterChange('conditional')}
+        >
+          <Info className="h-3.5 w-3.5" /> Diterima Bersyarat
+        </Button>
+        <Button
+          variant={statusFilter === 'waitlist' ? 'default' : 'outline'}
+          size="sm"
+          className="h-8 text-xs rounded-full gap-1.5"
+          onClick={() => handleFilterChange('waitlist')}
+        >
+          <CalendarDays className="h-3.5 w-3.5" /> Cadangan
         </Button>
         <Button
           variant={statusFilter === 'failed' ? 'default' : 'outline'}
@@ -711,7 +942,7 @@ export default function PenilaianPage() {
           className="h-8 text-xs rounded-full gap-1.5"
           onClick={() => handleFilterChange('failed')}
         >
-          <XCircle className="h-3.5 w-3.5" /> Tidak Lulus
+          <XCircle className="h-3.5 w-3.5" /> Tidak Diterima
         </Button>
       </div>
 
@@ -731,7 +962,7 @@ export default function PenilaianPage() {
                 <tr>
                   <th className="py-3 px-4 text-left whitespace-nowrap">Nama Pendaftar</th>
                   <th className="py-3 px-4 text-left whitespace-nowrap">Email / No. WA</th>
-                  <th className="py-3 px-4 text-left whitespace-nowrap">Status Seleksi</th>
+                  <th className="py-3 px-4 text-left whitespace-nowrap">Hasil Pendaftaran</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -753,7 +984,7 @@ export default function PenilaianPage() {
                       key={applicant.id}
                       onClick={() => setSelectedApplicant(applicant)}
                       className="hover:bg-slate-50/80 cursor-pointer transition-colors"
-                      title="Klik untuk melihat penilaian & penetapan hasil pendaftaran"
+                      title="Klik untuk melihat hasil seleksi & penetapan hasil pendaftaran"
                     >
                       <td className="py-3 px-4">
                         <div className="min-w-0">
@@ -779,7 +1010,7 @@ export default function PenilaianPage() {
         </CardContent>
       </Card>
 
-      {/* Modal Lembar Hasil Nilai Seleksi & Validasi Kelulusan */}
+      {/* Modal Lembar Hasil Nilai Seleksi & Validasi Kategori Hasil */}
       <ScoreDetailModal
         applicant={selectedApplicant}
         open={!!selectedApplicant}

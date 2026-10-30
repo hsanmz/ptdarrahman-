@@ -2,11 +2,14 @@
 
 Selection Stage & Schedule Orchestration Service.
 Features:
-1. Chronological Date-Stage grouping for mass selection schedules (CBT & Selection Sessions).
+1. Chronological Date-Stage grouping for mass selection schedules
+   (CBT & Selection Sessions).
 2. Same-day exam merging into a single consolidated notification.
-3. H-1 cutoff rule: slots for a session close 24 hours before the earliest exam in that batch starts.
+3. H-1 cutoff rule: slots for a session close 24 hours before the earliest
+   exam in that batch starts.
    Applicants verified after cutoff wait for the next session/batch.
-4. Stage progression rule: subsequent stages are dispatched 3 hours after the previous stage's exam starts.
+4. Stage progression rule: subsequent stages are dispatched 3 hours after the
+   previous stage's exam starts.
 5. Automated reminders: H-2, H-1, and 1-hour before exams.
 6. Anti-ban staggering & idempotency via NotificationLog.
 """
@@ -20,14 +23,13 @@ from datetime import date, datetime, timedelta
 from typing import Any
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from src.core.config import settings
 from src.core.notif_service import send_notifications
 from src.models.cbt import ExamSchedule
-from src.models.notification import NotificationLog
-from src.models.ppdb import PPDBApplicant, PPDBWave
+from src.models.ppdb import NotificationLog, PPDBApplicant, PPDBWave
 from src.models.selection import SelectionResult, SelectionSession
 
 logger = logging.getLogger("ptdarrahman.selection_stage")
@@ -49,8 +51,6 @@ class SelectionStageService:
     ) -> list[dict[str, Any]]:
         """Mengambil seluruh jadwal CBT dan Sesi Seleksi untuk suatu gelombang,
         bisa difilter berdasarkan nama batch/kloter."""
-        today = now_wib().date()
-
         # 1. CBT Schedules
         cbt_q = self.db.query(ExamSchedule).filter(
             ExamSchedule.wave_id == wave_id,
@@ -83,36 +83,48 @@ class SelectionStageService:
         for c in cbt_rows:
             if not c.session_date or not c.start_time:
                 continue
-            loc = c.meeting_url if c.mode == "online" else (c.location or "Lab CBT PTDARRAHMAN")
-            results.append({
-                "id": c.id,
-                "type": "cbt",
-                "category": c.category,
-                "name": c.name,
-                "batch_name": c.batch_name,
-                "session_date": c.session_date,
-                "start_time": c.start_time,
-                "end_time": c.end_time or "Selesai",
-                "mode": c.mode,
-                "location": loc,
-            })
+            loc = (
+                c.meeting_url
+                if c.mode == "online"
+                else (c.location or "Lab CBT PTDARRAHMAN")
+            )
+            results.append(
+                {
+                    "id": c.id,
+                    "type": "cbt",
+                    "category": c.category,
+                    "name": c.name,
+                    "batch_name": c.batch_name,
+                    "session_date": c.session_date,
+                    "start_time": c.start_time,
+                    "end_time": c.end_time or "Selesai",
+                    "mode": c.mode,
+                    "location": loc,
+                }
+            )
 
         for s in sess_rows:
             if not s.session_date or not s.start_time:
                 continue
-            loc = s.meeting_url if s.mode == "online" else (s.location or "Kampus PTDARRAHMAN")
-            results.append({
-                "id": s.id,
-                "type": "selection_session",
-                "category": s.session_type or "selection",
-                "name": s.name,
-                "batch_name": s.batch_name,
-                "session_date": s.session_date,
-                "start_time": s.start_time,
-                "end_time": s.end_time or "Selesai",
-                "mode": s.mode or "offline",
-                "location": loc,
-            })
+            loc = (
+                s.meeting_url
+                if s.mode == "online"
+                else (s.location or "Kampus PTDARRAHMAN")
+            )
+            results.append(
+                {
+                    "id": s.id,
+                    "type": "selection_session",
+                    "category": s.session_type or "selection",
+                    "name": s.name,
+                    "batch_name": s.batch_name,
+                    "session_date": s.session_date,
+                    "start_time": s.start_time,
+                    "end_time": s.end_time or "Selesai",
+                    "mode": s.mode or "offline",
+                    "location": loc,
+                }
+            )
 
         # Urutkan berdasarkan tanggal lalu jam mulai
         results.sort(key=lambda x: (x["session_date"], x["start_time"]))
@@ -141,8 +153,12 @@ class SelectionStageService:
             except ValueError:
                 start_t = datetime.strptime("08:00", "%H:%M").time()
 
-            earliest_dt = datetime.combine(earliest["session_date"], start_t, tzinfo=WIB)
-            cutoff_dt = earliest_dt - timedelta(days=1)  # H-1 sebelum tes pertama dimulai
+            earliest_dt = datetime.combine(
+                earliest["session_date"], start_t, tzinfo=WIB
+            )
+            cutoff_dt = earliest_dt - timedelta(
+                days=1
+            )  # H-1 sebelum tes pertama dimulai
 
             is_open = now < cutoff_dt
             is_completed = now > datetime.combine(
@@ -156,16 +172,18 @@ class SelectionStageService:
             # Stage dates in this batch
             stage_dates = sorted(list({x["session_date"] for x in items}))
 
-            summary.append({
-                "batch_name": b_name,
-                "is_open": is_open,
-                "is_completed": is_completed,
-                "cutoff_datetime": cutoff_dt,
-                "earliest_datetime": earliest_dt,
-                "schedules": items,
-                "stage_dates": stage_dates,
-                "total_stages": len(stage_dates),
-            })
+            summary.append(
+                {
+                    "batch_name": b_name,
+                    "is_open": is_open,
+                    "is_completed": is_completed,
+                    "cutoff_datetime": cutoff_dt,
+                    "earliest_datetime": earliest_dt,
+                    "schedules": items,
+                    "stage_dates": stage_dates,
+                    "total_stages": len(stage_dates),
+                }
+            )
 
         summary.sort(key=lambda x: x["earliest_datetime"])
         return summary
@@ -195,8 +213,10 @@ class SelectionStageService:
     def group_schedules_into_stages(
         self, schedules: list[dict[str, Any]]
     ) -> list[dict[str, Any]]:
-        """Kelompokkan jadwal berdasarkan tanggal. Jika beberapa ujian di hari yang sama,
-        digabung menjadi 1 stage."""
+        """Kelompokkan jadwal berdasarkan tanggal.
+
+        Jika beberapa ujian di hari yang sama, digabung menjadi 1 stage.
+        """
         if not schedules:
             return []
 
@@ -227,34 +247,45 @@ class SelectionStageService:
                 time_range = f"{earliest_time} - {latest_time}"
                 exam_loc = day_events[0]["location"]
 
-            stages.append({
-                "stage_number": stage_idx,
-                "session_date": s_date,
-                "start_datetime": stage_start_dt,
-                "earliest_time": earliest_time,
-                "latest_time": latest_time,
-                "time_range": time_range,
-                "exam_name": exam_name,
-                "location": exam_loc,
-                "events": day_events,
-            })
+            stages.append(
+                {
+                    "stage_number": stage_idx,
+                    "session_date": s_date,
+                    "start_datetime": stage_start_dt,
+                    "earliest_time": earliest_time,
+                    "latest_time": latest_time,
+                    "time_range": time_range,
+                    "exam_name": exam_name,
+                    "location": exam_loc,
+                    "events": day_events,
+                }
+            )
             stage_idx += 1
 
         return stages
 
     # ── 3. Dispatch Stage 1 (Initial / Upon Verification or Creation) ─────────
 
-    def dispatch_stage_1_to_applicant(
-        self, applicant_id: str, wave_id: str
-    ) -> bool:
+    def dispatch_stage_1_to_applicant(self, applicant_id: str, wave_id: str) -> bool:
         """Kirim Stage 1 ke pendaftar jika ada batch yang valid dan terbuka.
-        Jika belum ada jadwal atau sudah lewat H-1, pendaftar menunggu batch berikutnya."""
-        applicant = self.db.query(PPDBApplicant).filter(PPDBApplicant.id == applicant_id).first()
+
+        Jika belum ada jadwal atau sudah lewat H-1, pendaftar menunggu batch
+        berikutnya.
+        """
+        applicant = (
+            self.db.query(PPDBApplicant)
+            .filter(PPDBApplicant.id == applicant_id)
+            .first()
+        )
         if not applicant or not applicant.user_id:
             return False
 
         # Pastikan atau buat SelectionResult
-        s_res = self.db.query(SelectionResult).filter(SelectionResult.applicant_id == applicant_id).first()
+        s_res = (
+            self.db.query(SelectionResult)
+            .filter(SelectionResult.applicant_id == applicant_id)
+            .first()
+        )
         if not s_res:
             s_res = SelectionResult(
                 id=f"selres-{applicant_id}",
@@ -270,7 +301,10 @@ class SelectionStageService:
         # Cari batch terbuka
         batch = self.find_eligible_batch_for_applicant(wave_id, s_res.batch_name)
         if not batch:
-            logger.info("Applicant %s waiting for selection schedule (no open batch)", applicant_id)
+            logger.info(
+                "Applicant %s waiting for selection schedule (no open batch)",
+                applicant_id,
+            )
             return False
 
         stages = self.group_schedules_into_stages(batch["schedules"])
@@ -371,7 +405,9 @@ class SelectionStageService:
                 self.db.add(s_res)
                 self.db.commit()
 
-            batch = self.find_eligible_batch_for_applicant(app.wave_id, s_res.batch_name)
+            batch = self.find_eligible_batch_for_applicant(
+                app.wave_id, s_res.batch_name
+            )
             if not batch:
                 continue
 
@@ -400,7 +436,8 @@ class SelectionStageService:
             next_stage = stages[next_stage_num - 1]
 
             # Aturan Bisnis 3 Jam:
-            # Jadwal tahap selanjutnya dikirim 3 jam setelah jadwal ujian sebelumnya dimulai
+            # Jadwal tahap selanjutnya dikirim 3 jam setelah jadwal ujian
+            # sebelumnya dimulai
             trigger_time = prev_stage["start_datetime"] + timedelta(hours=3)
 
             if now >= trigger_time:
@@ -411,7 +448,9 @@ class SelectionStageService:
                         NotificationLog.recipient_user_id == app.user_id,
                         NotificationLog.event_key == "session_confirmed",
                         NotificationLog.status.in_(("queued", "sent")),
-                        NotificationLog.body_sent.like(f"%{next_stage['session_date']}%"),
+                        NotificationLog.body_sent.like(
+                            f"%{next_stage['session_date']}%"
+                        ),
                     )
                     .first()
                 )
@@ -432,7 +471,9 @@ class SelectionStageService:
                                 "jam_mulai": next_stage["earliest_time"],
                                 "jam_selesai": next_stage["latest_time"],
                                 "lokasi_atau_link": next_stage["location"],
-                                "link_aplikasi": f"{settings.ppdb_frontend_url}/dashboard",
+                                "link_aplikasi": (
+                                    f"{settings.ppdb_frontend_url}/dashboard"
+                                ),
                             },
                         )
                     ],
@@ -446,7 +487,8 @@ class SelectionStageService:
                 dispatched_count += 1
 
                 logger.info(
-                    "Advanced to Stage %d for applicant %s (%s) 3h post previous exam start",
+                    "Advanced to Stage %d for applicant %s (%s) 3h post "
+                    "previous exam start",
                     next_stage_num,
                     app.id,
                     next_stage["exam_name"],
@@ -523,14 +565,16 @@ class SelectionStageService:
                     if not app.user_id:
                         continue
 
-                    # Idempotency check: jangan kirim duplicate reminder dalam 24 jam terakhir
+                    # Idempotency check: jangan kirim duplicate reminder dalam
+                    # 24 jam terakhir
                     already_sent = (
                         self.db.query(NotificationLog.id)
                         .filter(
                             NotificationLog.recipient_user_id == app.user_id,
                             NotificationLog.event_key == event_key,
                             NotificationLog.status.in_(("queued", "sent")),
-                            NotificationLog.created_at >= now.replace(tzinfo=None) - timedelta(hours=24),
+                            NotificationLog.created_at
+                            >= now.replace(tzinfo=None) - timedelta(hours=24),
                             NotificationLog.body_sent.like(f"%{s['name']}%"),
                         )
                         .first()
@@ -547,7 +591,9 @@ class SelectionStageService:
                                     "tanggal": str(s["session_date"]),
                                     "waktu": s["start_time"],
                                     "lokasi_atau_link": s["location"],
-                                    "link_aplikasi": f"{settings.ppdb_frontend_url}/dashboard",
+                                    "link_aplikasi": (
+                                        f"{settings.ppdb_frontend_url}/dashboard"
+                                    ),
                                 },
                             )
                         ],

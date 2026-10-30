@@ -23,7 +23,6 @@ from src.models.ppdb import (
     PPDBStage2Bill,
     PPDBWave,
     PPDBWaveFeeDiscount,
-    PPDBWaveFeeItem,
 )
 from src.modules.ppdb.schemas import (
     ApplicantAdminCreate,
@@ -36,8 +35,6 @@ from src.modules.ppdb.schemas import (
     PeriodUpdate,
     WaveCreate,
     WaveFeeDiscountUpdate,
-    WaveFeeItemCreate,
-    WaveFeeItemUpdate,
     WaveUpdate,
 )
 from src.repositories.ppdb_repository import PPDBRepository
@@ -170,6 +167,8 @@ class PPDBService:
             description=body.description,
             wa_group_link=body.wa_group_link,
             head_of_committee=body.head_of_committee,
+            form_fee=body.form_fee,
+            minimum_dp=body.minimum_dp,
             status="inactive",
             created_at=datetime.now(WIB),
             updated_at=datetime.now(WIB),
@@ -195,6 +194,10 @@ class PPDBService:
             period.wa_group_link = provided["wa_group_link"]
         if "head_of_committee" in provided:
             period.head_of_committee = provided["head_of_committee"]
+        if "form_fee" in provided and provided["form_fee"] is not None:
+            period.form_fee = provided["form_fee"]
+        if "minimum_dp" in provided and provided["minimum_dp"] is not None:
+            period.minimum_dp = provided["minimum_dp"]
         period.updated_at = datetime.now(WIB)
 
         self.repository.update_period(period)
@@ -377,11 +380,6 @@ class PPDBService:
             registration_end_date=body.registration_end_date,
             quota=body.quota,
             early_discount_quota=body.early_discount_quota,
-            registration_fee=body.registration_fee,
-            minimum_dp=body.minimum_dp,
-            second_stage_fee=body.second_stage_fee
-            if body.second_stage_fee is not None
-            else 0,
             status="inactive",
             created_at=datetime.now(WIB),
             updated_at=datetime.now(WIB),
@@ -447,9 +445,6 @@ class PPDBService:
             "registration_end_date",
             "quota",
             "early_discount_quota",
-            "registration_fee",
-            "second_stage_fee",
-            "minimum_dp",
         ):
             if field in provided and provided[field] is not None:
                 setattr(wave, field, provided[field])
@@ -489,7 +484,7 @@ class PPDBService:
         return {"success": True}
 
     # -------------------------------------------------------------------------
-    # Wave fee items (Biaya Tahap 2 per gelombang)
+    # Diskon gelombang atas master komponen biaya periode
     # -------------------------------------------------------------------------
     def get_wave_fee_items(self, wave_id: str) -> dict[str, Any]:
         wave = self.repository.get_wave_by_id(wave_id)
@@ -543,67 +538,6 @@ class PPDBService:
             "items": item_data,
         }
 
-    def create_wave_fee_item(self, wave_id: str, body: WaveFeeItemCreate):
-        wave = self.repository.get_wave_by_id(wave_id)
-        if not wave:
-            raise HTTPException(status_code=404, detail="Gelombang tidak ditemukan")
-        if (
-            body.discount_scope == "first_x" or body.early_discount_type
-        ) and not wave.early_discount_quota:
-            raise HTTPException(
-                status_code=400,
-                detail="Kuota diskon pendaftar awal belum diatur pada gelombang ini",
-            )
-        item = PPDBWaveFeeItem(
-            id=str(uuid.uuid4()),
-            wave_id=wave_id,
-            name=body.name,
-            nominal=body.nominal,
-            description=body.description,
-            order_index=body.order_index,
-            discount_type=body.discount_type,
-            discount_value=body.discount_value,
-            discount_scope=body.discount_scope,
-            early_discount_type=body.early_discount_type,
-            early_discount_value=body.early_discount_value,
-            created_at=datetime.now(WIB),
-            updated_at=datetime.now(WIB),
-        )
-        self.repository.create_fee_item(item)
-        return {c.name: getattr(item, c.name) for c in item.__table__.columns}
-
-    def update_wave_fee_item(self, wave_id: str, item_id: str, body: WaveFeeItemUpdate):
-        wave = self.repository.get_wave_by_id(wave_id)
-        if not wave:
-            raise HTTPException(status_code=404, detail="Gelombang tidak ditemukan")
-        if (
-            body.discount_scope == "first_x" or body.early_discount_type
-        ) and not wave.early_discount_quota:
-            raise HTTPException(
-                status_code=400,
-                detail="Kuota diskon pendaftar awal belum diatur pada gelombang ini",
-            )
-        item = self.repository.get_fee_item(item_id)
-        if not item or item.wave_id != wave_id:
-            raise HTTPException(status_code=404, detail="Item biaya tidak ditemukan")
-        if self.repository.count_bills_for_fee_item(item_id) > 0:
-            raise HTTPException(
-                status_code=400,
-                detail="Item biaya sudah memiliki tagihan dan tidak bisa diubah",
-            )
-        item.name = body.name
-        item.nominal = body.nominal
-        item.description = body.description
-        item.order_index = body.order_index
-        item.discount_type = body.discount_type
-        item.discount_value = body.discount_value
-        item.discount_scope = body.discount_scope
-        item.early_discount_type = body.early_discount_type
-        item.early_discount_value = body.early_discount_value
-        item.updated_at = datetime.now(WIB)
-        self.repository.update_fee_item(item)
-        return {c.name: getattr(item, c.name) for c in item.__table__.columns}
-
     def update_wave_fee_discount(
         self, wave_id: str, fee_item_id: str, body: WaveFeeDiscountUpdate
     ) -> dict[str, Any]:
@@ -638,24 +572,6 @@ class PPDBService:
         discount.updated_at = now
         discount = self.repository.save_wave_fee_discount(discount)
         return {c.name: getattr(discount, c.name) for c in discount.__table__.columns}
-
-    def delete_wave_fee_item(self, wave_id: str, item_id: str):
-        wave = self.repository.get_wave_by_id(wave_id)
-        if not wave:
-            raise HTTPException(status_code=404, detail="Gelombang tidak ditemukan")
-        item = self.repository.get_fee_item(item_id)
-        if not item or item.wave_id != wave_id:
-            raise HTTPException(status_code=404, detail="Item biaya tidak ditemukan")
-        if (
-            self.repository.count_discounts_for_fee_item(item_id) > 0
-            or self.repository.count_bills_for_fee_item(item_id) > 0
-        ):
-            raise HTTPException(
-                status_code=400,
-                detail="Item biaya sudah dipakai diskon/tagihan dan tidak bisa dihapus",
-            )
-        self.repository.delete_fee_item(item)
-        return {"success": True}
 
     # -------------------------------------------------------------------------
     # Registration
@@ -868,7 +784,9 @@ class PPDBService:
             id=f"pay-{uuid.uuid4()}",
             applicant_id=applicant.id,
             method="qris",
-            amount=wave.registration_fee or 0,
+            # Biaya formulir adalah master tingkat periode (satu nilai untuk
+            # seluruh gelombang).
+            amount=int(period.form_fee or 0),
             status="pending",
             created_at=now,
             updated_at=now,
@@ -1016,6 +934,8 @@ class PPDBService:
         if not wave:
             raise HTTPException(status_code=404, detail="Gelombang tidak ditemukan")
 
+        period = self.repository.get_period_by_id(wave.period_id)
+
         if self.repository.get_applicant_by_email_active(body.email):
             raise HTTPException(
                 status_code=400, detail="Email sudah terdaftar pada pendaftar lain."
@@ -1118,7 +1038,9 @@ class PPDBService:
             id=f"pay-{uuid.uuid4()}",
             applicant_id=applicant.id,
             method="qris",
-            amount=wave.registration_fee or 0,
+            # Biaya formulir adalah master tingkat periode (satu nilai untuk
+            # seluruh gelombang).
+            amount=int(period.form_fee or 0) if period else 0,
             status="pending",
             created_at=now,
             updated_at=now,
@@ -1607,6 +1529,8 @@ class PPDBService:
                     "document_rejected": 0,
                     "selection": 0,
                     "passed": 0,
+                    "conditional": 0,
+                    "waitlist": 0,
                     "failed": 0,
                     "expired": 0,
                 },
@@ -1643,6 +1567,8 @@ class PPDBService:
                 "document_rejected": g("document_rejected"),
                 "selection": g("selection"),
                 "passed": g("passed"),
+                "conditional": g("conditional"),
+                "waitlist": g("waitlist"),
                 "failed": g("failed"),
                 "expired": g("expired"),
             },
@@ -1751,10 +1677,79 @@ class PPDBService:
             .first()
         )
 
-        # Kelengkapan nilai — menentukan apakah keputusan kelulusan boleh ditetapkan.
+        # Hasil ujian CBT Akademik & Psikologi dari attempt pendaftar.
+        from sqlalchemy import and_
+
+        from src.models.cbt import ExamAttempt, ExamSchedule
+
+        app_row = self.repository.db.get(PPDBApplicant, applicant_id)
+        cbt_rows = self.repository.db.execute(
+            select(
+                ExamSchedule.category,
+                ExamAttempt.status,
+                ExamAttempt.score,
+                ExamAttempt.started_at,
+                ExamAttempt.finished_at,
+                ExamAttempt.violations_count,
+                ExamSchedule.id.label("schedule_id"),
+                ExamSchedule.name.label("schedule_name"),
+                ExamSchedule.batch_name,
+                ExamSchedule.session_date,
+                ExamSchedule.start_time,
+                ExamSchedule.end_time,
+                ExamSchedule.mode,
+            )
+            .outerjoin(
+                ExamAttempt,
+                and_(
+                    ExamAttempt.schedule_id == ExamSchedule.id,
+                    ExamAttempt.applicant_id == applicant_id,
+                ),
+            )
+            .where(
+                ExamSchedule.wave_id == app_row.wave_id if app_row else None,
+                ExamSchedule.category.in_(("akademik", "psikologi")),
+            )
+            .order_by(ExamSchedule.session_date.asc())
+        ).all()
+
+        cbt_results: dict[str, dict[str, Any] | None] = {
+            "akademik": None,
+            "psikologi": None,
+        }
+        for row in cbt_rows:
+            if row.status is None:
+                continue
+            category = row.category
+            # Bila ada beberapa attempt, yang selesai diberi bobot lebih tinggi.
+            current = cbt_results.get(category)
+            candidate = {
+                "schedule_id": row.schedule_id,
+                "schedule_name": row.schedule_name,
+                "batch_name": row.batch_name,
+                "session_date": row.session_date.isoformat()
+                if row.session_date
+                else None,
+                "start_time": row.start_time,
+                "end_time": row.end_time,
+                "mode": row.mode,
+                "attempt_status": row.status,
+                "score": row.score,
+                "started_at": row.started_at.isoformat() if row.started_at else None,
+                "finished_at": row.finished_at.isoformat() if row.finished_at else None,
+                "violations_count": row.violations_count,
+            }
+            prefer_completed = current is None or (
+                current.get("attempt_status") != "completed"
+                and candidate["attempt_status"] == "completed"
+            )
+            if prefer_completed:
+                cbt_results[category] = candidate
+
+        # Kelengkapan nilai — kunci apakah keputusan hasil pendaftaran boleh ditetapkan.
         from src.services.selection_service import selection_score_gaps
 
-        app_obj = self.repository.db.get(PPDBApplicant, applicant_id)
+        app_obj = app_row
         missing_scores = (
             selection_score_gaps(self.repository.db, app_obj) if app_obj else []
         )
@@ -1765,9 +1760,20 @@ class PPDBService:
             elif hasattr(v, "__str__") and type(v).__name__ in ("Decimal", "UUID"):
                 applicant[k] = str(v)
 
+        result_notes = None
+        if sel_res:
+            result_notes = {
+                "akademik": sel_res.notes_akademik,
+                "psikologi": sel_res.notes_psikologi,
+                "tahfidz": sel_res.notes_tahfidz,
+                "wawancara": sel_res.notes_wawancara,
+            }
+
         return {
             "applicant": applicant,
             "categories": list(categories_map.values()),
+            "cbt_results": cbt_results,
+            "result_notes": result_notes,
             "evaluator_notes": sel_res.notes if sel_res else None,
             "graduation_status": sel_res.graduation_status
             if sel_res
@@ -1797,12 +1803,16 @@ class PPDBService:
                 d = discounts.get(item.id)
                 discount_amount = 0
                 discount_desc = ""
+                # Early bird hanya untuk pendaftar yang slotnya sah: flag
+                # ditandai saat pembayaran formulir sukses (X pembayar awal),
+                # bukan untuk semua pendaftar di gelombang.
                 if (
                     d
                     and d.early_discount_type
                     and d.early_discount_value
                     and wave
                     and wave.early_discount_quota
+                    and applicant.get("early_discount_eligible")
                 ):
                     if d.early_discount_type == "percent":
                         discount_amount = int(
@@ -1837,30 +1847,10 @@ class PPDBService:
                 )
             return fee_items
 
-        wave_name = wave.name if wave else "Gelombang 1"
-        return [
-            {
-                "name": f"Biaya Pembangunan (Early Bird {wave_name})",
-                "nominal": 10000000,
-                "description": "Potongan diskon pendaftar awal, dibayarkan 1 kali.",
-            },
-            {
-                "name": "SPP / Biaya Pendidikan Bulan Pertama",
-                "nominal": 1500000,
-                "description": "Biaya bulanan asrama, konsumsi, dan tahfidz.",
-            },
-            {
-                "name": "Biaya Matrikulasi (Pre-Pesantren)",
-                "nominal": 1000000,
-                "description": "Orientasi dan pembekalan adab santri baru.",
-            },
-            {
-                "name": "Biaya Seragam, Kitab & Modul Digital",
-                "nominal": 2500000,
-                "description": "4 setel seragam santri, paket kitab, dan modul "
-                "digital.",
-            },
-        ]
+        # Tanpa master komponen biaya pada periode: kembalikan daftar kosong.
+        # LoA menampilkan keterangan "belum dikonfigurasi" alih-alih angka
+        # template yang tidak keluar dari konfigurasi panitia.
+        return []
 
     def get_applicant_loa(self, applicant_id: str) -> dict[str, Any]:
         applicant = self.repository.get_applicant_detail(applicant_id)
@@ -1882,7 +1872,7 @@ class PPDBService:
             self.repository.db.commit()
             applicant["registration_number"] = reg_no
 
-        from src.models.ppdb import PPDBPeriod, PPDBWave, PPDBWaveFeeItem
+        from src.models.ppdb import PPDBPeriod, PPDBWave
 
         # Ambil data periode aktif / induk
         period_id = applicant.get("period_id")
@@ -1900,68 +1890,13 @@ class PPDBService:
         wave_id = applicant.get("wave_id")
         wave = self.repository.db.get(PPDBWave, wave_id) if wave_id else None
         wave_name = wave.name if wave else (applicant.get("wave_name") or "Gelombang 1")
-        minimum_dp = int(wave.minimum_dp) if wave and wave.minimum_dp else 5000000
+        # Minimal DP adalah master tingkat periode (dicantumkan pada LoA).
+        minimum_dp = int(period.minimum_dp) if period and period.minimum_dp else 5000000
 
-        # Ambil item biaya riil dari konfigurasi gelombang
-        fee_items_query = (
-            self.repository.db.query(PPDBWaveFeeItem)
-            .filter(PPDBWaveFeeItem.wave_id == wave_id)
-            .order_by(PPDBWaveFeeItem.order_index.asc())
-            .all()
-            if wave_id
-            else []
-        )
-
+        # Rincian biaya pendidikan: master komponen periode + diskon gelombang.
         fee_items = self._calculate_loa_fee_items(wave, applicant)
-        if True:
-            pass
-        elif fee_items_query:
-            for item in fee_items_query:
-                fee_items.append(
-                    {
-                        "id": item.id,
-                        "name": item.name,
-                        "nominal": int(item.nominal),
-                        "description": item.description
-                        or "Biaya komponen pendidikan resmi PPDB.",
-                    }
-                )
-        else:
-            fee_items = [
-                {
-                    "name": f"Biaya Pembangunan (Early Bird {wave_name})",
-                    "nominal": 10000000,
-                    "description": (
-                        "Potongan diskon pendaftar awal, dibayarkan 1 kali."
-                    ),
-                },
-                {
-                    "name": "SPP / Biaya Pendidikan Bulan Pertama",
-                    "nominal": 1500000,
-                    "description": ("Biaya bulanan asrama, konsumsi, dan tahfidz."),
-                },
-                {
-                    "name": "Biaya Matrikulasi (Pre-Pesantren)",
-                    "nominal": 1000000,
-                    "description": ("Orientasi dan pembekalan adab santri baru."),
-                },
-                {
-                    "name": "Biaya Seragam, Kitab & Modul Digital",
-                    "nominal": 2500000,
-                    "description": (
-                        "4 setel seragam santri, paket kitab, dan modul digital."
-                    ),
-                },
-            ]
 
         total_fee = sum(item["nominal"] for item in fee_items)
-        if (
-            wave
-            and wave.second_stage_fee
-            and wave.second_stage_fee > 0
-            and not fee_items_query
-        ):
-            total_fee = int(wave.second_stage_fee)
 
         months_id = {
             1: "Januari",
@@ -2019,7 +1954,13 @@ class PPDBService:
             "fee_items": fee_items,
             "total_fee": total_fee,
             "minimum_dp": minimum_dp,
-            "discount_name": f"Potongan Biaya Pembangunan (Early Bird {wave_name})",
+            # Label subsidi/diskon hanya ketika setidaknya satu komponen
+            # benar-benar terpotong; tanpa diskon, baris itu tidak tampil.
+            "discount_name": (
+                f"Potongan Biaya Pembangunan (Early Bird {wave_name})"
+                if any(item.get("discount_nominal") for item in fee_items)
+                else None
+            ),
             "deadline_lunas": deadline_str,
             "deadline_lunas_iso": deadline_dt.isoformat(),
             "fixed_clause": FIXED_LOA_CLAUSE,
@@ -2461,7 +2402,19 @@ class PPDBService:
                 "formulir_identifikasi_kesehatan.txt", "\n".join(health_lines) + "\n"
             )
 
-            evaluator_notes = dossier["transcript"].get("evaluator_notes", "-")
+            transcript = dossier.get("transcript") or {}
+            evaluator_notes = transcript.get("evaluator_notes", "-")
+            result_notes = transcript.get("result_notes") or {}
+            note_lines = []
+            for comp_key, comp_label in (
+                ("akademik", "Ujian Akademik (CBT)"),
+                ("psikologi", "Ujian Psikologi (CBT)"),
+                ("tahfidz", "Ujian Tahfidz"),
+                ("wawancara", "Ujian Wawancara"),
+            ):
+                note_val = (result_notes.get(comp_key) or "").strip()
+                if note_val:
+                    note_lines.append(f"Catatan {comp_label}: {note_val}")
             transcript_txt = (
                 f"TRANSKRIP HASIL SELEKSI PPDB\n"
                 f"Pesantren Tahfidz Qur'an dan Digital Ar-Rahman\n"
@@ -2471,7 +2424,9 @@ class PPDBService:
                 f"Gelombang: {applicant.get('wave_name')}\n"
                 f"Periode: {applicant.get('period_name')}\n"
                 f"Status: {applicant.get('status')}\n\n"
-                f"Catatan Evaluator: {evaluator_notes}\n"
+                "Catatan per Komponen Seleksi:\n"
+                f"{chr(10).join(note_lines) or '-'}\n\n"
+                f"Catatan Evaluator (Keputusan Akhir): {evaluator_notes}\n"
             )
             zf.writestr("transkrip_nilai.txt", transcript_txt)
 

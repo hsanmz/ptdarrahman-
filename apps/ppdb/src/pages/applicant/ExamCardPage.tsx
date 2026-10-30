@@ -68,7 +68,7 @@ export default function ExamCardPage() {
     return (
       <div className="flex h-screen flex-col items-center justify-center space-y-4 bg-slate-50 p-4 text-center">
         <ShieldCheck className="h-12 w-12 text-slate-300" />
-        <p className="text-muted-foreground">Data tidak ditemukan atau Anda belum memilih jadwal ujian.</p>
+        <p className="text-muted-foreground">Data tidak ditemukan atau jadwal ujian Anda belum ditetapkan panitia.</p>
         <Button variant="outline" onClick={() => navigate('/applicant')}>
           Kembali ke Dashboard
         </Button>

@@ -11,9 +11,9 @@ Idempotent. Membuat/memperbarui:
   * user ``Pendaftar`` bernama ``testpendaftar2`` dengan password tetap;
   * applicant dengan ``payment_status="paid"`` dan ``status="passed"``;
   * rubrik global "Tahfidz" & "Wawancara" (kategori + kriteria) bila belum ada,
-    beserta nilai Session 1:1 Tahfidz & Wawancara milik pendaftar ini;
+    beserta nilai Seleksi Tahfidz & Wawancara milik pendaftar ini;
   * hasil seleksi ``graduation_status="passed"`` dengan sesi Tahfidz/Wawancara
-    yang sudah di-booking (jadwal sesi dibuat khusus untuk akun test ini).
+    yang sudah ditetapkan (jadwal sesi dibuat khusus untuk akun test ini).
 
 TEST FIXTURE — penting:
   Script ini SENGAJA tidak membuat transaksi pembayaran berstatus ``success``.
@@ -359,7 +359,7 @@ def main() -> None:
                 f"REG-{now.strftime('%d%m%y')}{clean_id.zfill(5)}"
             )
 
-        # ── Rubrik + nilai Session 1:1 (Tahfidz & Wawancara) ──────────────────
+        # ── Rubrik + nilai Seleksi (Tahfidz & Wawancara) ──────────────────────
         score_count = 0
         for cat_name in RUBRIC_CATEGORY_NAMES:
             category, _ = _ensure_category(db, cat_name, now)
@@ -371,7 +371,7 @@ def main() -> None:
                 score_count += 1
         print(f"  nilai rubrik dipastikan: {score_count} kriteria")
 
-        # ── Sesi Tahfidz & Wawancara (sudah ter-booking oleh akun ini) ────────
+        # ── Sesi Tahfidz & Wawancara (ditetapkan untuk akun ini) ──────────────
         tahfidz_session, _ = _ensure_session(
             db,
             wave.id,

@@ -400,6 +400,14 @@ function SessionEvaluationContent() {
 
   const isCompleted = session?.status_color === 'green'
 
+  const scoreLabel = !isTahfidz
+    ? wawancaraMode === 'santri'
+      ? 'Skor Santri'
+      : wawancaraMode === 'ortu'
+      ? 'Skor Orang Tua'
+      : 'Skor Total'
+    : 'Skor Akhir'
+
   return (
     <div className="-m-3.5 sm:-m-4 md:-m-6 lg:-m-8 flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-3.6rem)] lg:max-h-[calc(100vh-3.6rem)] lg:overflow-hidden bg-background animate-fade-in select-text">
       {/* ── Mobile/Tablet View Switcher (< lg) ── */}
@@ -442,78 +450,66 @@ function SessionEvaluationContent() {
           mobileTab !== 'rubric' && "hidden lg:flex"
         )}
       >
-        {/* ── Header Lembar Penilaian (Sticky di atas kolom kiri) ── */}
-        <div className="px-4 sm:px-6 lg:px-8 py-3.5 sm:py-4 border-b border-slate-200/80 bg-white/95 backdrop-blur-sm shrink-0 z-10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
-            {/* Navigasi & Metadata Sesi */}
-            <div className="space-y-1.5 min-w-0">
-              <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 w-8 sm:h-9 sm:w-auto sm:px-2.5 p-0 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl shrink-0"
-                  onClick={handleBack}
-                  title="Kembali ke Ruang Sesi"
-                >
-                  <ArrowLeft className="h-4 w-4 sm:mr-1.5" />
-                  <span className="hidden sm:inline text-xs font-semibold">Kembali</span>
-                </Button>
-                <div className="h-4 w-px bg-slate-200 shrink-0 hidden sm:block" />
-                <h1 className="text-base sm:text-lg lg:text-xl font-bold text-slate-900 tracking-tight">
-                  Lembar {sessionLabel}
-                </h1>
-                <span
-                  className={cn(
-                    "text-[11px] font-semibold px-2.5 py-0.5 rounded-full border shrink-0",
-                    isCompleted
-                      ? "bg-emerald-50 text-emerald-800 border-emerald-200/80"
-                      : "bg-amber-50 text-amber-800 border-amber-200/80"
-                  )}
-                >
-                  {isCompleted ? 'Selesai' : 'Menunggu'}
-                </span>
-              </div>
+        {/* Header lembar penilaian: identitas sesi di kiri, skor dan aksi di kanan */}
+        <div className="px-4 sm:px-6 lg:px-8 py-3 border-b border-slate-200 bg-white shrink-0 z-10">
+          {/* Baris 1: nama sesi satu baris penuh, status di ujung kanan */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={handleBack}
+              title="Kembali ke Ruang Sesi"
+              aria-label="Kembali ke Ruang Sesi"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition-colors hover:bg-slate-50 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/40"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
 
-              {/* Baris Informasi Sesi */}
-              <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground pl-0 sm:pl-1">
-                <span className="font-semibold text-slate-800 truncate max-w-[200px] sm:max-w-none">
-                  {session.name}
+            <h1
+              className="min-w-0 flex-1 truncate text-[15px] font-bold tracking-tight text-slate-900 sm:text-base"
+              title={session.name || `Sesi ${sessionLabel}`}
+            >
+              {session.name || `Sesi ${sessionLabel}`}
+            </h1>
+
+            <span
+              className={cn(
+                'shrink-0 rounded-md border px-1.5 py-0.5 text-[10px] font-semibold',
+                isCompleted
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                  : 'bg-amber-50 text-amber-800 border-amber-200'
+              )}
+            >
+              {isCompleted ? 'Selesai' : 'Menunggu'}
+            </span>
+          </div>
+
+          {/* Baris 2: metadata sesi, skor, dan aksi */}
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2 sm:pl-12">
+            <div className="flex min-w-[220px] flex-1 flex-col gap-0.5 text-[11px] text-slate-600">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span className="flex items-center gap-1">
+                  <CalendarDays className="h-3 w-3 shrink-0 text-slate-400" />
+                  <span className="whitespace-nowrap font-medium">{formatDateSafe(session.session_date)}</span>
                 </span>
-                <span className="text-slate-300 select-none">·</span>
-                <span className="flex items-center gap-1 shrink-0 font-medium text-slate-600">
-                  <CalendarDays className="h-3.5 w-3.5 text-slate-400" />
-                  {formatDateSafe(session.session_date)}
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3 shrink-0 text-slate-400" />
+                  <span className="whitespace-nowrap font-medium">{session.start_time || '-'} WIB</span>
                 </span>
-                <span className="text-slate-300 select-none">·</span>
-                <span className="flex items-center gap-1 shrink-0 font-medium text-slate-600">
-                  <Clock className="h-3.5 w-3.5 text-slate-400" />
-                  {session.start_time || '-'}
-                </span>
-                {session.officer_name && (
-                  <>
-                    <span className="text-slate-300 select-none">·</span>
-                    <span className="flex items-center gap-1 shrink-0 font-medium text-slate-600">
-                      <User className="h-3.5 w-3.5 text-slate-400" />
-                      {session.officer_name}
-                    </span>
-                  </>
-                )}
               </div>
+              {session.officer_name && (
+                <span className="flex min-w-0 items-center gap-1">
+                  <User className="h-3 w-3 shrink-0 text-slate-400" />
+                  <span className="font-medium">{session.officer_name}</span>
+                </span>
+              )}
             </div>
 
-            {/* Skor Akhir dan Tombol Simpan */}
-            <div className="flex items-center gap-3 sm:gap-4 self-end md:self-center shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 w-full md:w-auto justify-between md:justify-end">
-              <div className="text-left md:text-right">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block">
-                  {!isTahfidz
-                    ? wawancaraMode === 'santri'
-                      ? 'SKOR SANTRI'
-                      : wawancaraMode === 'ortu'
-                      ? 'SKOR ORANG TUA'
-                      : 'SKOR TOTAL'
-                    : 'SKOR AKHIR'}
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <div className="flex flex-col items-end border-r border-slate-200 pr-3">
+                <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">
+                  {scoreLabel}
                 </span>
-                <span className="text-2xl sm:text-3xl font-black text-emerald-800 tracking-tight leading-none">
+                <span className="text-base font-bold leading-none tabular-nums text-emerald-700 sm:text-lg">
                   {calculatedScore.toLocaleString('id-ID', {
                     minimumFractionDigits: 0,
                     maximumFractionDigits: 1,
@@ -521,25 +517,21 @@ function SessionEvaluationContent() {
                 </span>
               </div>
 
-              <DocTrigger docKey="ppdb-session-evaluation" variant="light" />
+              <DocTrigger
+                docKey="ppdb-session-evaluation"
+                variant="light"
+                className="h-9 w-9 rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700"
+              />
 
               {canCrud && (
                 <Button
                   onClick={() => saveMutation.mutate()}
                   disabled={saveMutation.isPending}
-                  className="h-10 px-5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl gap-2 text-xs sm:text-sm font-semibold shadow-xs transition-all active:scale-98 shrink-0"
+                  className="h-9 gap-2 rounded-lg bg-emerald-700 px-3.5 text-xs font-semibold text-white hover:bg-emerald-800"
                 >
                   <Save className="h-4 w-4 shrink-0" />
-                  <span>
-                    {saveMutation.isPending
-                      ? 'Menyimpan...'
-                      : !isTahfidz
-                      ? wawancaraMode === 'santri'
-                        ? 'Simpan Nilai Santri'
-                        : wawancaraMode === 'ortu'
-                        ? 'Simpan Nilai Orang Tua'
-                        : 'Simpan Wawancara'
-                      : 'Simpan Nilai Tahfidz'}
+                  <span className="truncate">
+                    {saveMutation.isPending ? 'Menyimpan...' : 'Simpan Nilai'}
                   </span>
                 </Button>
               )}
@@ -563,7 +555,7 @@ function SessionEvaluationContent() {
                 )}
               >
                 <User className="h-3.5 w-3.5 text-blue-600" />
-                <span>Wawancara Calon Santri</span>
+                <span>Calon Santri</span>
                 {isSantriEvaluated ? (
                   <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-semibold inline-flex items-center gap-0.5">
                     <CheckCircle2 className="h-2.5 w-2.5" /> Sudah
@@ -585,7 +577,7 @@ function SessionEvaluationContent() {
                 )}
               >
                 <Users className="h-3.5 w-3.5 text-emerald-600" />
-                <span>Wawancara Orang Tua / Wali</span>
+                <span>Orang Tua / Wali</span>
                 {isOrtuEvaluated ? (
                   <span className="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full font-semibold inline-flex items-center gap-0.5">
                     <CheckCircle2 className="h-2.5 w-2.5" /> Sudah
@@ -764,7 +756,7 @@ function SessionEvaluationContent() {
             <div className="space-y-4 pt-4 border-t border-slate-100">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                  Penginputan Catatan Hasil Wawancara
+                  Catatan Hasil Wawancara
                 </span>
                 <span className="text-[11px] text-muted-foreground">Tersimpan otomatis bersama skor</span>
               </div>
@@ -775,11 +767,10 @@ function SessionEvaluationContent() {
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
                       <User className="h-3.5 w-3.5 text-blue-600" />
-                      <span>1. Catatan Hasil Wawancara Calon Santri / Siswa</span>
+                      <span>Catatan Calon Santri</span>
                       <span className="text-rose-500 font-bold">*</span>
                       <span className="text-[10px] text-rose-500 font-semibold">(Wajib Diisi)</span>
                     </label>
-                    <span className="text-[10px] text-blue-800/80 font-medium">Kepribadian, Akhlak & Kesiapan Mondok</span>
                   </div>
                   <Textarea
                     rows={3}
@@ -798,11 +789,10 @@ function SessionEvaluationContent() {
                   <div className="flex items-center justify-between">
                     <label className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
                       <Users className="h-3.5 w-3.5 text-emerald-600" />
-                      <span>2. Catatan Hasil Wawancara Orang Tua / Wali</span>
+                      <span>Catatan Orang Tua / Wali</span>
                       <span className="text-rose-500 font-bold">*</span>
                       <span className="text-[10px] text-rose-500 font-semibold">(Wajib Diisi)</span>
                     </label>
-                    <span className="text-[10px] text-emerald-800/80 font-medium">Komitmen Pendidikan & Kesiapan Orang Tua</span>
                   </div>
                   <Textarea
                     rows={3}

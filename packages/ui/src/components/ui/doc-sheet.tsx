@@ -79,16 +79,16 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
       },
       {
         number: 3,
-        title: 'Kartu Sesi 1:1 Milik Anda',
+        title: 'Kartu Jadwal Seleksi Anda',
         icon: Clock,
         content: (
           <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
             <p>
-              Pada bagian bawah dashboard, terdapat ringkasan kartu sesi 1:1 (Tahfidz/Wawancara) yang dibuat oleh akun Anda.
+              Pada bagian bawah dashboard, terdapat ringkasan kartu jadwal seleksi (Tahfidz/Wawancara) milik gelombang aktif.
             </p>
             <ul className="list-disc list-inside space-y-1 text-slate-600">
-              <li><strong>Merah:</strong> Sesi belum diambil oleh pendaftar.</li>
-              <li><strong>Kuning:</strong> Sesi telah di-booking santri dan siap dinilai (klik untuk input nilai).</li>
+              <li><strong>Merah:</strong> Sesi belum memiliki peserta.</li>
+              <li><strong>Kuning:</strong> Sesi sudah berisi peserta dan siap dinilai (klik untuk input nilai).</li>
               <li><strong>Hijau:</strong> Sesi telah selesai dinilai.</li>
             </ul>
           </div>
@@ -101,7 +101,7 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
         content: (
           <ol className="list-decimal list-inside text-xs text-slate-700 space-y-1.5 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
             <li><strong>Verifikasi Dokumen:</strong> Periksa berkas dan kuesioner kesehatan pendaftar yang telah melunasi formulir.</li>
-            <li><strong>Sesi 1:1:</strong> Siapkan slot jadwal Tahfidz dan Wawancara untuk santri yang berkasnya valid.</li>
+            <li><strong>Jadwal Seleksi:</strong> Siapkan jadwal Tahfidz dan Wawancara untuk santri yang berkasnya valid.</li>
             <li><strong>Hasil Seleksi:</strong> Tetapkan kelulusan dan rilis LoA resmi.</li>
             <li><strong>Review LoA:</strong> Pantau tanda tangan digital orang tua & santri hingga alur PPDB tuntas.</li>
           </ol>
@@ -151,7 +151,7 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
                 Tahap Seleksi
               </Badge>
               <p className="text-xs text-slate-700 leading-relaxed">
-                Dokumen dinyatakan lengkap dan disetujui. Santri berhak memilih jadwal Session 1:1 Tahfidz serta Wawancara.
+                Dokumen dinyatakan lengkap dan disetujui. Santri menjalani seleksi Tahfidz dan Wawancara sesuai jadwal yang ditetapkan panitia.
               </p>
             </div>
             <div className="p-3.5 rounded-xl border border-emerald-200 bg-emerald-50/50 flex items-start gap-3">
@@ -333,11 +333,11 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/50">
                 <p className="font-bold text-emerald-900 text-xs">1. Session Tahfidz</p>
-                <p className="text-[11px] text-emerald-800 mt-1">Diinput penguji 1:1 berdasarkan rubrik hafalan, tajwid & makhraj.</p>
+                <p className="text-[11px] text-emerald-800 mt-1">Diinput penguji di lembar evaluasi berdasarkan rubrik hafalan, tajwid & makhraj.</p>
               </div>
               <div className="p-3 rounded-xl border border-purple-200 bg-purple-50/50">
                 <p className="font-bold text-purple-900 text-xs">2. Session Wawancara</p>
-                <p className="text-[11px] text-purple-800 mt-1">Diinput pewawancara 1:1 berdasarkan kesiapan dan komitmen santri/wali.</p>
+                <p className="text-[11px] text-purple-800 mt-1">Diinput pewawancara di lembar evaluasi berdasarkan kesiapan dan komitmen santri/wali.</p>
               </div>
             </div>
           </div>
@@ -485,7 +485,7 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
         icon: Sparkles,
         content: (
           <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-            Rubrik penilaian menentukan kriteria apa saja yang akan dinilai oleh penguji saat sesi tatap muka 1:1, beserta porsi persentase (bobot) masing-masing kriteria terhadap nilai akhir.
+            Rubrik penilaian menentukan kriteria apa saja yang akan dinilai oleh penguji saat sesi seleksi, beserta porsi persentase (bobot) masing-masing kriteria terhadap nilai akhir.
           </p>
         ),
       },
@@ -637,7 +637,7 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
   },
 
   'ppdb-session-evaluation': {
-    title: 'Lembar Evaluasi Ujian 1:1',
+    title: 'Lembar Evaluasi Seleksi',
     subtitle: 'Panduan pengisian penilaian kriteria rubrik Tahfidz/Wawancara dan tinjauan dossier santri.',
     sections: [
       {
@@ -931,7 +931,7 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
               <li>Data lengkap Orang Tua / Wali (Ayah, Ibu, Wali).</li>
               <li>Kuesioner Identifikasi Kesehatan santri.</li>
               <li>Seluruh dokumen persyaratan yang pernah diunggah & riwayat verifikasinya.</li>
-              <li>Jadwal & lembar evaluasi Session 1:1 Tahfidz & Wawancara.</li>
+              <li>Jadwal & lembar evaluasi seleksi Tahfidz & Wawancara.</li>
               <li>Keputusan pendaftaran dan LoA beserta status tanda tangan.</li>
               <li>Riwayat transaksi pembayaran formulir pendaftaran.</li>
             </ul>
@@ -986,8 +986,8 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
               Broadcast otomatis setiap Senin bagi pendaftar yang belum menyelesaikan tagihan formulir.
             </div>
             <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
-              <strong className="text-slate-900 block mb-0.5">Booking Session 1:1:</strong>
-              Konfirmasi jadwal ujian tatap muka kepada santri dan penguji pembuat jadwal.
+              <strong className="text-slate-900 block mb-0.5">Jadwal Seleksi Ditetapkan:</strong>
+              Konfirmasi jadwal ujian kepada santri saat panitia menetapkan atau mengubah jadwal seleksi.
             </div>
             <div className="p-3 rounded-xl border border-slate-200 bg-slate-50">
               <strong className="text-slate-900 block mb-0.5">Pengumuman & LoA Kelulusan:</strong>
@@ -1264,13 +1264,13 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
       },
       {
         number: 3,
-        title: 'Tahap 3: Ujian Seleksi Session 1:1',
+        title: 'Tahap 3: Ujian Seleksi',
         icon: GraduationCap,
         content: (
           <div className="space-y-2 text-xs text-slate-700 leading-relaxed">
             <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/50">
-              <strong className="text-emerald-950 block mb-0.5">Booking Jadwal Session 1:1:</strong>
-              Pilih slot jadwal tes Tahfidz dan Wawancara yang tersedia sesuai kenyamanan Anda (tersedia mode Online via Zoom atau Offline di pesantren).
+              <strong className="text-emerald-950 block mb-0.5">Jadwal Seleksi Ditetapkan Panitia:</strong>
+              Jadwal tes Tahfidz dan Wawancara Anda ditetapkan panitia dan tampil di dashboard (tersedia mode Online via Zoom atau Offline di pesantren).
             </div>
           </div>
         ),
@@ -1409,17 +1409,17 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
   },
 
   'applicant-tahfidz': {
-    title: 'Seleksi 1:1 Tahfidz Al-Qur\'an',
-    subtitle: 'Panduan pemilihan slot penguji, aspek penilaian tartil & hafalan, serta tata tertib pelaksanaan.',
+    title: 'Seleksi Tahfidz Al-Qur\'an',
+    subtitle: 'Panduan jadwal penguji, aspek penilaian tartil & hafalan, serta tata tertib pelaksanaan.',
     sections: [
       {
         number: 1,
-        title: 'Pemilihan Slot Jadwal Penguji',
+        title: 'Jadwal Penguji',
         icon: CalendarDays,
         content: (
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed space-y-1.5">
             <p>
-              Pilih salah satu jadwal ujian 1:1 Tahfidz yang tersedia di daftar sesi. Perhatikan nama asatidz/penguji, tanggal, waktu, serta mode sesi yang dipilih.
+              Jadwal ujian Tahfidz Anda ditetapkan oleh panitia dan tampil pada kartu jadwal di halaman Tes Seleksi. Perhatikan nama asatidz/penguji, tanggal, waktu, serta mode sesi.
             </p>
             <p>
               • <strong>Mode Online:</strong> Ujian dilaksanakan melalui video conference Zoom Meeting. Tautan Zoom akan muncul pada kartu jadwal Anda.
@@ -1470,17 +1470,17 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
   },
 
   'applicant-interview': {
-    title: 'Seleksi 1:1 Wawancara Santri & Wali',
+    title: 'Seleksi Wawancara Santri & Wali',
     subtitle: 'Panduan pelaksanaan wawancara komitmen calon santri dan orang tua/wali santri.',
     sections: [
       {
         number: 1,
-        title: 'Pemilihan Jadwal Wawancara',
+        title: 'Jadwal Wawancara',
         icon: CalendarDays,
         content: (
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed space-y-1.5">
             <p>
-              Pilih slot waktu wawancara yang tersedia setelah menyelesaikan tahapan sebelumnya. Sesi wawancara dapat dilakukan secara <strong>Online (Zoom)</strong> atau <strong>Offline (tatap muka di pesantren)</strong>.
+              Jadwal wawancara ditetapkan oleh panitia dan tampil pada halaman Wawancara setelah tahapan sebelumnya selesai. Sesi wawancara dapat dilakukan secara <strong>Online (Zoom)</strong> atau <strong>Offline (tatap muka di pesantren)</strong>.
             </p>
           </div>
         ),
@@ -1513,12 +1513,12 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
   },
 
   'applicant-selection': {
-    title: 'Tes Seleksi & Ujian 1:1',
-    subtitle: 'Petunjuk tahapan ujian tatap muka langsung (Session 1:1 Tahfidz & Wawancara).',
+    title: 'Tes Seleksi & Wawancara',
+    subtitle: 'Petunjuk tahapan ujian seleksi Tahfidz dan Wawancara.',
     sections: [
       {
         number: 1,
-        title: 'Tahapan Seleksi Personal 1:1',
+        title: 'Tahapan Seleksi',
         icon: Users,
         content: (
           <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
@@ -1528,11 +1528,11 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
       },
       {
         number: 2,
-        title: 'Pemilihan Jadwal Mandiri',
+        title: 'Informasi Jadwal',
         icon: Clock,
         content: (
           <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-            Setelah dokumen persyaratan disetujui panitia, calon santri dapat memilih slot jadwal penguji yang tersedia secara mandiri melalui menu Seleksi di portal ini.
+            Setelah berkas persyaratan disetujui panitia, jadwal penguji Anda ditetapkan oleh panitia; informasi jadwal tampil di halaman Tes Seleksi portal ini.
           </p>
         ),
       },

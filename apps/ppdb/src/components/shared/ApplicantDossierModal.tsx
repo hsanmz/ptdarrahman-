@@ -1,15 +1,12 @@
 import { HealthIdentificationViewer } from './HealthIdentificationViewer'
+import { resultStatusLabel } from '@/lib/selectionStatus'
 import { useState } from 'react'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiFetch, apiFetchBlob } from '@/api/client'
 import {
   Dialog,
   DialogContent,
   DialogTitle,
-  DialogHeader,
-  DialogDescription,
-  DialogFooter,
-  Textarea,
   Tabs,
   TabsList,
   TabsTrigger,
@@ -46,6 +43,7 @@ import {
 import { useToast } from '@/components/Toast'
 import ApplicantTranscriptModal from './ApplicantTranscriptModal'
 import ApplicantLoAModal from './ApplicantLoAModal'
+import MoveSessionDialog from './MoveSessionDialog'
 
 interface ApplicantDossierModalProps {
   open: boolean
@@ -110,8 +108,6 @@ export default function ApplicantDossierModal({
   const [transcriptOpen, setTranscriptOpen] = useState(false)
   const [loaOpen, setLoaOpen] = useState(false)
   const [rescheduleOpen, setRescheduleOpen] = useState(false)
-  const [targetSessionId, setTargetSessionId] = useState('')
-  const [rescheduleReason, setRescheduleReason] = useState('')
 
   const { data: dossier, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['applicant-dossier', applicantId],
@@ -135,30 +131,6 @@ export default function ApplicantDossierModal({
       return applicant?.wave_id ? all.filter((s) => s.wave_id === applicant.wave_id) : all
     },
     enabled: rescheduleOpen,
-  })
-
-  const rescheduleMutation = useMutation({
-    mutationFn: async () => {
-      if (!targetSessionId) throw new Error('Pilih sesi target')
-      return await apiFetch(`/selection/applicants/${applicantId}/move-session`, {
-        method: 'POST',
-        body: JSON.stringify({
-          target_session_id: targetSessionId,
-          reason: rescheduleReason.trim() || undefined,
-        }),
-      })
-    },
-    onSuccess: (res: any) => {
-      toast('success', res?.message || 'Jadwal seleksi pendaftar berhasil dipindahkan!')
-      setRescheduleOpen(false)
-      setTargetSessionId('')
-      setRescheduleReason('')
-      queryClient.invalidateQueries({ queryKey: ['applicant-dossier', applicantId] })
-      queryClient.invalidateQueries({ queryKey: ['selection-sessions'] })
-    },
-    onError: (err: any) => {
-      toast('error', err.message || 'Gagal memindahkan sesi pendaftar')
-    },
   })
 
   const handleDownloadZip = async () => {
@@ -254,19 +226,17 @@ export default function ApplicantDossierModal({
                         ? 'success'
                         : applicant.status === 'failed'
                         ? 'destructive'
+                        : applicant.status === 'conditional'
+                        ? 'info'
+                        : applicant.status === 'waitlist'
+                        ? 'gold'
                         : applicant.status === 'selection'
                         ? 'warning'
                         : 'secondary'
                     }
                     className="uppercase font-semibold mt-0.5"
                   >
-                    {applicant.status === 'passed'
-                      ? 'Lulus'
-                      : applicant.status === 'failed'
-                      ? 'Tidak Lulus'
-                      : applicant.status === 'selection'
-                      ? 'Dalam Seleksi'
-                      : applicant.status || 'Baru'}
+                    {resultStatusLabel(applicant.status) || applicant.status || 'Baru'}
                   </Badge>
                 </div>
               </div>
@@ -566,6 +536,41 @@ export default function ApplicantDossierModal({
                       </div>
                     </div>
 
+                    {/* Hasil Ujian CBT Akademik & Psikologi */}
+                    {transcript?.cbt_results && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+                        {(['akademik', 'psikologi'] as const).map((cbtKey) => {
+                          const cbt = transcript.cbt_results[cbtKey]
+                          const done =
+                            cbt?.attempt_status === 'completed' && cbt?.score != null
+                          return (
+                            <div
+                              key={cbtKey}
+                              className="rounded-lg border border-slate-200 p-3 bg-white text-xs"
+                            >
+                              <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
+                                <span className="font-semibold text-slate-800 capitalize">
+                                  Ujian {cbtKey}
+                                </span>
+                                {done ? (
+                                  <Badge variant="success" className="text-[10px] font-bold">
+                                    {Number(cbt.score)} / 100
+                                  </Badge>
+                                ) : (
+                                  <Badge variant="warning" className="text-[10px]">
+                                    Belum Ada Nilai
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-slate-600 mt-1.5">
+                                {cbt ? `${cbt.schedule_name} · ${cbt.session_date || '-'}` : 'Belum ada jadwal ujian.'}
+                              </p>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
+
                     {transcript?.evaluations?.length > 0 ? (
                       <Table className="min-w-[650px]">
                         <TableHeader>
@@ -740,83 +745,46 @@ export default function ApplicantDossierModal({
         applicantId={applicantId}
       />
       {/* Modal Pindah Sesi Seleksi */}
-      <Dialog open={rescheduleOpen} onOpenChange={setRescheduleOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
-              <Calendar className="h-5 w-5 text-blue-600" />
-              Pindah Sesi Seleksi
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Pindahkan jadwal seleksi pendaftar ini ke sesi lain di gelombang yang sama. Sistem otomatis mengirimkan notifikasi jadwal baru via WhatsApp.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div>
-              <label className="text-xs font-semibold text-slate-700 block mb-1">
-                Pilih Sesi Seleksi Baru <span className="text-red-500">*</span>
-              </label>
-              <select
-                value={targetSessionId}
-                onChange={(e) => setTargetSessionId(e.target.value)}
-                className="w-full text-xs rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">-- Pilih Sesi Target --</option>
-                {availableSessions.map((s: any) => (
-                  <option key={s.id} value={s.id}>
-                    [{s.session_type === 'interview' ? 'Wawancara' : 'Tahfidz'}] {s.name || s.title} ({s.session_date ? formatDate(s.session_date) : ''} · {s.start_time || ''} - {s.end_time || ''})
-                  </option>
-                ))}
-              </select>
-              {availableSessions.length === 0 && (
-                <p className="text-[11px] text-amber-600 mt-1">
-                  Belum ada sesi seleksi lain yang tersedia di gelombang ini.
-                </p>
-              )}
-            </div>
-
-            <div>
-              <label className="text-xs font-semibold text-slate-700 block mb-1">
-                Alasan Pemindahan (Opsional)
-              </label>
-              <Textarea
-                placeholder="Contoh: Peserta sakit / berhalangan hadir pada tanggal sesi sebelumnya..."
-                value={rescheduleReason}
-                onChange={(e) => setRescheduleReason(e.target.value)}
-                className="text-xs"
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setRescheduleOpen(false)}
-              disabled={rescheduleMutation.isPending}
-            >
-              Batal
-            </Button>
-            <Button
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5"
-              onClick={() => rescheduleMutation.mutate()}
-              disabled={!targetSessionId || rescheduleMutation.isPending}
-            >
-              {rescheduleMutation.isPending ? (
-                <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Memindahkan...
-                </>
-              ) : (
-                'Konfirmasi Pindah Sesi'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <MoveSessionDialog
+        open={rescheduleOpen}
+        onOpenChange={setRescheduleOpen}
+        sourceSessionId={null}
+        sourceSessionLabel={null}
+        applicants={
+          applicant
+            ? [
+                {
+                  applicant_id: applicantId,
+                  full_name: applicant.full_name,
+                  phone: applicant.phone,
+                  extra_label: applicant.registration_number
+                    ? `No. Regis: ${applicant.registration_number}`
+                    : null,
+                  status_label: null,
+                  moves_disabled: false,
+                },
+              ]
+            : []
+        }
+        targets={availableSessions
+          .map((s: any) => ({
+            id: s.id,
+            name: s.name || s.title,
+            session_date: s.session_date,
+            start_time: s.start_time,
+            end_time: s.end_time,
+            tag:
+              (s.session_type || '').toLowerCase().includes('wawancara') ||
+              (s.session_type || '').toLowerCase().includes('interview')
+                ? 'Wawancara'
+                : 'Tahfidz',
+          }))}
+        onMoved={() => {
+          queryClient.invalidateQueries({ queryKey: ['applicant-dossier', applicantId] })
+          queryClient.invalidateQueries({ queryKey: ['selection-sessions'] })
+          queryClient.invalidateQueries({ queryKey: ['available-reschedule-sessions'] })
+        }}
+      />
     </>
   )
 }

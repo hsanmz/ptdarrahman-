@@ -16,6 +16,7 @@ import {
   GraduationCap,
   HeartPulse,
   Home,
+  Info,
   KeyRound,
   Loader2,
   Lock,
@@ -535,11 +536,19 @@ export default function ApplicantProfilePage() {
                     <div className="mt-1 flex items-center justify-center">
                       {applicant?.status === 'passed' ? (
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary">
-                          <CheckCircle2 className="h-3 w-3 shrink-0" /> Lulus Seleksi
+                          <CheckCircle2 className="h-3 w-3 shrink-0" /> Diterima
+                        </span>
+                      ) : applicant?.status === 'conditional' ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-sky-600">
+                          <Info className="h-3 w-3 shrink-0" /> Diterima Bersyarat
+                        </span>
+                      ) : applicant?.status === 'waitlist' ? (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-violet-600">
+                          <Clock className="h-3 w-3 shrink-0" /> Cadangan
                         </span>
                       ) : applicant?.status === 'failed' ? (
                         <span className="inline-flex items-center gap-1 text-[11px] font-medium text-rose-600">
-                          <XCircle className="h-3 w-3 shrink-0" /> Belum Lolos
+                          <XCircle className="h-3 w-3 shrink-0" /> Tidak Diterima
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary">

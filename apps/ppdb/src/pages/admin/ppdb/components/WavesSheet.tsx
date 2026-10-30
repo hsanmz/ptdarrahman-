@@ -12,7 +12,7 @@ import {
 } from '@/components/ui'
 import {
   Plus, Edit, Trash2, CheckCircle, XCircle, Waves, Receipt, Check, Users, Banknote,
-  Percent, Tag, Calculator, Sparkles, Save
+  Percent, Tag, Calculator, Sparkles, Info
 } from 'lucide-react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm, useWatch } from 'react-hook-form'
@@ -43,7 +43,6 @@ const waveSchema = z.object({
   registration_end_date: z.string().min(1, 'Tanggal akhir pendaftaran wajib diisi'),
   quota: z.number().min(1, 'Kuota harus diisi minimal 1'),
   early_discount_quota: z.number().min(0, 'Jumlah harus nol atau lebih'),
-  registration_fee: z.number().min(0, 'Biaya tidak boleh negatif'),
 }).refine(data => data.registration_end_date > data.registration_start_date, {
   message: "Tanggal akhir pendaftaran harus setelah tanggal mulai pendaftaran",
   path: ["registration_end_date"],
@@ -60,7 +59,6 @@ const emptyWaveForm = (): WaveFormData => ({
   registration_end_date: '',
   quota: 0,
   early_discount_quota: 0,
-  registration_fee: 0,
 })
 
 const fmtDateShort = (d: string): string =>
@@ -89,41 +87,33 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [actionId, setActionId] = useState<{ id: string, type: 'activate' | 'deactivate' } | null>(null)
 
-  const { register, handleSubmit, setValue, control, reset, formState: { errors } } = useForm<WaveFormData>({
+  const { register, handleSubmit, control, reset, formState: { errors } } = useForm<WaveFormData>({
     resolver: zodResolver(waveSchema),
     defaultValues: emptyWaveForm()
   })
 
-  const registrationFee = useWatch({ control, name: 'registration_fee' })
   const startDateWatch = useWatch({ control, name: 'registration_start_date' })
 
   // ---------------------------------------------------------------------------
-  // Dialog Rincian Biaya & Diskon (3 Tab)
+  // Dialog Diskon Biaya (2 Tab) — master komponen biaya ada di level Periode
   // ---------------------------------------------------------------------------
   const [feeDialogWave, setFeeDialogWave] = useState<any>(null)
-  const [feeActiveTab, setFeeActiveTab] = useState<'components' | 'early_discount' | 'engine'>('components')
+  const [feeActiveTab, setFeeActiveTab] = useState<'regular_discount' | 'early_discount' | 'engine'>('regular_discount')
   const [feeItems, setFeeItems] = useState<any[]>([])
-  const [feeWaveMinimumDp, setFeeWaveMinimumDp] = useState<number>(0)
-  const [savingMinimumDp, setSavingMinimumDp] = useState(false)
 
-  // Form Tambah/Edit Item di Tab 1
-  const [newFeeName, setNewFeeName] = useState('')
-  const [newFeeNominal, setNewFeeNominal] = useState(0)
-  const [newFeeDescription, setNewFeeDescription] = useState('')
-  const [feeDiscountType, setFeeDiscountType] = useState<'' | 'percent' | 'nominal'>('')
-  const [feeDiscountValue, setFeeDiscountValue] = useState(0)
-  const [editingFeeItem, setEditingFeeItem] = useState<any>(null)
+  // Edit Diskon Reguler (Tab 1)
+  const [regularEditingItem, setRegularEditingItem] = useState<any>(null)
+  const [regularDiscountType, setRegularDiscountType] = useState<'' | 'percent' | 'nominal'>('')
+  const [regularDiscountValue, setRegularDiscountValue] = useState(0)
 
-  // Edit Diskon Pendaftar Awal di Tab 2
+  // Edit Diskon Pendaftar Awal (Tab 2)
   const [earlyEditingItem, setEarlyEditingItem] = useState<any>(null)
   const [earlyDiscountType, setEarlyDiscountType] = useState<'' | 'percent' | 'nominal'>('')
   const [earlyDiscountValue, setEarlyDiscountValue] = useState(0)
 
   const openFeeDialog = async (w: any) => {
     setFeeDialogWave(w)
-    setFeeWaveMinimumDp(w.minimum_dp || 0)
-    setFeeActiveTab('components')
-    resetFeeItemForm()
+    setFeeActiveTab('regular_discount')
     fetchFeeItems(w.id)
   }
 
@@ -136,186 +126,35 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
     }
   }
 
-  const handleSaveMinimumDp = async () => {
+  // Handle Update Diskon Reguler (Tab 1)
+  const handleSaveRegularDiscount = async (item: any) => {
     if (!feeDialogWave || !canCrud) return
-    setSavingMinimumDp(true)
-    try {
-      await ppdbService.updateWave(feeDialogWave.id, { minimum_dp: feeWaveMinimumDp })
-      setFeeDialogWave((prev: any) => ({ ...prev, minimum_dp: feeWaveMinimumDp }))
-      await queryClient.invalidateQueries({ queryKey: ['waves', period.id] })
-      toast('success', 'Minimal DP berhasil diperbarui')
-    } catch (e: any) {
-      toast('error', e.message || 'Gagal memperbarui minimal DP')
-    } finally {
-      setSavingMinimumDp(false)
-    }
-  }
-
-  const handleAddFeeItem = async () => {
-    const item = { is_period_item: false }
-    if (!item.is_period_item && (!newFeeName.trim() || newFeeNominal <= 0)) {
-      toast('error', 'Nama komponen dan nominal wajib diisi')
-      return
-    }
-    if (feeDiscountType && (feeDiscountValue <= 0 || (feeDiscountType === 'percent' && feeDiscountValue > 100))) {
+    if (regularDiscountType && (regularDiscountValue <= 0 || (regularDiscountType === 'percent' && regularDiscountValue > 100))) {
       toast('error', 'Nilai diskon reguler harus lebih dari 0 dan persentase maksimal 100%')
       return
     }
     try {
-      await apiFetch(`/ppdb/waves/${feeDialogWave.id}/fee-items`, {
-        method: 'POST',
-        body: JSON.stringify({
-          name: newFeeName.trim(),
-          nominal: newFeeNominal,
-          description: newFeeDescription.trim() || null,
-          order_index: feeItems.length + 1,
-          discount_type: feeDiscountType || null,
-          discount_value: feeDiscountType ? feeDiscountValue : null,
-          discount_scope: 'all',
-          early_discount_type: null,
-          early_discount_value: null
-        })
-      })
-      resetFeeItemForm()
-      fetchFeeItems(feeDialogWave.id)
-      toast('success', 'Komponen biaya berhasil ditambahkan')
-    } catch (e: any) {
-      toast('error', e.message || 'Gagal menambah komponen biaya')
-    }
-  }
-
-  const handleEditFeeItem = async (item: any) => {
-    if (item.is_period_item) {
-      if (feeDiscountType && (feeDiscountValue <= 0 || (feeDiscountType === 'percent' && feeDiscountValue > 100))) {
-        toast('error', 'Nilai diskon reguler harus lebih dari 0 dan persentase maksimal 100%')
-        return
-      }
-      try {
-        await apiFetch(`/ppdb/waves/${feeDialogWave.id}/fee-discounts/${item.id}`, {
-          method: 'PUT',
-          body: JSON.stringify({
-            discount_type: feeDiscountType || null,
-            discount_value: feeDiscountType ? feeDiscountValue : 0,
-            early_discount_type: item.early_discount_type || null,
-            early_discount_value: item.early_discount_value || 0,
-          })
-        })
-        resetFeeItemForm()
-        fetchFeeItems(feeDialogWave.id)
-        toast('success', 'Diskon reguler berhasil diperbarui')
-      } catch (e: any) {
-        toast('error', e.message || 'Gagal memperbarui diskon')
-      }
-      return
-    }
-    if (!item.is_period_item && (!newFeeName.trim() || newFeeNominal <= 0)) {
-      toast('error', 'Nama komponen dan nominal wajib diisi')
-      return
-    }
-    if (feeDiscountType && (feeDiscountValue <= 0 || (feeDiscountType === 'percent' && feeDiscountValue > 100))) {
-      toast('error', 'Nilai diskon reguler harus lebih dari 0 dan persentase maksimal 100%')
-      return
-    }
-    try {
-      await apiFetch(`/ppdb/waves/${feeDialogWave.id}/fee-items/${item.id}`, {
+      await apiFetch(`/ppdb/waves/${feeDialogWave.id}/fee-discounts/${item.id}`, {
         method: 'PUT',
         body: JSON.stringify({
-          name: newFeeName.trim(),
-          nominal: newFeeNominal,
-          description: newFeeDescription.trim() || null,
-          order_index: item.order_index || 0,
-          discount_type: feeDiscountType || null,
-          discount_value: feeDiscountType ? feeDiscountValue : null,
-          discount_scope: 'all',
+          discount_type: regularDiscountType || null,
+          discount_value: regularDiscountType ? regularDiscountValue : null,
           early_discount_type: item.early_discount_type || null,
           early_discount_value: item.early_discount_value || null,
         })
       })
-      resetFeeItemForm()
+      setRegularEditingItem(null)
       fetchFeeItems(feeDialogWave.id)
-      toast('success', 'Komponen biaya berhasil diperbarui')
+      toast('success', 'Diskon reguler berhasil diperbarui')
     } catch (e: any) {
-      toast('error', e.message || 'Gagal memperbarui komponen biaya')
-    }
-  }
-
-  const startEditFeeItem = (item: any) => {
-    setEditingFeeItem(item)
-    setNewFeeName(item.name)
-    setNewFeeNominal(Number(item.nominal))
-    setNewFeeDescription(item.description || '')
-    setFeeDiscountType(item.discount_type || '')
-    setFeeDiscountValue(Number(item.discount_value || 0))
-  }
-
-  const resetFeeItemForm = () => {
-    setEditingFeeItem(null)
-    setNewFeeName('')
-    setNewFeeNominal(0)
-    setNewFeeDescription('')
-    setFeeDiscountType('')
-    setFeeDiscountValue(0)
-  }
-
-  const handleDeleteFeeItem = async (itemOrId: any) => {
-    const isPeriod = typeof itemOrId === 'object' && itemOrId?.is_period_item
-    const id = typeof itemOrId === 'object' ? itemOrId.id : itemOrId
-    if (isPeriod) {
-      try {
-        await apiFetch(`/ppdb/waves/${feeDialogWave.id}/fee-discounts/${id}`, {
-          method: 'PUT',
-          body: JSON.stringify({
-            discount_type: null,
-            discount_value: 0,
-            early_discount_type: null,
-            early_discount_value: 0,
-          })
-        })
-        fetchFeeItems(feeDialogWave.id)
-        toast('success', 'Diskon gelombang berhasil direset ke standar')
-      } catch (e: any) {
-        toast('error', e.message || 'Gagal mereset diskon gelombang')
-      }
-      return
-    }
-    try {
-      await apiFetch(`/ppdb/waves/${feeDialogWave.id}/fee-items/${id}`, { method: 'DELETE' })
-      fetchFeeItems(feeDialogWave.id)
-      toast('success', 'Komponen biaya berhasil dihapus')
-    } catch (e: any) {
-      toast('error', e.message || 'Gagal menghapus komponen biaya')
+      toast('error', e.message || 'Gagal memperbarui diskon reguler')
     }
   }
 
   // Handle Update Diskon Tambahan Pendaftar Awal (Tab 2)
   const handleSaveEarlyDiscount = async (item: any) => {
-    if (item.is_period_item) {
-      if (earlyDiscountType && (earlyDiscountValue <= 0 || (earlyDiscountType === 'percent' && earlyDiscountValue > 100))) {
-        toast('error', 'Nilai diskon tambahan harus lebih dari 0 dan persentase maksimal 100%')
-        return
-      }
-      if (earlyDiscountType && !(feeDialogWave?.early_discount_quota > 0)) {
-        toast('error', 'Atur kuota pendaftar awal pada gelombang terlebih dahulu')
-        return
-      }
-      try {
-        await apiFetch(`/ppdb/waves/${feeDialogWave.id}/fee-discounts/${item.id}`, {
-          method: 'PUT',
-          body: JSON.stringify({
-            discount_type: item.discount_type || null,
-            discount_value: item.discount_value || 0,
-            early_discount_type: earlyDiscountType || null,
-            early_discount_value: earlyDiscountType ? earlyDiscountValue : 0,
-          })
-        })
-        setEarlyEditingItem(null)
-        fetchFeeItems(feeDialogWave.id)
-        toast('success', 'Diskon pendaftar awal berhasil diperbarui')
-      } catch (e: any) {
-        toast('error', e.message || 'Gagal memperbarui diskon pendaftar awal')
-      }
-      return
-    }
+    if (!feeDialogWave || !canCrud) return
+    if (!item.is_period_item) return
     if (earlyDiscountType && (earlyDiscountValue <= 0 || (earlyDiscountType === 'percent' && earlyDiscountValue > 100))) {
       toast('error', 'Nilai diskon tambahan harus lebih dari 0 dan persentase maksimal 100%')
       return
@@ -325,16 +164,11 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
       return
     }
     try {
-      await apiFetch(`/ppdb/waves/${feeDialogWave.id}/fee-items/${item.id}`, {
+      await apiFetch(`/ppdb/waves/${feeDialogWave.id}/fee-discounts/${item.id}`, {
         method: 'PUT',
         body: JSON.stringify({
-          name: item.name,
-          nominal: item.nominal,
-          description: item.description,
-          order_index: item.order_index || 0,
-          discount_type: item.discount_type,
-          discount_value: item.discount_value,
-          discount_scope: 'all',
+          discount_type: item.discount_type || null,
+          discount_value: item.discount_value || null,
           early_discount_type: earlyDiscountType || null,
           early_discount_value: earlyDiscountType ? earlyDiscountValue : null,
         })
@@ -427,7 +261,6 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
       registration_end_date: (w.registration_end_date || '').split('T')[0],
       quota: w.quota ?? 0,
       early_discount_quota: w.early_discount_quota ?? 0,
-      registration_fee: w.registration_fee ?? 0,
     })
     setFormError(null)
     setShowForm(true)
@@ -659,11 +492,11 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                           <Banknote className="h-3.5 w-3.5" /> Biaya Formulir
                         </p>
                         <p className="mt-1 text-lg font-bold text-slate-900 leading-tight">
-                          {w.registration_fee
-                            ? `Rp ${Number(w.registration_fee).toLocaleString('id-ID')}`
+                          {period?.form_fee
+                            ? `Rp ${Number(period.form_fee).toLocaleString('id-ID')}`
                             : 'Gratis'}
                         </p>
-                        <p className="mt-1.5 text-[11px] text-slate-500">Ditarik saat pendaftaran awal</p>
+                        <p className="mt-1.5 text-[11px] text-slate-500">Master periode — berlaku semua gelombang</p>
                       </div>
                     </div>
 
@@ -761,8 +594,8 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
             </div>
 
             <div className="space-y-3">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kuota &amp; Biaya Formulir</p>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kuota Pendaftar</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="wave-quota">Kuota Pendaftar *</Label>
                   <Input
@@ -774,16 +607,6 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                     disabled={!canCrud}
                   />
                   {errors.quota && <p className="text-xs text-red-500">{errors.quota.message}</p>}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="wave-fee1">Biaya Formulir (Rp)</Label>
-                  <CurrencyInput
-                    id="wave-fee1"
-                    value={registrationFee}
-                    onValueChange={(v: number) => setValue('registration_fee', v)}
-                    placeholder="Contoh: 350.000"
-                    disabled={!canCrud}
-                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="wave-early-discount-quota">Kuota Pendaftar Awal</Label>
@@ -798,6 +621,9 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                   {errors.early_discount_quota && <p className="text-xs text-red-500">{errors.early_discount_quota.message}</p>}
                 </div>
               </div>
+              <p className="text-[11px] text-muted-foreground leading-snug">
+                Biaya formulir, komponen biaya, dan minimal DP diatur di master <strong>Periode</strong>. Di gelombang ini hanya diskonnya.
+              </p>
             </div>
 
             {formError && (
@@ -851,7 +677,7 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
               </DialogTitle>
             </div>
             <DialogDescription>
-              Kelola komponen biaya pendidikan, diskon reguler gelombang, diskon tambahan untuk pendaftar awal, dan simulasi perhitungan biaya.
+              Master komponen biaya ada di level Periode. Di gelombang ini panitia hanya mengatur diskon reguler, diskon pendaftar awal, dan simulasi perhitungannya.
             </DialogDescription>
           </DialogHeader>
 
@@ -859,16 +685,16 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
           <div className="flex border-b border-slate-200 mt-2 gap-1 overflow-x-auto no-scrollbar whitespace-nowrap pb-0.5">
             <button
               type="button"
-              onClick={() => setFeeActiveTab('components')}
+              onClick={() => setFeeActiveTab('regular_discount')}
               className={cn(
                 'flex items-center gap-2 px-3 sm:px-4 py-2.5 text-xs font-semibold border-b-2 transition-all shrink-0',
-                feeActiveTab === 'components'
+                feeActiveTab === 'regular_discount'
                   ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
                   : 'border-transparent text-slate-500 hover:text-slate-800'
               )}
             >
               <Tag className="h-3.5 w-3.5 shrink-0" />
-              1. Komponen Biaya
+              1. Diskon Reguler
             </button>
             <button
               type="button"
@@ -900,112 +726,66 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
 
           <div className="pt-3">
             {/* --------------------------------------------------------------- */}
-            {/* TAB 1: KOMPONEN & DISKON REGULER */}
+            {/* TAB 1: DISKON REGULER GELOMBANG */}
             {/* --------------------------------------------------------------- */}
-            {feeActiveTab === 'components' && (
-              <div className="space-y-5">
-                {/* Minimal DP Setting Bar */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border border-emerald-100 bg-emerald-50/40">
-                  <div className="space-y-0.5">
-                    <p className="text-xs font-bold text-emerald-950 flex items-center gap-1.5">
-                      <Banknote className="h-4 w-4 text-emerald-600" />
-                      Minimal DP Pendaftaran Ulang
+            {feeActiveTab === 'regular_discount' && (
+              <div className="space-y-4">
+                <div className="flex items-start gap-3 p-3.5 rounded-xl border border-emerald-100 bg-emerald-50/40">
+                  <Info className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
+                  <div className="space-y-1 text-xs">
+                    <p className="font-bold text-emerald-900">
+                      Diskon reguler gelombang atas master komponen biaya periode
                     </p>
-                    <p className="text-[11px] text-emerald-700">
-                      Batas minimal pembayaran uang muka (DP) pertama yang wajib dilunasi pendaftar gelombang ini.
+                    <p className="text-emerald-800">
+                      Nominal standar tiap komponen diatur di halaman <strong>Periode</strong>. Panitia di sini hanya menentukan potongan per gelombangnya.
                     </p>
-                  </div>
-                  <div className="flex flex-col xs:flex-row items-stretch xs:items-center gap-2 shrink-0 w-full sm:w-auto">
-                    <CurrencyInput
-                      value={feeWaveMinimumDp}
-                      onValueChange={setFeeWaveMinimumDp}
-                      placeholder="Contoh: 1.000.000"
-                      className="w-full xs:w-36 sm:w-44 bg-white"
-                      disabled={!canCrud || savingMinimumDp}
-                    />
-                    {canCrud && (
-                      <Button
-                        size="sm"
-                        onClick={handleSaveMinimumDp}
-                        disabled={savingMinimumDp}
-                        className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white shrink-0 justify-center"
-                      >
-                        <Save className="h-3.5 w-3.5" />
-                        {savingMinimumDp ? 'Menyimpan...' : 'Simpan DP'}
-                      </Button>
-                    )}
                   </div>
                 </div>
 
-                {/* Form Tambah/Edit Komponen */}
-                {canCrud && (
-                  <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                      {editingFeeItem ? 'Edit Komponen Biaya' : 'Tambah Komponen Biaya Baru'}
-                    </h4>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Nama Komponen *</Label>
-                        <Input
-                          value={newFeeName}
-                          onChange={(e) => setNewFeeName(e.target.value)}
-                          placeholder="Misal: Uang Gedung / DP3"
-                          className="bg-white"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Nominal Normal (Rp) *</Label>
-                        <CurrencyInput
-                          value={newFeeNominal}
-                          onValueChange={setNewFeeNominal}
-                          placeholder="Misal: 5.000.000"
-                          className="bg-white"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label className="text-xs">Deskripsi / Keterangan</Label>
-                        <Input
-                          value={newFeeDescription}
-                          onChange={(e) => setNewFeeDescription(e.target.value)}
-                          placeholder="Opsional: Misal fasilitas santri"
-                          className="bg-white"
-                        />
-                      </div>
+                {/* Edit Diskon Reguler Inline */}
+                {regularEditingItem && (
+                  <div className="p-4 rounded-xl border border-emerald-300 bg-emerald-50/40 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-bold text-emerald-950">
+                        Atur Diskon Reguler: <span className="text-emerald-700">{regularEditingItem.name}</span>
+                      </p>
+                      <span className="text-[11px] text-slate-500">
+                        Standar: Rp {Number(regularEditingItem.nominal).toLocaleString('id-ID')}
+                      </span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="space-y-1.5">
-                        <Label className="text-xs">Diskon Reguler Gelombang</Label>
+                        <Label className="text-xs">Tipe Diskon Reguler</Label>
                         <select
                           className="h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-xs"
-                          value={feeDiscountType}
-                          onChange={(e) => setFeeDiscountType(e.target.value as '' | 'percent' | 'nominal')}
+                          value={regularDiscountType}
+                          onChange={(e) => setRegularDiscountType(e.target.value as '' | 'percent' | 'nominal')}
                         >
                           <option value="">Tanpa Diskon Reguler</option>
                           <option value="percent">Persentase (%)</option>
                           <option value="nominal">Nominal Rupiah (Rp)</option>
                         </select>
                       </div>
-                      {feeDiscountType && (
+                      {regularDiscountType && (
                         <div className="space-y-1.5">
                           <Label className="text-xs">
-                            {feeDiscountType === 'percent' ? 'Besaran Diskon (%)' : 'Besaran Diskon (Rp)'}
+                            {regularDiscountType === 'percent' ? 'Besaran Diskon (%)' : 'Besaran Diskon (Rp)'}
                           </Label>
-                          {feeDiscountType === 'percent' ? (
+                          {regularDiscountType === 'percent' ? (
                             <Input
                               type="number"
                               min={0.01}
                               max={100}
                               step="0.01"
-                              value={feeDiscountValue || ''}
-                              onChange={(e) => setFeeDiscountValue(Number(e.target.value))}
+                              value={regularDiscountValue || ''}
+                              onChange={(e) => setRegularDiscountValue(Number(e.target.value))}
                               className="bg-white"
                             />
                           ) : (
                             <CurrencyInput
-                              value={feeDiscountValue}
-                              onValueChange={setFeeDiscountValue}
+                              value={regularDiscountValue}
+                              onValueChange={setRegularDiscountValue}
                               placeholder="Nominal diskon"
                               className="bg-white"
                             />
@@ -1014,33 +794,29 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                       )}
                     </div>
 
-                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200/60">
-                      {editingFeeItem ? (
-                        <>
-                          <Button variant="outline" size="sm" onClick={resetFeeItemForm}>Batal</Button>
-                          <Button size="sm" onClick={() => handleEditFeeItem(editingFeeItem)} disabled={!editingFeeItem?.is_period_item && (!newFeeName.trim() || newFeeNominal <= 0)} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                            {editingFeeItem?.is_period_item ? 'Simpan Diskon' : 'Simpan Perubahan'}
-                          </Button>
-                        </>
-                      ) : (
-                        <Button size="sm" onClick={handleAddFeeItem} disabled={!newFeeName.trim() || newFeeNominal <= 0} className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white">
-                          <Plus className="h-4 w-4" /> Tambah Komponen
-                        </Button>
-                      )}
+                    <div className="flex items-center justify-end gap-2 pt-2 border-t border-emerald-200">
+                      <Button variant="outline" size="sm" onClick={() => setRegularEditingItem(null)}>Batal</Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleSaveRegularDiscount(regularEditingItem)}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                      >
+                        Simpan Diskon Reguler
+                      </Button>
                     </div>
                   </div>
                 )}
 
-                {/* Tabel Komponen */}
+                {/* Tabel Diskon Reguler */}
                 <div className="rounded-xl border border-slate-200 overflow-hidden bg-white shadow-xs">
                   <Table className="min-w-[550px]">
                     <TableHeader className="bg-slate-50">
                       <TableRow>
                         <TableHead className="w-10 text-center whitespace-nowrap">No</TableHead>
                         <TableHead className="whitespace-nowrap">Komponen</TableHead>
-                        <TableHead className="whitespace-nowrap">Biaya Normal</TableHead>
-                        <TableHead className="whitespace-nowrap">Potongan</TableHead>
+                        <TableHead className="whitespace-nowrap">Biaya Standar</TableHead>
                         <TableHead className="whitespace-nowrap">Diskon Reguler</TableHead>
+                        <TableHead className="text-right whitespace-nowrap">Harga Setelah Diskon</TableHead>
                         <TableHead className="w-20 text-right whitespace-nowrap">Aksi</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -1048,7 +824,7 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                       {feeItems.length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={6} className="text-center py-6 text-muted-foreground text-xs">
-                            Belum ada komponen biaya yang ditambahkan untuk gelombang ini.
+                            Belum ada master komponen biaya pada periode ini. Atur di halaman Periode terlebih dahulu.
                           </TableCell>
                         </TableRow>
                       ) : (
@@ -1061,8 +837,10 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                               <TableCell>
                                 <div className="flex items-center gap-1.5">
                                   <p className="font-semibold text-xs text-slate-800">{item.name}</p>
-                                  {item.is_period_item && (
+                                  {item.is_period_item ? (
                                     <Badge variant="outline" className="text-[9px] px-1 py-0 font-normal text-muted-foreground bg-slate-50">Master</Badge>
+                                  ) : (
+                                    <Badge variant="outline" className="text-[9px] px-1 py-0 font-normal text-amber-700 bg-amber-50">Legacy</Badge>
                                   )}
                                 </div>
                                 {item.description && (
@@ -1080,33 +858,27 @@ export default function WavesSheet({ period, onClose }: { period: any, onClose: 
                                       : `Rp ${Number(item.discount_value).toLocaleString('id-ID')}`}
                                   </span>
                                 ) : (
-                                  <span className="text-slate-400 text-xs">—</span>
+                                  <span className="text-slate-400 text-xs">— (Standar periode)</span>
                                 )}
                               </TableCell>
-                              <TableCell className="text-xs font-bold text-slate-900">
+                              <TableCell className="text-right text-xs font-bold text-slate-900">
                                 Rp {regNet.toLocaleString('id-ID')}
                               </TableCell>
                               <TableCell className="text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-slate-600 hover:bg-slate-100"
-                                    onClick={() => startEditFeeItem(item)}
-                                    title="Edit Komponen"
-                                  >
-                                    <Edit className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 text-rose-600 hover:bg-rose-50"
-                                    onClick={() => handleDeleteFeeItem(item)}
-                                    title={item.is_period_item ? "Reset Diskon ke Standar" : "Hapus Komponen"}
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={!item.is_period_item}
+                                  onClick={() => {
+                                    setRegularEditingItem(item)
+                                    setRegularDiscountType(item.discount_type || '')
+                                    setRegularDiscountValue(Number(item.discount_value || 0))
+                                  }}
+                                  className="h-7 text-xs text-emerald-700 hover:bg-emerald-50"
+                                  title={item.is_period_item ? 'Atur diskon' : 'Komponen legacy — hanya bisa dibaca'}
+                                >
+                                  <Edit className="h-3 w-3 mr-1" /> Set
+                                </Button>
                               </TableCell>
                             </TableRow>
                           )

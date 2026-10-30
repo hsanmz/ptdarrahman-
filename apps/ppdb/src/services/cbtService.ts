@@ -219,19 +219,6 @@ export const cbtService = {
       { method: 'POST' }
     ),
 
-  moveCandidateSchedule: (
-    scheduleId: string,
-    applicantId: string,
-    payload: { target_schedule_id: string; reason?: string }
-  ) =>
-    apiFetch<{ message: string; target_schedule_id: string; target_schedule_name: string }>(
-      `/cbt/schedules/${scheduleId}/move-candidate/${applicantId}`,
-      {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      }
-    ),
-
   // ── Applicant: CBT Engine ──────────────────────────────────────
   verifyAccess: (scheduleId: string, password: string, access_token: string) =>
     apiFetch<any>(`/cbt/verify-access/${scheduleId}`, {

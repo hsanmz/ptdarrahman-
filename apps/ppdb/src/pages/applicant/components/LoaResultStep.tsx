@@ -9,6 +9,8 @@ import {
   X,
   FileSignature,
   AlertTriangle,
+  AlertCircle,
+  Clock,
   ShieldCheck,
   PenTool,
   BookOpen,
@@ -218,10 +220,48 @@ export default function LoaResultStep({ applicant, selectionResult, loa }: LoaRe
         <div className="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
           <X className="w-8 h-8" />
         </div>
-        <h3 className="text-lg sm:text-xl font-bold text-red-800 mb-2 font-heading">Mohon Maaf, Anda Dinyatakan Tidak Lulus</h3>
+        <h3 className="text-lg sm:text-xl font-bold text-red-800 mb-2 font-heading">Mohon Maaf, Anda Belum Diterima</h3>
         <p className="text-red-700 text-sm max-w-md mx-auto leading-relaxed">
           Terima kasih telah berpartisipasi dalam proses seleksi PPDB Pesantren Tahfidz Qur'an dan Digital Arrahman. Tetap semangat dalam menuntut ilmu di mana pun Anda berada.
         </p>
+      </div>
+    )
+  }
+
+  if (applicant?.status === 'conditional') {
+    return (
+      <div className="p-6 sm:p-8 border rounded-2xl text-center bg-sky-50/70 border-sky-200">
+        <div className="w-16 h-16 bg-sky-100 text-sky-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <AlertCircle className="w-8 h-8" />
+        </div>
+        <h3 className="text-lg sm:text-xl font-bold text-sky-900 mb-2 font-heading">Hasil Pendaftaran: Diterima Bersyarat</h3>
+        <p className="text-sky-800 text-sm max-w-md mx-auto leading-relaxed">
+          Ananda dinyatakan diterima bersyarat oleh panitia. Silakan hubungi panitia PPDB untuk memahami syarat yang harus dipenuhi dan kesepakatan berlanjutnya pendidikan.
+        </p>
+        {selectionResult?.notes && (
+          <p className="text-sky-900/80 text-xs italic max-w-md mx-auto mt-3 border-t border-sky-200 pt-3">
+            "{selectionResult.notes}"
+          </p>
+        )}
+      </div>
+    )
+  }
+
+  if (applicant?.status === 'waitlist') {
+    return (
+      <div className="p-6 sm:p-8 border rounded-2xl text-center bg-violet-50/70 border-violet-200">
+        <div className="w-16 h-16 bg-violet-100 text-violet-600 rounded-full flex items-center justify-center mx-auto mb-4">
+          <Clock className="w-8 h-8" />
+        </div>
+        <h3 className="text-lg sm:text-xl font-bold text-violet-900 mb-2 font-heading">Hasil Pendaftaran: Cadangan</h3>
+        <p className="text-violet-800 text-sm max-w-md mx-auto leading-relaxed">
+          Ananda masuk dalam daftar cadangan. Status bisa naik menjadi Diterima apabila ada kuota yang tersedia — pantau status melalui portal ini dan pesan WhatsApp dari panitia.
+        </p>
+        {selectionResult?.notes && (
+          <p className="text-violet-900/80 text-xs italic max-w-md mx-auto mt-3 border-t border-violet-200 pt-3">
+            "{selectionResult.notes}"
+          </p>
+        )}
       </div>
     )
   }

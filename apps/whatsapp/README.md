@@ -17,7 +17,7 @@ Aplikasi ini mendengarkan instruksi *queue* dari backend (`apps/api`) via **Bull
 - ⏰ **Pengingat Berkala:** Mem-blasting peringatan tagihan tertunda setiap hari Senin.
 - 🛑 **Alert Kuota:** Mengirim notifikasi pembatalan invoice jika kuota gelombang tiba-tiba habis.
 - 🎓 **Hasil Kelulusan & LoA:** Mengirim status kelulusan dan dokumen penerimaan resmi santri.
-- 📅 **Konfirmasi Sesi:** Menyampaikan jadwal sesi 1:1 Tahfidz dan Wawancara.
+- 📅 **Konfirmasi Sesi:** Menyampaikan jadwal seleksi Tahfidz dan Wawancara.
 
 ## 📦 Menjalankan secara Lokal
 

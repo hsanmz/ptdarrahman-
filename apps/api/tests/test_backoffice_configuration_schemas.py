@@ -5,7 +5,7 @@ from pydantic import ValidationError
 
 from src.modules.ppdb.schemas import (
     WaveBase,
-    WaveFeeItemCreate,
+    WaveFeeDiscountUpdate,
 )
 from src.modules.selection.schemas import SessionCreate
 
@@ -29,23 +29,39 @@ def test_wave_early_discount_quota_must_fit_wave_quota():
         WaveBase(**_wave_payload(early_discount_quota=101))
 
 
-def test_component_discount_requires_matching_type_and_value():
-    item = WaveFeeItemCreate(
-        name="SPP",
-        nominal=500_000,
-        discount_type="percent",
-        discount_value=10,
-        discount_scope="first_x",
+def test_wave_no_longer_holds_fee_components_or_dp():
+    """Biaya formulir, biaya tahap 2, dan minimal DP pindah ke level Periode."""
+    assert "registration_fee" not in WaveBase.model_fields
+    assert "second_stage_fee" not in WaveBase.model_fields
+    assert "minimum_dp" not in WaveBase.model_fields
+    assert "early_discount_quota" in WaveBase.model_fields
+
+
+def test_period_carries_form_fee_and_minimum_dp():
+    from src.modules.ppdb.schemas import PeriodCreate
+
+    p = PeriodCreate(
+        name="Periode 2026/2027",
+        academic_year="2026/2027",
+        form_fee=350_000,
+        minimum_dp=5_000_000,
     )
-    assert item.discount_scope == "first_x"
+    assert p.form_fee == 350_000
+    assert p.minimum_dp == 5_000_000
 
     with pytest.raises(ValidationError):
-        WaveFeeItemCreate(name="SPP", nominal=500_000, discount_type="percent")
+        PeriodCreate(name="Periode", academic_year="2026/2027", form_fee=-1)
+
+
+def test_wave_discount_requires_matching_type_and_value():
+    d = WaveFeeDiscountUpdate(discount_type="nominal", discount_value=100_000)
+    assert d.discount_value == 100_000
+
+    with pytest.raises(ValidationError):
+        WaveFeeDiscountUpdate(discount_type="percent")
 
     with pytest.raises(ValidationError, match="maksimal 100%"):
-        WaveFeeItemCreate(
-            name="SPP", nominal=500_000, discount_type="percent", discount_value=101
-        )
+        WaveFeeDiscountUpdate(discount_type="percent", discount_value=101)
 
 
 def test_selection_session_requires_schedule_and_mode_details():

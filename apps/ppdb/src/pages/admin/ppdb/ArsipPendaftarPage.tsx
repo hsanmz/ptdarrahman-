@@ -29,6 +29,7 @@ import PaginationControls from '@/components/shared/PaginationControls'
 import PaymentStatusBadge from '@/components/shared/PaymentStatusBadge'
 import ApplicantDossierModal from '@/components/shared/ApplicantDossierModal'
 import { cn } from '@/lib/utils'
+import { resultStatusMeta } from '@/lib/selectionStatus'
 
 interface PeriodItem {
   id: string
@@ -87,28 +88,16 @@ function DocStatusBadge({ status }: { status: string }) {
 }
 
 function SelectionStatusBadge({ status }: { status?: string }) {
-  if (status === 'passed')
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-200">
-        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-        Lulus
-      </span>
-    )
-  if (status === 'failed')
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-700 ring-1 ring-inset ring-red-200">
-        <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
-        Tidak Lulus
-      </span>
-    )
-  if (status === 'selection')
-    return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-200">
-        <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-        Seleksi
-      </span>
-    )
-  return <span className="text-sm text-slate-400">—</span>
+  if (!['passed', 'failed', 'conditional', 'waitlist', 'selection'].includes(status || '')) {
+    return <span className="text-sm text-slate-400">—</span>
+  }
+  const meta = resultStatusMeta(status)
+  return (
+    <span className={cn('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ring-inset', meta.cls)}>
+      <span className={cn('h-1.5 w-1.5 rounded-full', meta.dot)} />
+      {meta.label}
+    </span>
+  )
 }
 
 export default function ArsipPendaftarPage() {
@@ -300,8 +289,10 @@ export default function ArsipPendaftarPage() {
                 <option value="document_approved">Dokumen Disetujui</option>
                 <option value="document_rejected">Dokumen Ditolak</option>
                 <option value="selection">Dalam Proses Seleksi</option>
-                <option value="passed">Lulus Seleksi</option>
-                <option value="failed">Tidak Lulus</option>
+                <option value="passed">Diterima</option>
+                <option value="conditional">Diterima Bersyarat</option>
+                <option value="waitlist">Cadangan</option>
+                <option value="failed">Tidak Diterima</option>
                 <option value="expired">Tagihan Kedaluwarsa</option>
               </select>
             </div>

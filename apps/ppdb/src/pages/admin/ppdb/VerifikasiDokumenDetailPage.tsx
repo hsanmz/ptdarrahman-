@@ -1526,7 +1526,7 @@ export default function VerifikasiDokumenDetailPage() {
               <span className="font-bold block">Dampak Verifikasi Dokumen:</span>
               <ul className="list-disc list-inside space-y-0.5 text-[11px] text-emerald-800">
                 <li>Status pendaftar beralih ke <strong>Lolos Berkas (Tahap Seleksi)</strong>.</li>
-                <li>Calon santri dapat langsung melakukan <strong>Booking Sesi Ujian Tahfidz &amp; Wawancara</strong>.</li>
+                <li>Calon santri masuk ke <strong>Sesi Ujian Tahfidz &amp; Wawancara</strong> sesuai jadwal yang ditetapkan panitia.</li>
                 <li>Notifikasi kelulusan berkas otomatis dikirimkan via WhatsApp.</li>
               </ul>
             </div>

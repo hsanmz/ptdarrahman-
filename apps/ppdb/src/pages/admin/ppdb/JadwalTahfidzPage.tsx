@@ -33,22 +33,14 @@ import {
   BookOpen,
   Plus,
   Calendar,
-  Clock,
   MapPin,
   Video,
   User,
-  Users,
   Search,
   Pencil,
   Trash2,
   CalendarDays,
   ExternalLink,
-  ChevronDown,
-  ChevronUp,
-  Award,
-  ArrowRight,
-  Phone,
-  Tag,
   Loader2,
   LayoutGrid,
   List,
@@ -83,17 +75,11 @@ export default function JadwalTahfidzPage() {
   // Selected Wave Filter
   const [selectedWaveId, setSelectedWaveId] = useState<string>('')
   const [searchQuery, setSearchQuery] = useState('')
-  const [expandedSchedules, setExpandedSchedules] = useState<Record<string, boolean>>({})
 
   // Modal States
   const [sessionModal, setSessionModal] = useState<'create' | 'edit' | null>(null)
   const [selectedSession, setSelectedSession] = useState<any | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
-
-  // Reschedule State (Pindah Sesi)
-  const [rescheduleApplicant, setRescheduleApplicant] = useState<{ applicant_id: string; full_name: string } | null>(null)
-  const [targetSessionId, setTargetSessionId] = useState('')
-  const [rescheduleReason, setRescheduleReason] = useState('')
 
   // Periods & Waves Query
   const { data: periodsRes } = useQuery({
@@ -192,35 +178,6 @@ export default function JadwalTahfidzPage() {
     },
   })
 
-  // Reschedule Mutation
-  const rescheduleMutation = useMutation({
-    mutationFn: async () => {
-      if (!rescheduleApplicant || !targetSessionId) {
-        throw new Error('Pilih jadwal target pemindahan')
-      }
-      return await api.apiFetch(
-        `/selection/applicants/${rescheduleApplicant.applicant_id}/move-session`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            target_session_id: targetSessionId,
-            reason: rescheduleReason.trim() || undefined,
-          }),
-        }
-      )
-    },
-    onSuccess: (res: any) => {
-      toast('success', res?.message || 'Jadwal berhasil dipindahkan!')
-      setRescheduleApplicant(null)
-      setTargetSessionId('')
-      setRescheduleReason('')
-      queryClient.invalidateQueries({ queryKey: ['selection-sessions', 'tahfidz'] })
-    },
-    onError: (err: any) => {
-      toast('error', err.message || 'Gagal memindahkan jadwal')
-    },
-  })
-
   // Handlers
   const handleOpenCreate = () => {
     setSelectedSession(null)
@@ -261,16 +218,11 @@ export default function JadwalTahfidzPage() {
     setSessionModal('edit')
   }
 
-  const toggleExpand = (id: string) => {
-    setExpandedSchedules((prev) => ({ ...prev, [id]: !prev[id] }))
-  }
-
   const handleSave = () => {
     if (!form.wave_id) return toast('error', 'Pilih gelombang terlebih dahulu')
     if (!form.name.trim()) return toast('error', 'Nama jadwal wajib diisi')
     if (!form.session_date) return toast('error', 'Tanggal pelaksanaan wajib diisi')
     if (!form.start_time) return toast('error', 'Jam mulai wajib diisi')
-    if (!form.officer_name.trim()) return toast('error', 'Nama Penguji Tahfidz wajib diisi')
     if (form.mode === 'online' && !form.meeting_url.trim()) {
       return toast('error', 'Tautan Zoom/Meet wajib diisi untuk mode online')
     }
@@ -294,7 +246,7 @@ export default function JadwalTahfidzPage() {
               className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
             >
               <Plus className="w-4 h-4" />
-              Buat Jadwal Tahfidz
+              Buat Jadwal Seleksi
             </Button>
           ) : undefined
         }
@@ -307,27 +259,18 @@ export default function JadwalTahfidzPage() {
             <Label className="text-xs font-semibold text-muted-foreground whitespace-nowrap">
               Filter Gelombang:
             </Label>
-            <div className="flex flex-wrap gap-1.5">
-              <Button
-                variant={selectedWaveId === '' ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedWaveId('')}
-                className="h-8 text-xs"
-              >
-                Semua Gelombang
-              </Button>
+            <select
+              value={selectedWaveId}
+              onChange={(e) => setSelectedWaveId(e.target.value)}
+              className="h-8 min-w-[190px] max-w-[240px] rounded-lg border border-slate-300 bg-white px-2.5 text-xs text-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="">Semua Gelombang</option>
               {waves.map((w: any) => (
-                <Button
-                  key={w.id}
-                  variant={selectedWaveId === w.id ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => setSelectedWaveId(w.id)}
-                  className="h-8 text-xs"
-                >
+                <option key={w.id} value={w.id}>
                   {w.name}
-                </Button>
+                </option>
               ))}
-            </div>
+            </select>
           </div>
         )}
 
@@ -395,7 +338,7 @@ export default function JadwalTahfidzPage() {
             action={
               canCrud ? (
                 <Button onClick={handleOpenCreate} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                  <Plus className="w-4 h-4 mr-1.5" /> Buat Jadwal Tahfidz
+                  <Plus className="w-4 h-4 mr-1.5" /> Buat Jadwal Seleksi
                 </Button>
               ) : undefined
             }
@@ -407,20 +350,20 @@ export default function JadwalTahfidzPage() {
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50/70">
-                  <TableHead className="text-xs font-semibold">Nama Jadwal</TableHead>
+                  <TableHead className="text-xs font-semibold">Jadwal Sesi</TableHead>
                   <TableHead className="text-xs font-semibold">Kloter / Batch</TableHead>
                   <TableHead className="text-xs font-semibold">Gelombang</TableHead>
-                  <TableHead className="text-xs font-semibold">Tanggal &amp; Waktu</TableHead>
+                  <TableHead className="text-xs font-semibold">Waktu</TableHead>
                   <TableHead className="text-xs font-semibold">Penguji</TableHead>
-                  <TableHead className="text-xs font-semibold">Mode / Lokasi</TableHead>
+                  <TableHead className="text-xs font-semibold">Pelaksanaan</TableHead>
                   <TableHead className="text-xs font-semibold text-center">Peserta</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredSchedules.map((s) => {
-                  const bookedList: any[] = s.booked_applicants || []
+                  const sessionParticipants: any[] = s.participants || []
                   const evaluatedCount = s.evaluated_count || 0
-                  const totalApplicants = bookedList.length
+                  const totalApplicants = sessionParticipants.length
 
                   return (
                     <TableRow
@@ -430,55 +373,68 @@ export default function JadwalTahfidzPage() {
                       title="Klik untuk membuka ruang seleksi tahfidz"
                     >
                       <TableCell>
-                        <div className="font-semibold text-xs text-slate-900 group-hover:text-emerald-700 transition-colors">
+                        <div
+                          className="font-semibold text-xs text-slate-900 group-hover:text-emerald-700 transition-colors max-w-[180px] truncate"
+                          title={s.name}
+                        >
                           {s.name}
                         </div>
-                        {s.description && (
-                          <div className="text-[11px] text-muted-foreground line-clamp-1">
-                            {s.description}
-                          </div>
-                        )}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 border-emerald-200">
-                          {s.batch_name || '-'}
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 border-emerald-200 max-w-[110px]"
+                          title={s.batch_name || '-'}
+                        >
+                          <span className="truncate">{s.batch_name || '-'}</span>
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">
-                          {s.wave_name || '-'}
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 max-w-[120px]"
+                          title={s.wave_name || '-'}
+                        >
+                          <span className="truncate">{s.wave_name || '-'}</span>
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="text-xs text-slate-800 font-medium">
+                        <div className="text-xs text-slate-800 font-medium whitespace-nowrap">
                           {formatDateSafe(s.session_date)}
-                        </div>
-                        <div className="text-[11px] text-muted-foreground font-mono">
-                          {s.start_time || '08:00'} WIB - Selesai
+                          <span className="text-[11px] text-muted-foreground font-mono ml-1.5">
+                            {s.start_time || '08:00'} WIB
+                          </span>
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-xs text-slate-800 font-medium">
+                        <div
+                          className="text-xs text-slate-800 font-medium max-w-[120px] truncate"
+                          title={s.officer_name || '-'}
+                        >
                           {s.officer_name || '-'}
                         </div>
                       </TableCell>
                       <TableCell>
-                        {s.mode === 'online' ? (
-                          <Badge variant="secondary" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 gap-1">
-                            <Video className="w-2.5 h-2.5" /> Online
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200 gap-1">
-                            <MapPin className="w-2.5 h-2.5" /> {s.location || 'Offline'}
-                          </Badge>
-                        )}
+                        <div className="flex items-center gap-1 max-w-[140px] whitespace-nowrap text-[11px] font-medium text-slate-800">
+                          {s.mode === 'online' ? (
+                            <Video className="w-2.5 h-2.5 shrink-0 text-blue-600" />
+                          ) : (
+                            <MapPin className="w-2.5 h-2.5 shrink-0 text-amber-600" />
+                          )}
+                          <span
+                            className="truncate"
+                            title={s.mode === 'online' ? 'Online' : s.location || 'Offline'}
+                          >
+                            {s.mode === 'online' ? 'Online' : s.location || 'Offline'}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell className="text-center">
-                        <span className="text-xs font-semibold text-slate-800">
+                        <span className="text-xs font-semibold text-slate-800 whitespace-nowrap">
                           {totalApplicants}
-                        </span>
-                        <span className="text-[11px] text-muted-foreground font-mono ml-1">
-                          ({evaluatedCount} dinilai)
+                          <span className="text-[11px] text-muted-foreground font-mono ml-1">
+                            ({evaluatedCount} dinilai)
+                          </span>
                         </span>
                       </TableCell>
                     </TableRow>
@@ -489,12 +445,11 @@ export default function JadwalTahfidzPage() {
           </div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filteredSchedules.map((s) => {
-            const bookedList: any[] = s.booked_applicants || []
-            const isExpanded = !!expandedSchedules[s.id]
+            const sessionParticipants: any[] = s.participants || []
             const evaluatedCount = s.evaluated_count || 0
-            const totalApplicants = bookedList.length
+            const totalApplicants = sessionParticipants.length
 
             return (
               <Card
@@ -507,265 +462,133 @@ export default function JadwalTahfidzPage() {
                   <div className="h-1.5 w-full bg-emerald-500" />
 
                   <CardContent className="p-5 space-y-4">
-                    {/* Header: Title, Batch, Mode */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3
-                            className="font-bold text-base text-slate-900 truncate group-hover:text-emerald-700 transition-colors"
-                            title="Klik untuk buka ruang & input nilai"
+                    {/* Header: Badges, Title, Aksi */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <Badge
+                            variant="outline"
+                            className="text-[11px] bg-emerald-50 text-emerald-800 border-emerald-200 max-w-[140px] min-w-0"
                           >
-                            {s.name}
-                          </h3>
+                            <span className="truncate">{s.wave_name || 'Gelombang'}</span>
+                          </Badge>
                           {s.batch_name && (
                             <Badge
                               variant="outline"
-                              className="text-[10px] font-semibold bg-emerald-50 text-emerald-700 border-emerald-200"
+                              className="text-[11px] bg-purple-50 text-purple-700 border-purple-200 max-w-[110px] min-w-0"
                             >
-                              {s.batch_name}
+                              <span className="truncate">{s.batch_name}</span>
                             </Badge>
                           )}
-                          {s.wave_name && (
-                            <Badge
-                              variant="outline"
-                              className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 inline-flex items-center gap-1"
-                            >
-                              <Tag className="h-2.5 w-2.5 shrink-0" />
-                              {s.wave_name}
-                            </Badge>
-                          )}
-                        </div>
-                        {s.description && (
-                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                            {s.description}
-                          </p>
-                        )}
-                      </div>
-
-                      <Badge
-                        variant={s.mode === 'online' ? 'secondary' : 'outline'}
-                        className={cn(
-                          'text-xs font-semibold shrink-0 gap-1',
-                          s.mode === 'online'
-                            ? 'bg-blue-50 text-blue-700 border-blue-200'
-                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        )}
-                      >
-                        {s.mode === 'online' ? (
-                          <>
-                            <Video className="w-3 h-3 text-blue-600" /> Online (Zoom)
-                          </>
-                        ) : (
-                          <>
-                            <MapPin className="w-3 h-3 text-emerald-600" /> Offline
-                          </>
-                        )}
-                      </Badge>
-                    </div>
-
-                    {/* Metadata Grid */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-xs text-slate-600 bg-slate-50/80 p-3 rounded-xl border border-slate-100">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span>
-                          {formatDateSafe(s.session_date)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span>
-                          {s.start_time || '08:00'} WIB - Selesai
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <User className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                        <span className="font-medium text-slate-800 truncate">
-                          Penguji: {s.officer_name || '-'}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 truncate">
-                        {s.mode === 'online' ? (
-                          <>
-                            <ExternalLink className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-                            {s.meeting_url ? (
-                              <a
-                                href={s.meeting_url}
-                                target="_blank"
-                                rel="noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="text-blue-600 hover:underline truncate"
-                              >
-                                {s.meeting_url}
-                              </a>
-                            ) : (
-                              <span>Link belum disetel</span>
+                          <Badge
+                            variant="secondary"
+                            className={cn(
+                              'text-[11px]',
+                              s.mode === 'online'
+                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                : 'bg-amber-50 text-amber-700 border-amber-200'
                             )}
-                          </>
-                        ) : (
-                          <>
-                            <MapPin className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                            <span className="truncate">{s.location || 'Kampus PTDARRAHMAN'}</span>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Participants Summary Header */}
-                    <div className="flex items-center justify-between pt-1">
-                      <div className="flex items-center gap-2">
-                        <Users className="w-4 h-4 text-slate-500" />
-                        <span className="text-xs font-semibold text-slate-800">
-                          {totalApplicants} Peserta Terdaftar
-                        </span>
-                        <span className="text-xs text-muted-foreground font-mono">
-                          ({evaluatedCount} dinilai)
-                        </span>
-                      </div>
-
-                      {totalApplicants > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 text-xs text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50 gap-1"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            toggleExpand(s.id)
-                          }}
+                          >
+                            {s.mode === 'online' ? 'Online' : 'Offline'}
+                          </Badge>
+                        </div>
+                        <h3
+                          className="font-bold text-base text-foreground group-hover:text-emerald-700 transition-colors line-clamp-1 mt-1"
+                          title={s.name}
                         >
-                          {isExpanded ? (
-                            <>
-                              Sembunyikan Peserta <ChevronUp className="w-3.5 h-3.5" />
-                            </>
-                          ) : (
-                            <>
-                              Lihat {totalApplicants} Peserta <ChevronDown className="w-3.5 h-3.5" />
-                            </>
-                          )}
-                        </Button>
+                          {s.name}
+                        </h3>
+                      </div>
+
+                      {canCrud && (
+                        <div className="flex items-center gap-0.5 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleOpenEdit(s)
+                            }}
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-emerald-700 hover:bg-emerald-50"
+                            title="Edit Jadwal"
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setDeleteId(s.id)
+                            }}
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                            title="Hapus Jadwal"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                       )}
                     </div>
 
-                    {/* Expandable Participant List */}
-                    {isExpanded && totalApplicants > 0 && (
-                      <div className="border border-slate-200 rounded-xl overflow-hidden divide-y divide-slate-100 bg-white">
-                        {bookedList.map((app: any, idx: number) => (
-                          <div
-                            key={app.id || idx}
-                            className="p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:bg-slate-50/80 transition-colors"
-                          >
-                            <div className="min-w-0">
-                              <div className="flex items-center gap-2">
-                                <span className="font-semibold text-xs text-slate-900 truncate">
-                                  {app.full_name}
-                                </span>
-                                {app.nisn && (
-                                  <span className="text-[10px] text-muted-foreground font-mono">
-                                    NISN: {app.nisn}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                                {app.phone && (
-                                  <span className="inline-flex items-center gap-1 font-mono">
-                                    <Phone className="w-2.5 h-2.5" /> {app.phone}
-                                  </span>
-                                )}
-                                {app.notes && (
-                                  <span className="truncate max-w-[200px] text-slate-400">
-                                    • {app.notes}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              {canCrud && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-7 text-[11px] gap-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 border-blue-200"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    setRescheduleApplicant({
-                                      applicant_id: app.id,
-                                      full_name: app.full_name,
-                                    })
-                                    setTargetSessionId('')
-                                    setRescheduleReason('')
-                                  }}
-                                >
-                                  Pindah Sesi
-                                </Button>
-                              )}
-                              <Button
-                                size="sm"
-                                className="h-7 text-[11px] gap-1 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
-                                onClick={(e) => {
-                                  e.stopPropagation()
-                                  navigate(
-                                    `/admin/sessions/tahfidz/evaluasi/${s.id}?applicant_id=${app.id}`
-                                  )
-                                }}
-                              >
-                                <Award className="w-3 h-3" />
-                                Form Nilai
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
+                    {/* Detail Pelaksanaan */}
+                    <div className="space-y-2 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2 text-foreground">
+                        <Calendar className="w-4 h-4 text-emerald-600 shrink-0" />
+                        <span className="font-medium truncate">
+                          {formatDateSafe(s.session_date)} ({s.start_time || '08:00'} WIB - Selesai)
+                        </span>
                       </div>
-                    )}
+
+                      <div className="flex items-center gap-2">
+                        {s.mode === 'online' ? (
+                          <Video className="w-4 h-4 text-blue-500 shrink-0" />
+                        ) : (
+                          <MapPin className="w-4 h-4 text-amber-500 shrink-0" />
+                        )}
+                        {s.mode === 'online' ? (
+                          s.meeting_url ? (
+                            <a
+                              href={s.meeting_url}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-blue-600 hover:underline truncate max-w-[220px]"
+                              title={s.meeting_url}
+                            >
+                              {s.meeting_url}
+                            </a>
+                          ) : (
+                            <span className="truncate">Tautan Zoom/Meet</span>
+                          )
+                        ) : (
+                          <span className="truncate max-w-[220px]" title={s.location || 'Kampus PTDARRAHMAN'}>
+                            {s.location || 'Kampus PTDARRAHMAN'}
+                          </span>
+                        )}
+                      </div>
+
+                      {s.officer_name && (
+                        <div className="flex items-center gap-2">
+                          <User className="w-4 h-4 text-purple-500 shrink-0" />
+                          <span className="truncate" title={s.officer_name}>
+                            Penguji: {s.officer_name}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-border/50 text-xs">
+                      <div className="flex flex-col">
+                        <span className="text-muted-foreground">
+                          Peserta: <strong className="text-foreground">{totalApplicants} Orang</strong>
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">{evaluatedCount} dinilai</span>
+                      </div>
+                      <span className="inline-flex items-center text-xs font-semibold text-emerald-600 group-hover:translate-x-0.5 transition-transform whitespace-nowrap">
+                        Buka Ruang &amp; Nilai <ExternalLink className="w-3 h-3 ml-1" />
+                      </span>
+                    </div>
                   </CardContent>
-                </div>
-
-                {/* Card Footer: Action Buttons */}
-                <div className="border-t border-slate-100 bg-slate-50/50 p-3.5 flex items-center justify-between gap-2 flex-wrap">
-                  <div className="text-[11px] text-muted-foreground">
-                    Dibuat {formatDateSafe(s.created_at, { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      className="h-8 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 shadow-xs"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        navigate(`/admin/jadwal-seleksi/tahfidz/${s.id}`)
-                      }}
-                    >
-                      <span>Buka Ruang & Nilai</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </Button>
-
-                    {canCrud && (
-                      <div className="flex items-center gap-1 border-l border-slate-200 pl-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-slate-600 hover:text-slate-900"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleOpenEdit(s)
-                          }}
-                          title="Edit Jadwal"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setDeleteId(s.id)
-                          }}
-                          title="Hapus Jadwal"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
                 </div>
               </Card>
             )
@@ -779,12 +602,12 @@ export default function JadwalTahfidzPage() {
         onOpenChange={(open) => !open && setSessionModal(null)}
       >
         <DialogContent className="max-w-lg max-h-[85vh] flex flex-col p-0 overflow-hidden rounded-2xl">
-          <DialogHeader className="p-5 border-b bg-slate-50/60 shrink-0">
+          <DialogHeader className="p-5 pr-16 border-b bg-slate-50/60 shrink-0">
             <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
               <BookOpen className="h-5 w-5 text-emerald-600" />
               {sessionModal === 'create'
-                ? 'Buat Jadwal Seleksi Tahfidz'
-                : 'Edit Jadwal Seleksi Tahfidz'}
+                ? 'Buat Jadwal Seleksi (Tahfidz)'
+                : 'Edit Jadwal Seleksi (Tahfidz)'}
             </DialogTitle>
             <DialogDescription className="text-xs text-slate-500">
               Tentukan jadwal ujian seleksi hafalan Al-Qur'an untuk pendaftar pada gelombang ini.
@@ -871,7 +694,7 @@ export default function JadwalTahfidzPage() {
             {/* Penguji Tahfidz */}
             <div>
               <Label className="text-xs font-semibold text-slate-700 block mb-1">
-                Nama Penguji Tahfidz <span className="text-red-500">*</span>
+                Nama Penguji / Pengawas (Opsional)
               </Label>
               <Input
                 placeholder="Contoh: Ustadz M. Farhan, Al-Hafidz"
@@ -980,89 +803,7 @@ export default function JadwalTahfidzPage() {
                   Menyimpan...
                 </>
               ) : (
-                'Simpan Jadwal Tahfidz'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ── Modal Dialog Pindah Sesi (Reschedule Peserta) ── */}
-      <Dialog
-        open={rescheduleApplicant !== null}
-        onOpenChange={(open) => !open && setRescheduleApplicant(null)}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
-              <Calendar className="h-5 w-5 text-blue-600" />
-              Pindah Sesi Tahfidz
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Pindahkan jadwal ujian Tahfidz untuk peserta{' '}
-              <span className="font-semibold text-slate-800">
-                {rescheduleApplicant?.full_name}
-              </span>
-              . Sistem akan otomatis mengirimkan notifikasi jadwal baru via WhatsApp.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div>
-              <Label className="text-xs font-semibold text-slate-700 block mb-1">
-                Pilih Jadwal Tahfidz Target <span className="text-red-500">*</span>
-              </Label>
-              <select
-                value={targetSessionId}
-                onChange={(e) => setTargetSessionId(e.target.value)}
-                className="w-full text-xs rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">-- Pilih Jadwal Target --</option>
-                {schedules.map((s: any) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.session_date ? s.session_date.split('T')[0] : ''} ·{' '}
-                    {s.start_time || ''} - {s.end_time || ''})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <Label className="text-xs font-semibold text-slate-700 block mb-1">
-                Alasan Pemindahan Jadwal (Opsional)
-              </Label>
-              <Textarea
-                placeholder="Contoh: Peserta berhalangan hadir pada tanggal sesi sebelumnya karena sakit..."
-                value={rescheduleReason}
-                onChange={(e) => setRescheduleReason(e.target.value)}
-                className="text-xs"
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setRescheduleApplicant(null)}
-              disabled={rescheduleMutation.isPending}
-            >
-              Batal
-            </Button>
-            <Button
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5"
-              onClick={() => rescheduleMutation.mutate()}
-              disabled={!targetSessionId || rescheduleMutation.isPending}
-            >
-              {rescheduleMutation.isPending ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  Memindahkan...
-                </>
-              ) : (
-                'Konfirmasi Pindah Sesi'
+                'Simpan Jadwal'
               )}
             </Button>
           </DialogFooter>

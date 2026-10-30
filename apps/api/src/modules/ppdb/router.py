@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -25,7 +24,6 @@ from src.core.dependencies import (
     require_ppdb_read,
 )
 from src.core.rate_limit import rate_limit_dependency
-
 from src.modules.ppdb.schemas import (
     ApplicantAdminCreate,
     ApplicantAdminUpdate,
@@ -39,10 +37,8 @@ from src.modules.ppdb.schemas import (
     PeriodFeeItemCreate,
     PeriodFeeItemUpdate,
     PeriodUpdate,
-    WaveFeeDiscountUpdate,
     WaveCreate,
-    WaveFeeItemCreate,
-    WaveFeeItemUpdate,
+    WaveFeeDiscountUpdate,
     WaveUpdate,
 )
 from src.repositories.ppdb_repository import PPDBRepository
@@ -314,7 +310,7 @@ def delete_wave_endpoint(
 
 
 # ---------------------------------------------------------------------------
-# Wave fee items (Biaya Tahap 2 per gelombang)
+# Diskon gelombang atas master komponen biaya periode
 # ---------------------------------------------------------------------------
 @router.get("/waves/{id}/fee-items")
 def get_wave_fee_items(
@@ -322,27 +318,8 @@ def get_wave_fee_items(
     user: dict = Depends(require_ppdb_read),
     service: PPDBService = Depends(get_ppdb_service),
 ):
+    """Master komponen biaya periode + diskon yang diatur per gelombang."""
     return service.get_wave_fee_items(id)
-
-
-@router.post("/waves/{id}/fee-items", status_code=201)
-def create_wave_fee_item(
-    id: str,
-    body: WaveFeeItemCreate,
-    user: dict = Depends(require_ppdb_admin),
-    service: PPDBService = Depends(get_ppdb_service),
-):
-    return service.create_wave_fee_item(id, body)
-
-
-@router.delete("/waves/{id}/fee-items/{item_id}")
-def delete_wave_fee_item(
-    id: str,
-    item_id: str,
-    user: dict = Depends(require_ppdb_admin),
-    service: PPDBService = Depends(get_ppdb_service),
-):
-    return service.delete_wave_fee_item(id, item_id)
 
 
 @router.put("/waves/{id}/fee-items/{item_id}")
@@ -363,16 +340,6 @@ def update_wave_fee_discount(
         entity_id=f"{id}_{fee_item_id}",
     )
     return result
-
-
-def update_wave_fee_item(
-    id: str,
-    item_id: str,
-    body: WaveFeeItemUpdate,
-    user: dict = Depends(require_ppdb_admin),
-    service: PPDBService = Depends(get_ppdb_service),
-):
-    return service.update_wave_fee_item(id, item_id, body)
 
 
 # ---------------------------------------------------------------------------

@@ -5,19 +5,12 @@ import * as api from '@/api/client'
 import { useToast } from '@/components/Toast'
 import { useCanPage } from '@/hooks/useCan'
 import { DocTrigger } from '@repo/ui'
+import MoveSessionDialog from '@/components/shared/MoveSessionDialog'
 import {
   Card,
   Badge,
   Button,
   Input,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-  Textarea,
-  Label,
   Table,
   TableHeader,
   TableRow,
@@ -74,10 +67,8 @@ export default function TahfidzSessionDetailPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'evaluated' | 'pending'>('all')
   const [viewMode, setViewMode] = useState<'list' | 'bulk'>('list')
 
-  // Reschedule Dialog State
-  const [rescheduleApplicant, setRescheduleApplicant] = useState<{ applicant_id: string; full_name: string } | null>(null)
-  const [targetSessionId, setTargetSessionId] = useState('')
-  const [rescheduleReason, setRescheduleReason] = useState('')
+  // Reschedule Dialog State (Pindah Sesi Massal)
+  const [moveDialogOpen, setMoveDialogOpen] = useState(false)
 
   // 1. Fetch Session Info & Applicants (Real-time polling 5s)
   const { data: sessionsRes, isLoading: loadingSessions, isFetching } = useQuery({
@@ -112,11 +103,11 @@ export default function TahfidzSessionDetailPage() {
   const [bulkData, setBulkData] = useState<Record<string, { scores: Record<string, number>; notes: string }>>({})
 
   // Initialize bulk data when session applicants load
-  const bookedApplicants: any[] = Array.isArray(session?.booked_applicants) ? session.booked_applicants : []
+  const sessionParticipants: any[] = Array.isArray(session?.participants) ? session.participants : []
 
   // Filtered applicants
   const filteredApplicants = useMemo(() => {
-    return bookedApplicants.filter((app) => {
+    return sessionParticipants.filter((app) => {
       const isEval = !!app.is_tahfidz_evaluated
       if (statusFilter === 'evaluated' && !isEval) return false
       if (statusFilter === 'pending' && isEval) return false
@@ -130,7 +121,7 @@ export default function TahfidzSessionDetailPage() {
       }
       return true
     })
-  }, [bookedApplicants, statusFilter, searchQuery])
+  }, [sessionParticipants, statusFilter, searchQuery])
 
   // Bulk Save Mutation
   const bulkSaveMutation = useMutation({
@@ -138,7 +129,7 @@ export default function TahfidzSessionDetailPage() {
       // Validate that each candidate with scores has REQUIRED notes
       const payloadItems: any[] = []
 
-      for (const app of bookedApplicants) {
+      for (const app of sessionParticipants) {
         const appBulk = bulkData[app.id]
         if (!appBulk) continue
 
@@ -178,38 +169,9 @@ export default function TahfidzSessionDetailPage() {
     },
   })
 
-  // Reschedule Mutation
-  const rescheduleMutation = useMutation({
-    mutationFn: async () => {
-      if (!rescheduleApplicant || !targetSessionId) {
-        throw new Error('Pilih jadwal target pemindahan')
-      }
-      return await api.apiFetch(
-        `/selection/applicants/${rescheduleApplicant.applicant_id}/move-session`,
-        {
-          method: 'POST',
-          body: JSON.stringify({
-            target_session_id: targetSessionId,
-            reason: rescheduleReason.trim() || undefined,
-          }),
-        }
-      )
-    },
-    onSuccess: (res: any) => {
-      toast('success', res?.message || 'Jadwal santri berhasil dipindahkan!')
-      setRescheduleApplicant(null)
-      setTargetSessionId('')
-      setRescheduleReason('')
-      queryClient.invalidateQueries({ queryKey: ['selection-sessions', 'tahfidz'] })
-    },
-    onError: (err: any) => {
-      toast('error', err.message || 'Gagal memindahkan jadwal santri')
-    },
-  })
-
   // Calculate bulk summary
-  const totalCount = bookedApplicants.length
-  const evaluatedCount = bookedApplicants.filter((a) => a.is_tahfidz_evaluated).length
+  const totalCount = sessionParticipants.length
+  const evaluatedCount = sessionParticipants.filter((a) => a.is_tahfidz_evaluated).length
   const pendingCount = totalCount - evaluatedCount
 
   if (loadingSessions && !session) {
@@ -282,25 +244,37 @@ export default function TahfidzSessionDetailPage() {
           )}
 
           {canCrud && (
-            <Button
-              variant={viewMode === 'bulk' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode((m) => (m === 'bulk' ? 'list' : 'bulk'))}
-              className={cn(
-                'h-9 text-xs gap-1.5',
-                viewMode === 'bulk' ? 'bg-emerald-700 text-white' : 'border-emerald-300 text-emerald-700 hover:bg-emerald-50'
-              )}
-            >
-              {viewMode === 'bulk' ? (
-                <>
-                  <List className="h-3.5 w-3.5" /> Tampilan Daftar
-                </>
-              ) : (
-                <>
-                  <TableProperties className="h-3.5 w-3.5" /> Input Nilai Sekaligus
-                </>
-              )}
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setMoveDialogOpen(true)}
+                disabled={totalCount === 0}
+                className="h-9 text-xs gap-1.5 border-slate-300 text-slate-700 hover:bg-slate-50 font-semibold"
+                title="Pindahkan peserta ke jadwal Tahfidz lain jika berhalangan"
+              >
+                <Calendar className="h-3.5 w-3.5" /> Pindah Sesi
+              </Button>
+              <Button
+                variant={viewMode === 'bulk' ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setViewMode((m) => (m === 'bulk' ? 'list' : 'bulk'))}
+                className={cn(
+                  'h-9 text-xs gap-1.5',
+                  viewMode === 'bulk' ? 'bg-emerald-700 text-white' : 'border-emerald-300 text-emerald-700 hover:bg-emerald-50'
+                )}
+              >
+                {viewMode === 'bulk' ? (
+                  <>
+                    <List className="h-3.5 w-3.5" /> Tampilan Daftar
+                  </>
+                ) : (
+                  <>
+                    <TableProperties className="h-3.5 w-3.5" /> Input Nilai Sekaligus
+                  </>
+                )}
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -312,7 +286,7 @@ export default function TahfidzSessionDetailPage() {
             <Calendar className="h-5 w-5" />
           </div>
           <div>
-            <span className="text-[11px] text-muted-foreground block">Tanggal Pelaksanaan</span>
+            <span className="text-[11px] text-muted-foreground block">Tanggal</span>
             <span className="text-xs font-semibold text-slate-800">
               {formatDateSafe(session.session_date)}
             </span>
@@ -324,7 +298,7 @@ export default function TahfidzSessionDetailPage() {
             <Clock className="h-5 w-5" />
           </div>
           <div>
-            <span className="text-[11px] text-muted-foreground block">Waktu Ujian</span>
+            <span className="text-[11px] text-muted-foreground block">Waktu</span>
             <span className="text-xs font-semibold text-slate-800">
               {session.start_time || '08:00'} - {session.end_time || '12:00'} WIB
             </span>
@@ -336,7 +310,7 @@ export default function TahfidzSessionDetailPage() {
             <User className="h-5 w-5" />
           </div>
           <div>
-            <span className="text-[11px] text-muted-foreground block">Penguji Tahfidz</span>
+            <span className="text-[11px] text-muted-foreground block">Penguji</span>
             <span className="text-xs font-semibold text-slate-800 truncate block max-w-[170px]">
               {session.officer_name || '-'}
             </span>
@@ -348,7 +322,7 @@ export default function TahfidzSessionDetailPage() {
             {session.mode === 'online' ? <Video className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
           </div>
           <div>
-            <span className="text-[11px] text-muted-foreground block">Mode / Lokasi</span>
+            <span className="text-[11px] text-muted-foreground block">Pelaksanaan</span>
             {session.mode === 'online' ? (
               session.meeting_url ? (
                 <a
@@ -374,11 +348,11 @@ export default function TahfidzSessionDetailPage() {
       {/* ── Summary Stats ── */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Card className="p-4 border-slate-200">
-          <span className="text-xs text-muted-foreground">Total Peserta Terdaftar</span>
+          <span className="text-xs text-muted-foreground">Total Peserta</span>
           <p className="text-2xl font-bold text-slate-900 mt-1">{totalCount} Santri</p>
         </Card>
         <Card className="p-4 border-slate-200">
-          <span className="text-xs text-muted-foreground">Sudah Selesai Dinilai</span>
+          <span className="text-xs text-muted-foreground">Sudah Dinilai</span>
           <p className="text-2xl font-bold text-emerald-600 mt-1">{evaluatedCount} Santri</p>
         </Card>
         <Card className="p-4 border-slate-200">
@@ -407,7 +381,7 @@ export default function TahfidzSessionDetailPage() {
                   onClick={() => setStatusFilter('all')}
                   className="h-7 text-xs px-2.5"
                 >
-                  Semua ({totalCount})
+                  Semua
                 </Button>
                 <Button
                   variant={statusFilter === 'pending' ? 'default' : 'ghost'}
@@ -415,7 +389,7 @@ export default function TahfidzSessionDetailPage() {
                   onClick={() => setStatusFilter('pending')}
                   className="h-7 text-xs px-2.5"
                 >
-                  Belum ({pendingCount})
+                  Belum
                 </Button>
                 <Button
                   variant={statusFilter === 'evaluated' ? 'default' : 'ghost'}
@@ -423,7 +397,7 @@ export default function TahfidzSessionDetailPage() {
                   onClick={() => setStatusFilter('evaluated')}
                   className="h-7 text-xs px-2.5"
                 >
-                  Sudah ({evaluatedCount})
+                  Sudah
                 </Button>
               </div>
 
@@ -441,7 +415,7 @@ export default function TahfidzSessionDetailPage() {
 
           {filteredApplicants.length === 0 ? (
             <div className="py-12 text-center text-xs text-muted-foreground">
-              {bookedApplicants.length === 0
+              {sessionParticipants.length === 0
                 ? 'Belum ada pendaftar yang terdaftar di jadwal seleksi ini.'
                 : 'Tidak ada santri yang cocok dengan filter pencarian.'}
             </div>
@@ -471,7 +445,10 @@ export default function TahfidzSessionDetailPage() {
                         title="Klik untuk membuka lembar penilaian"
                       >
                         <TableCell>
-                          <div className="font-semibold text-xs text-slate-900 group-hover:text-emerald-700 transition-colors">
+                          <div
+                            className="font-semibold text-xs text-slate-900 group-hover:text-emerald-700 transition-colors max-w-[200px] truncate"
+                            title={app.full_name}
+                          >
                             {app.full_name}
                           </div>
                         </TableCell>
@@ -574,7 +551,7 @@ export default function TahfidzSessionDetailPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {bookedApplicants.map((app, idx) => {
+                {sessionParticipants.map((app, idx) => {
                   const currentAppBulk = bulkData[app.id] || { scores: {}, notes: app.notes || '' }
                   const scores = currentAppBulk.scores
 
@@ -665,88 +642,36 @@ export default function TahfidzSessionDetailPage() {
         </Card>
       )}
 
-      {/* ── Modal Dialog Pindah Sesi (Reschedule) ── */}
-      <Dialog
-        open={rescheduleApplicant !== null}
-        onOpenChange={(open) => !open && setRescheduleApplicant(null)}
-      >
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-base font-bold text-slate-800">
-              <Calendar className="h-5 w-5 text-blue-600" />
-              Pindah Sesi Tahfidz
-            </DialogTitle>
-            <DialogDescription className="text-xs text-slate-500">
-              Pindahkan jadwal ujian Tahfidz untuk peserta{' '}
-              <span className="font-semibold text-slate-800">
-                {rescheduleApplicant?.full_name}
-              </span>
-              . Sistem akan otomatis mengirimkan notifikasi jadwal baru via WhatsApp.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-2">
-            <div>
-              <Label className="text-xs font-semibold text-slate-700 block mb-1">
-                Pilih Jadwal Tahfidz Target <span className="text-red-500">*</span>
-              </Label>
-              <select
-                value={targetSessionId}
-                onChange={(e) => setTargetSessionId(e.target.value)}
-                className="w-full text-xs rounded-md border border-slate-300 bg-white px-3 py-2 text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">-- Pilih Jadwal Target --</option>
-                {allSchedules
-                  .filter((s: any) => s.id !== session.id)
-                  .map((s: any) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.session_date ? s.session_date.split('T')[0] : ''} ·{' '}
-                      {s.start_time || ''} - {s.end_time || ''})
-                    </option>
-                  ))}
-              </select>
-            </div>
-
-            <div>
-              <Label className="text-xs font-semibold text-slate-700 block mb-1">
-                Alasan Pemindahan Jadwal (Opsional)
-              </Label>
-              <Textarea
-                placeholder="Contoh: Peserta sakit / berhalangan hadir pada tanggal sesi sebelumnya..."
-                value={rescheduleReason}
-                onChange={(e) => setRescheduleReason(e.target.value)}
-                className="text-xs"
-                rows={3}
-              />
-            </div>
-          </div>
-
-          <DialogFooter className="flex justify-end gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setRescheduleApplicant(null)}
-              disabled={rescheduleMutation.isPending}
-            >
-              Batal
-            </Button>
-            <Button
-              size="sm"
-              className="bg-blue-600 hover:bg-blue-700 text-white gap-1.5"
-              onClick={() => rescheduleMutation.mutate()}
-              disabled={!targetSessionId || rescheduleMutation.isPending}
-            >
-              {rescheduleMutation.isPending ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" /> Memindahkan...
-                </>
-              ) : (
-                'Konfirmasi Pindah Sesi'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* ── Modal Dialog Pindah Sesi (Reschedule Massal) ── */}
+      <MoveSessionDialog
+        open={moveDialogOpen}
+        onOpenChange={setMoveDialogOpen}
+        sourceSessionId={session.id}
+        sourceSessionLabel={`${session.name} (${session.session_date ? formatDateSafe(session.session_date) : '-'} · ${session.start_time || '-'} - ${session.end_time || '-'} WIB)`}
+        applicants={sessionParticipants.map((app: any) => ({
+          applicant_id: app.id,
+          full_name: app.full_name,
+          phone: app.phone,
+          extra_label: app.nisn ? `NISN: ${app.nisn}` : null,
+          status_label: app.is_tahfidz_evaluated
+            ? `Sudah Dinilai (${app.tahfidz_score ?? '-'})`
+            : 'Belum Dinilai',
+          moves_disabled: false,
+        }))}
+        targets={allSchedules
+          .filter((s: any) => s.id !== session.id)
+          .map((s: any) => ({
+            id: s.id,
+            name: s.name,
+            session_date: s.session_date,
+            start_time: s.start_time,
+            end_time: s.end_time,
+            tag: s.batch_name || null,
+          }))}
+        onMoved={() =>
+          queryClient.invalidateQueries({ queryKey: ['selection-sessions', 'tahfidz'] })
+        }
+      />
     </div>
   )
 }

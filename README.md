@@ -70,7 +70,7 @@ Project ini menggunakan arsitektur modular **pnpm workspace** yang diorkestrasi 
 | PDF/Print | Print engine kustom A4 (`utils/export*`) |
 | Auth | HTTP-only Cookie JWT (via Core API) |
 
-**Fitur Backoffice:** Manajemen gelombang & master biaya, verifikasi berkas, Bank Soal CBT (Akademik & Psikologi), penjadwalan ujian CBT massal & live monitoring peserta, sesi 1:1 Tahfidz & Wawancara (Santri & Ortu), rekapitulasi penilaian seleksi gabungan, review & penerbitan LoA, cetak dokumen resmi, arsip dossier ZIP.
+**Fitur Backoffice:** Manajemen gelombang & master biaya, verifikasi berkas, Bank Soal CBT (Akademik & Psikologi), penjadwalan ujian CBT massal & live monitoring peserta, seleksi Tahfidz & Wawancara terpadu (Santri & Ortu), rekapitulasi penilaian seleksi gabungan, review & penerbitan LoA, cetak dokumen resmi, arsip dossier ZIP.
 
 ### 🛡️ apps/superadmin — Panel Superadmin
 | Kategori | Teknologi |
@@ -114,7 +114,7 @@ Project ini menggunakan arsitektur modular **pnpm workspace** yang diorkestrasi 
 | Queue | BullMQ + Redis |
 | WA Client | whatsapp-web.js + Chromium |
 
-**Fitur:** Penerima task dari Core API via Redis queue, pengirim notifikasi otomatis (pembayaran formulir, booking sesi, grup WA, pengingat ujian H-2/H-1/1 jam), standalone service.
+**Fitur:** Penerima task dari Core API via Redis queue, pengirim notifikasi otomatis (pembayaran formulir, jadwal seleksi, grup WA, pengingat ujian H-2/H-1/1 jam), standalone service.
 
 ---
 

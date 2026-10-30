@@ -30,6 +30,9 @@ def test_normal_payment_webhook_marks_success():
     )
     mock_repo.get_transaction_by_id.return_value = tx
     mock_repo.get_applicant_by_id.return_value = applicant
+    mock_repo.get_wave_by_id.return_value = MagicMock(
+        id="wave-1", early_discount_quota=0
+    )
 
     service = PaymentService(mock_repo)
     service.check_wave_quota_and_close_if_full = MagicMock(return_value=False)
