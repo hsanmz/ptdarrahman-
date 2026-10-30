@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getNewsCached } from '@/app/lib/api'
+import { fetchActivePpdbWave } from '@/app/lib/ppdb'
 import type { NewsArticle } from '@/app/lib/types'
 import NewsDetailClient from './_components/NewsDetailClient'
 
@@ -43,5 +44,7 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ slu
   const safeNews = allNews ?? []
   const article = safeNews.find((a) => a.slug === slug)
   if (!article || !article.content) notFound()
-  return <NewsDetailClient article={article} allNews={safeNews} />
+  let wave = null
+  try { wave = await fetchActivePpdbWave() } catch { wave = null }
+  return <NewsDetailClient article={article} allNews={safeNews} wave={wave} />
 }

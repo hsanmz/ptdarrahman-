@@ -8,6 +8,7 @@ import type { Program } from '@/app/lib/types'
 import type { ProgramMenuLink } from '@/app/lib/programs'
 import { Clock, Layers, Check, BookOpen, Cpu, Globe, Award, ArrowRight } from 'lucide-react'
 import { resolvePortalUrl } from '@repo/ui'
+import PpdbWaveBanner from '@/app/components/ui/PpdbWaveBanner'
 
 
 const iconMap: Record<string, typeof BookOpen> = {
@@ -21,9 +22,10 @@ interface Props {
   program: Program
   /** Program lain dari CMS, dipakai sidebar "Program Lainnya". */
   others?: ProgramMenuLink[]
+  wave?: import('@/app/lib/ppdb').ActivePpdbWave | null
 }
 
-export default function ProgramDetailClient({ program, others = [] }: Props) {
+export default function ProgramDetailClient({ program, others = [], wave = null }: Props) {
   const sectionRef = useRef<HTMLElement>(null)
 
   useScrollReveal(sectionRef, { start: 'top 80%', stagger: 0.1 })
@@ -212,6 +214,8 @@ export default function ProgramDetailClient({ program, others = [] }: Props) {
             {/* Sidebar: aksi pendaftaran + program lain */}
             <div className="lg:col-span-1">
               <div className="lg:sticky lg:top-24 space-y-5">
+                <PpdbWaveBanner wave={wave} variant="compact" />
+
                 <div className="rounded-2xl border border-[var(--border)] bg-[var(--bg-elevated)] p-6 shadow-[var(--shadow-sm)]">
                   <div className="flex items-center gap-3">
                     <span className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-[var(--accent-subtle)]">

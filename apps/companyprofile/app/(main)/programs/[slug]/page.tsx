@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getProgramsCached } from '@/app/lib/api'
 import { fallbackProgram, fallbackPrograms, KNOWN_PROGRAMS, siblingProgramLinks } from '@/app/lib/programs'
+import { fetchActivePpdbWave } from '@/app/lib/ppdb'
 import type { Program } from '@/app/lib/types'
 import ProgramDetailClient from './_components/ProgramDetailClient'
 
@@ -63,5 +64,7 @@ export default async function ProgramDetailPage({ params }: { params: Promise<{ 
   // daftar cadangan supaya halaman yang jatuh ke konten bawaan tetap punya
   // navigasi ke program lain.
   const others = siblingProgramLinks(list.length > 0 ? list : fallbackPrograms(), program.slug)
-  return <ProgramDetailClient program={program} others={others} />
+  let wave = null
+  try { wave = await fetchActivePpdbWave() } catch { wave = null }
+  return <ProgramDetailClient program={program} others={others} wave={wave} />
 }

@@ -7,11 +7,13 @@ import type { Facility } from '@/app/lib/types'
 import { Play } from 'lucide-react'
 import InteractiveImageAccordion from '@/app/components/ui/InteractiveImageAccordion'
 import EmptyState from '@/app/components/ui/EmptyState'
+import PpdbWaveBanner from '@/app/components/ui/PpdbWaveBanner'
 import {
   FACILITY_CATEGORY_OPTIONS,
   facilityCategoryKey,
   facilityCategoryLabel,
 } from '@/app/lib/facility-categories'
+import type { ActivePpdbWave } from '@/app/lib/ppdb'
 
 interface FilterOption {
   key: string
@@ -50,7 +52,7 @@ function buildFilterOptions(facilities: Facility[]): FilterOption[] {
   return [{ key: 'all', label: 'Semua' }, ...standard, ...custom]
 }
 
-export default function FacilitiesClient({ facilities }: { facilities: Facility[] }) {
+export default function FacilitiesClient({ facilities, wave = null }: { facilities: Facility[]; wave?: ActivePpdbWave | null }) {
   const [filter, setFilter] = useState('all')
   const sectionRef = useRef<HTMLElement>(null)
 
@@ -119,6 +121,21 @@ export default function FacilitiesClient({ facilities }: { facilities: Facility[
               />
             )}
           </div>
+
+          {/* ── CTA Kontekstual: ajakan pendaftaran setelah melihat fasilitas ── */}
+          {wave && (
+            <div className="mb-16">
+              <div className="text-center mb-6">
+                <h3 className="font-[var(--font-display)] text-xl sm:text-2xl font-bold text-[var(--text)] mb-2">
+                  {'Kenali Lingkungan Belajar PTDARRAHMAN Lebih Dekat'}
+                </h3>
+                <p className="text-sm text-[var(--text-secondary)] max-w-lg mx-auto">
+                  {'Lihat bagaimana fasilitas kami mendukung pembelajaran, pembinaan akhlak, dan kegiatan santri.'}
+                </p>
+              </div>
+              <PpdbWaveBanner wave={wave} variant="prominent" />
+            </div>
+          )}
 
           {/* Virtual Tour */}
           <div className="text-center bg-[var(--bg-secondary)] rounded-2xl p-6 sm:p-8 md:p-12 border border-[var(--color-border)]">

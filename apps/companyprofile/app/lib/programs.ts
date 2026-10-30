@@ -93,6 +93,28 @@ const FALLBACK_CONTENT: Record<string, ProgramContent> = {
       'Pribadi muslim yang disiplin waktu, mandiri, tangguh secara fisik dan mental, serta siap memimpin kerja tim di masyarakat.',
     ],
   },
+  'dirasah-islamiyah': {
+    title: 'Dirasah Islamiyah (Studi Keislaman)',
+    tagline: 'Memperkokoh Dasar Akidah, Fiqih, Akhlak, dan Kegiatan Kitab Kuning',
+    desc: "Program Dirasah Islamiyah membekali santri dengan pemahaman keislaman yang berjenjang: akidah, fiqih, akhlak, ulumul Qur'an dan hadits, tarikh, serta kaidah bahasa Arab sebagai kunci membaca kitab kuning secara mandiri. Pembelajaran berlangsung melalui halaqah bersama guru dengan pendekatan bertahap: mulai dari kaidah dasar, penguatan bahasa, hingga praktik menelusuri kitab. Ilmu keislaman ini menjadi fondasi bagi program tahfidz karena santri memahami makna dan konteks ayat yang dihafalkannya.",
+    duration: 'Program Terpadu 6 Tahun',
+    level: 'Studi Keislaman Berjenjang',
+    highlights: [
+      'Pembelajaran Keislaman Berjenjang: Materi akidah, fiqih, dan akhlak disusun bertahap sesuai kesiapan santri agar dasar ilmu kokoh.',
+      'Bahasa Arab untuk Membaca Kitab: Pembinaan nahwu dan sharaf membiasakan santri menelusuri kitab kuning secara mandiri.',
+      "Ulumul Qur'an & Hadits: Kaidah umum ilmu al-Qur'an dan hadits diperkenalkan sebagai pengantar studi keislaman lanjutan.",
+      'Evaluasi Pembelajaran Berkala: Pencapaian santri dipantau melalui penilaian harian, ujian pertengahan, dan sumatif akhir semester.',
+    ],
+    curriculum: [
+      'Akidah & Tauhid',
+      'Fiqih & Akhlak',
+      'Bahasa Arab: Nahwu & Sharaf',
+      "Ulumul Qur'an & Hadits",
+    ],
+    outcomes: [
+      'Santri memiliki dasar keilmuan keislaman yang kokoh, kaidah bahasa Arab untuk menelusuri kitab, serta bekal melanjutkan studi ke perguruan tinggi keislaman.',
+    ],
+  },
 }
 
 const FALLBACK_ICONS: Record<string, string> = {
@@ -100,6 +122,7 @@ const FALLBACK_ICONS: Record<string, string> = {
   'teknologi-digital': 'laptop-code',
   bilingual: 'language',
   'akademi-kepemimpinan': 'users',
+  'dirasah-islamiyah': 'book-quran',
 }
 
 export function fallbackProgram(slug: string): Program | null {
@@ -121,6 +144,7 @@ export const KNOWN_PROGRAMS: KnownProgram[] = [
   { id: 'digital', label: 'Rekayasa Teknologi Digital, Web & IoT', fallbackSlug: 'teknologi-digital', keywords: ['digital', 'teknologi', 'it'] },
   { id: 'bilingual', label: 'Program Bilingual (Bahasa Arab & Inggris Aktif)', fallbackSlug: 'bilingual', keywords: ['bilingual'] },
   { id: 'leadership', label: 'Akademi Kepemimpinan, Karakter & Kemandirian Santri', fallbackSlug: 'akademi-kepemimpinan', keywords: ['kepemimpinan', 'leadership'] },
+  { id: 'dirasah', label: 'Dirasah Islamiyah (Studi Keislaman)', fallbackSlug: 'dirasah-islamiyah', keywords: ['dirasah', 'islami'] },
 ]
 
 export function fallbackProgramSlugs(): Record<string, string> {

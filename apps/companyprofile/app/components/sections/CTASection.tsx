@@ -83,11 +83,18 @@ export default function CTASection({ wave = null }: { wave?: ActivePpdbWave | nu
             <p className="text-sm sm:text-base md:text-lg text-white/80 mb-8 sm:mb-12 max-w-2xl mx-auto">
               {ppdb.academicYear ? (
                 <>
-                  {'Pendaftaran Tahun Ajaran '}
-                  <strong className="text-white">{ppdb.academicYear}</strong>
-                  {' akan dibuka.'}
+                  {'Pendaftaran '}
+                  {ppdb.waveName ? (
+                    <>
+                      <strong className="text-white">Gelombang {ppdb.waveName}</strong>
+                      {' untuk '}
+                    </>
+                  ) : (
+                    <strong className="text-white">Tahun Ajaran {ppdb.academicYear}</strong>
+                  )}
+                  {' sedang dibuka.'}
                   {ppdb.quota ? ` Kuota ${ppdb.quota} peserta.` : ' Kuota terbatas.'}
-                  {' Berikan anak Anda hadiah keunggulan Al-Quran dan penguasaan digital.'}
+                  {' Bergabunglah bersama PTDARRAHMAN.'}
                 </>
               ) : (
                 'Pendaftaran Peserta Didik Baru akan segera dibuka. Kuota terbatas. Berikan anak Anda hadiah keunggulan Al-Quran dan penguasaan digital.'

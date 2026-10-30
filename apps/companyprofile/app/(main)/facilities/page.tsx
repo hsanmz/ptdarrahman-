@@ -3,6 +3,7 @@ import { Suspense } from 'react'
 import FacilitiesClient from './_components/FacilitiesClient'
 import { getFacilities } from '@/app/lib/api'
 import { getFacilitiesDummyFallback } from '@/app/lib/dummyFacilities'
+import { fetchActivePpdbWave } from '@/app/lib/ppdb'
 import type { Facility } from '@/app/lib/types'
 
 export const metadata: Metadata = {
@@ -35,9 +36,11 @@ export default async function FacilitiesPage() {
   let facilities: Facility[] | null = null
   try { facilities = await getFacilities() } catch { facilities = null }
   facilities = getFacilitiesDummyFallback(facilities)
+  let wave = null
+  try { wave = await fetchActivePpdbWave() } catch { wave = null }
   return (
     <Suspense>
-      <FacilitiesClient facilities={facilities ?? []} />
+      <FacilitiesClient facilities={facilities ?? []} wave={wave} />
     </Suspense>
   )
 }

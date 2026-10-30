@@ -33,8 +33,9 @@ describe('programMenuLinks — isi dropdown "Program" (navbar & footer)', () => 
       '/programs/teknologi-digital',
       '/programs/bilingual',
       '/programs/akademi-kepemimpinan',
+      '/programs/dirasah-islamiyah',
     ])
-    expect(links).toHaveLength(4)
+    expect(links).toHaveLength(5)
   })
 
   it('membatasi jumlah item dan menambah tautan "Lihat Semua Program"', () => {
@@ -56,6 +57,7 @@ describe('programMenuLinks — isi dropdown "Program" (navbar & footer)', () => 
       { href: '/programs/teknologi-digital', label: 'Rekayasa Teknologi Digital, Web & IoT' },
       { href: '/programs/bilingual', label: 'Program Bilingual (Bahasa Arab & Inggris Aktif)' },
       { href: '/programs/akademi-kepemimpinan', label: 'Akademi Kepemimpinan, Karakter & Kemandirian Santri' },
+      { href: '/programs/dirasah-islamiyah', label: 'Dirasah Islamiyah (Studi Keislaman)' },
     ])
   })
 })

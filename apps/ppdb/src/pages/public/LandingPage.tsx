@@ -12,7 +12,6 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { prefersReducedMotion } from '@/lib/motion'
-import PortalReveal from '@/components/landing/PortalReveal'
 import Footer from '@/components/layout/Footer'
 
 interface ActiveWave {
@@ -57,10 +56,8 @@ export default function LandingPage() {
       }
     }
 
-    // Parallax vertikal sudah digantikan PortalReveal (panel terbelah +
-    // zoom-out latar), jadi blok GSAP timeline di sini dihapus. Yang tersisa
-    // cuma Lenis untuk smooth scroll dan sinkronisasinya ke ScrollTrigger,
-    // yang tetap dipakai oleh komponen anak.
+    // Parallax vertikal dihapus; yang tersisa cuma Lenis untuk smooth scroll
+    // dan sinkronisasinya ke ScrollTrigger, yang tetap dipakai oleh komponen anak.
     const lenis = new Lenis()
     lenisRef.current = lenis
     lenis.on('scroll', ScrollTrigger.update)
@@ -167,13 +164,7 @@ export default function LandingPage() {
           bikin interpolasinya linear, dan secara visual tetap persis pill. */}
       <header
         className={cn(
-          // z-50, di BAWAH PortalReveal (z-60), jadi navbar tidak perlu
-          // animasi opacity sendiri: panel portal yang menutup sudah menutupnya.
-          // Versi sebelumnya memakai z-70 + timeline fade (hold 0-0.15, ramp
-          // 0.15-0.45) supaya navbar muncul lebih cepat. Itu satu timeline
-          // ekstra hanya untuk menampakkan navbar, dan hasilnya navbar
-          // menyala di atas panel yang masih gelap. Behind-the-portal jauh
-          // lebih sederhana dan tidak perlu digeser timing-nya.
+          // z-50 di navbar PPDB.
           'fixed z-50 ease-brand-pill',
           'transition-[left,right,top,max-width,border-radius,background-color,box-shadow,border-color]',
         scrolled
@@ -244,12 +235,8 @@ export default function LandingPage() {
           )}
       </header>
 
-      {/* ── Portal Reveal (efek pembuka) ── */}
-      {/* Isi hero jadi children PortalReveal, bukan section terpisah: panelnya
-          membelah untuk MEMBUKA konten ini. Kalau konten diletakkan setelah
-          portal, yang terlihat hanya gradien kosong selama 220vh. */}
-      <PortalReveal>
-        <div className="hero-column relative flex flex-col items-center text-center">
+      {/* ── Hero ── */}
+      <div className="hero-column relative flex flex-col items-center text-center">
                 {/* Status pill (PPDB specific) */}
                 {wave && (
                   <div className="mb-5 flex flex-col items-center gap-2 animate-fade-in sm:mb-12">
@@ -318,8 +305,6 @@ export default function LandingPage() {
 </Button>
                 </div>
         </div>
-      </PortalReveal>
-
       {/* ── Alur Pendaftaran ── */}
       {/* pt-40 menutupi wave 137px di atas section ini. `border-t` lama
           dihapus karena garis 1px itu akan memotong tepi gelombang. */}

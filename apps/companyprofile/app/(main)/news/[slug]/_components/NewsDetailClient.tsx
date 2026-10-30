@@ -6,9 +6,11 @@ import Link from 'next/link'
 import { Calendar, User, ArrowLeft, ArrowRight } from 'lucide-react'
 import RichContent from '@/app/components/ui/RichContent'
 import { useScrollReveal } from '@/app/hooks/useScrollAnimations'
+import NewsSidebar from './NewsSidebar'
 import type { NewsArticle } from '@/app/lib/types'
+import type { ActivePpdbWave } from '@/app/lib/ppdb'
 
-export default function NewsDetailClient({ article, allNews }: { article: NewsArticle; allNews: NewsArticle[] }) {
+export default function NewsDetailClient({ article, allNews, wave = null }: { article: NewsArticle; allNews: NewsArticle[]; wave?: ActivePpdbWave | null }) {
   const info = article.content
 
   const currentIndex = allNews.findIndex((a) => a.slug === article.slug)
@@ -82,47 +84,73 @@ export default function NewsDetailClient({ article, allNews }: { article: NewsAr
         </div>
       </section>
 
-      {/* Content */}
+      {/* Content — split 70/30 di desktop, single column di mobile */}
       <section className="py-16 bg-[var(--bg)]">
-        <div ref={contentRef} className="max-w-4xl mx-auto px-4 sm:px-6">
-          <div className="prose prose-gray max-w-none">
-          <RichContent content={info?.content ?? ''} />
-          </div>
+        <div
+          ref={contentRef}
+          className="max-w-7xl mx-auto px-4 sm:px-6"
+        >
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
+            {/* ── 70%: Konten utama ── */}
+            <div className="lg:col-span-7">
+              <div className="prose prose-gray max-w-none">
+                <RichContent content={info?.content ?? ''} />
+              </div>
 
-{article.gallery && article.gallery.length > 0 && (
-            <div className="img-overlay rounded-xl sm:rounded-2xl shadow-md overflow-hidden mb-8 relative aspect-[16/9]">
-              <Image src={article.gallery[0] || ''} alt={info?.title || 'Galeri Berita'} fill className="object-cover" sizes="(max-width: 768px) 100vw, 800px" loading="lazy" />
+              {article.gallery && article.gallery.length > 0 && (
+                <div className="img-overlay rounded-xl sm:rounded-2xl shadow-md overflow-hidden mb-8 relative aspect-[16/9]">
+                  <Image
+                    src={article.gallery[0] || ''}
+                    alt={info?.title || 'Galeri Berita'}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 100vw, 800px"
+                    loading="lazy"
+                  />
+                </div>
+              )}
+
+              <div className="verse-divider my-16" />
+
+              {/* Prev/Next Navigation */}
+              <div className="flex flex-col sm:flex-row justify-between gap-4">
+                {prev ? (() => {
+                  const p = prev.content ?? {}
+                  return (
+                    <Link
+                      href={`/news/${prev.slug}`}
+                      className="group flex items-center gap-3 text-sm text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+                    >
+                      <ArrowLeft className="w-4 h-4 flex-shrink-0" />
+                      <div className="text-right">
+                        <div className="text-xs">Sebelumnya</div>
+                        <div className="font-medium line-clamp-1">{p.title}</div>
+                      </div>
+                    </Link>
+                  )
+                })() : <div />}
+                {next ? (() => {
+                  const n = next.content ?? {}
+                  return (
+                    <Link
+                      href={`/news/${next.slug}`}
+                      className="group flex items-center gap-3 text-sm text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors"
+                    >
+                      <div>
+                        <div className="text-xs">Selanjutnya</div>
+                        <div className="font-medium line-clamp-1">{n.title}</div>
+                      </div>
+                      <ArrowRight className="w-4 h-4 flex-shrink-0" />
+                    </Link>
+                  )
+                })() : <div />}
+              </div>
             </div>
-          )}
 
-          <div className="verse-divider my-16" />
-
-          {/* Prev/Next Navigation */}
-          <div className="flex flex-col sm:flex-row justify-between gap-4">
-            {prev ? (() => {
-              const p = prev.content ?? {}
-              return (
-                <Link href={`/news/${prev.slug}`} className="group flex items-center gap-3 text-sm text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors">
-                  <ArrowLeft className="w-4 h-4 flex-shrink-0" />
-                  <div className="text-right">
-                    <div className="text-xs">Sebelumnya</div>
-                    <div className="font-medium line-clamp-1">{p.title}</div>
-                  </div>
-                </Link>
-              )
-            })() : <div />}
-            {next ? (() => {
-              const n = next.content ?? {}
-              return (
-                <Link href={`/news/${next.slug}`} className="group flex items-center gap-3 text-sm text-[var(--text-muted)] hover:text-[var(--accent)] transition-colors">
-                  <div>
-                    <div className="text-xs">Selanjutnya</div>
-                    <div className="font-medium line-clamp-1">{n.title}</div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 flex-shrink-0" />
-                </Link>
-              )
-            })() : <div />}
+            {/* ── 30%: Sidebar promosi ── */}
+            <div className="lg:col-span-5">
+              <NewsSidebar article={article} allNews={allNews} wave={wave} />
+            </div>
           </div>
         </div>
       </section>

@@ -101,7 +101,10 @@ body {
   font-family: var(--font-body), sans-serif;
   background: var(--bg);
   color: var(--text);
-  overflow-x: hidden;
+  /* `clip`, bukan `hidden`: keduanya menyembunyikan overflow horizontal yang sama,
+     tetapi `clip` tidak mengubah body menjadi scroll container — penyebab
+     klasik `position: sticky` (sidebar/daftar isi) berhenti mengikuti layar. */
+  overflow-x: clip;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

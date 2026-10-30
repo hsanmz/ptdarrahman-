@@ -9,6 +9,8 @@ import { getContactInfo, getSocialLinks } from '@/app/lib/api'
 import { programMenuLinks } from '@/app/lib/programs'
 import type { Program } from '@/app/lib/types'
 import { useBrand } from '@repo/ui'
+import { fetchActivePpdbWave } from '@/app/lib/ppdb'
+import type { ActivePpdbWave } from '@/app/lib/ppdb'
 
 interface SocialItem {
   label: string
@@ -32,6 +34,7 @@ export default function Footer({ programs = [] }: { programs?: Program[] }) {
   const { logoUrl } = useBrand(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')
   const [socials, setSocials] = useState<SocialItem[]>(staticSocialLinks)
   const [contact, setContact] = useState<ContactState>(FALLBACK_CONTACT)
+  const [wave, setWave] = useState<ActivePpdbWave | null>(null)
 
   useEffect(() => {
     // Tautan sosial & info kontak dinamis dari API; fallback statis jika kosong/error.
@@ -51,10 +54,39 @@ export default function Footer({ programs = [] }: { programs?: Program[] }) {
         })
       })
       .catch(() => {})
+    fetchActivePpdbWave().then(setWave).catch(() => {})
   }, [])
 
   return (
-    <footer className="relative bg-[var(--bg-secondary)] pt-16 pb-8 overflow-hidden">
+    <>
+      {/* ── PPDB CTA Strip ── */}
+      {wave && (
+        <div className="bg-emerald-700 text-white">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <p className="text-sm">
+              {'Pendaftaran PPDB'}
+              {wave.academic_year && (
+                <span> <strong>{wave.academic_year}</strong></span>
+              )}
+              {wave.name && (
+                <span> — Gelombang <strong>{wave.name}</strong></span>
+              )}
+              {wave.quota ? ` · Kuota ${wave.quota} peserta` : ''}
+              {' sedang '}
+              <span className="font-semibold">{'buka'}</span>
+              {'.'}
+            </p>
+            <Link
+              href="/ppdb"
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-white text-emerald-700 text-xs font-bold rounded-full hover:bg-emerald-50 transition-all whitespace-nowrap"
+            >
+              {'Informasi PPDB'}
+              <ArrowUpRight className="w-3 h-3" />
+            </Link>
+          </div>
+        </div>
+      )}
+      <footer className="relative bg-[var(--bg-secondary)] pt-16 pb-8 overflow-hidden">
       {/* Tear-off tipis untuk memisahkan footer dari section sebelumnya. */}
       <ShapeDividerDiagonal fill="var(--bg)" tintStrength={0.2} />
 
@@ -123,6 +155,8 @@ export default function Footer({ programs = [] }: { programs?: Program[] }) {
                 { href: '/programs', label: 'Program' },
                 { href: '/facilities', label: 'Fasilitas' },
                 { href: '/gallery', label: 'Galeri' },
+                { href: '/faq', label: 'FAQ' },
+                { href: '/syarat-ketentuan', label: 'Syarat & Ketentuan' },
                 { href: '/contact', label: 'Kontak' },
               ].map((l) => (
                 <li key={l.href}>
@@ -187,5 +221,6 @@ export default function Footer({ programs = [] }: { programs?: Program[] }) {
         </div>
       </div>
     </footer>
+    </>
   )
 }

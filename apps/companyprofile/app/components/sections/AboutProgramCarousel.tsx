@@ -2,7 +2,6 @@
 
 import Image from 'next/image'
 import { motion, useReducedMotion } from 'framer-motion'
-import SectionTitle from '@/app/components/ui/SectionTitle'
 import ShapeDivider from '@/app/components/ui/ShapeDivider'
 import ShapeDividerBottom from '@/app/components/ui/ShapeDividerBottom'
 
@@ -112,17 +111,6 @@ export default function AboutProgramCarousel() {
       <ShapeDivider fill="var(--bg)" />
       
       <div className="absolute inset-0 bg-pattern-grid opacity-[0.03]" />
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 mb-10 sm:mb-14 relative z-10">
-        <SectionTitle
-          center
-          badge="PROGRAM UNGGULAN"
-          title="Tahfidz & Digital dalam Satu Kurikulum"
-        />
-        <p className="text-center text-[var(--text-secondary)] mt-4 max-w-2xl mx-auto text-sm">
-          {'Perpaduan hafalan Al-Quran dengan kompetensi teknologi, bahasa, dan kepemimpinan — membentuk santri unggul sejak hari pertama.'}
-        </p>
-      </div>
 
       {/* Edge fade overlays */}
       <div
