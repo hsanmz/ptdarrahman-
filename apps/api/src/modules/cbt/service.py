@@ -2043,17 +2043,22 @@ class CBTService:
             f"{now.strftime('%d-%m-%Y %H:%M')})"
         )
         if sel_result:
-            if schedule.category == "akademik":
+            is_akademik = schedule.category == "akademik"
+            if is_akademik:
                 sel_result.score = final_percentage  # Primary CBT score
-            existing_notes = sel_result.notes or ""
-            sel_result.notes = f"{existing_notes}\n{note_entry}".strip()
+            if is_akademik:
+                sel_result.notes_akademik = note_entry
+            else:
+                sel_result.notes_psikologi = note_entry
             sel_result.updated_at = now
         else:
+            is_akademik = schedule.category == "akademik"
             new_sel = SelectionResult(
                 id=str(uuid4()),
                 applicant_id=applicant.id,
-                score=final_percentage if schedule.category == "akademik" else None,
-                notes=note_entry,
+                score=final_percentage if is_akademik else None,
+                notes_akademik=note_entry if is_akademik else None,
+                notes_psikologi=note_entry if not is_akademik else None,
                 created_at=now,
                 updated_at=now,
             )

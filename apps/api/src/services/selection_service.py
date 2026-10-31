@@ -1,3 +1,4 @@
+import re
 from datetime import date, datetime, timedelta
 from typing import Any, cast
 from uuid import uuid4
@@ -97,6 +98,34 @@ def _notify_assessment_completed_once(db: Any, applicant: Any, stage_name: str) 
         ],
         applicant.user_id,
     )
+
+
+def clean_decision_notes(raw: str | None) -> str:
+    """Sisakan catatan evaluator (keputusan) murni dari teks bersama `result.notes`.
+
+    Data lama menempelkan dua jenis teks yang bukan keputusan evaluator:
+    - pesan otomatis CBT: "Nilai Tes Akademik: 40.0 (Selesai pada ...)" —
+      nilainya sudah tampil di kartu komponen, jadi tidak perlu diulang;
+    - tag komponen legacy: "[Tahfidz]:" / "[Wawancara]:" — isinya kini
+      tersimpan pada kolom notes_tahfidz / notes_wawancara.
+    Keduanya dibuang tanpa mempedulikan posisi baris (data lama kadang
+    menempel inline dalam satu kalimat); baris kosong ganda dirapikan.
+    """
+    if not raw:
+        return ""
+    cleaned = re.sub(
+        r"Nilai\s+Tes\s+(?:Akademik|Psikologi)\s*:[^\n]*",
+        "",
+        raw,
+        flags=re.IGNORECASE,
+    )
+    cleaned = re.sub(
+        r"\[\s*(?:Tahfidz|Wawancara)\s*\]\s*:[^\n]*",
+        "",
+        cleaned,
+        flags=re.IGNORECASE,
+    )
+    return re.sub(r"\n{2,}", "\n", cleaned).strip()
 
 
 def selection_score_gaps(db: Any, applicant: Any) -> list[str]:

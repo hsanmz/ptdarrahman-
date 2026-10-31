@@ -4561,7 +4561,7 @@ function App({ academicYear, shirtColor, pantsColor, showBag, showStrap, showCap
 
 
 
-      <a href="./" className="wordmark" aria-label="PPDB Ar-Rahman Home"><span className="brand-type font-bold text-emerald-800 dark:text-emerald-300 tracking-tight text-xl">AR-RAHMAN<small className="text-[10px] tracking-widest text-gold-accent font-semibold block uppercase">Digital Boarding</small></span></a>
+      <a href="./" className="wordmark" aria-label="PPDB PTDARRAHMAN Home"><span className="brand-type font-bold text-emerald-800 dark:text-emerald-300 tracking-tight text-xl">AR-RAHMAN<small className="text-[10px] tracking-widest text-gold-accent font-semibold block uppercase">Digital Boarding</small></span></a>
 
 
 

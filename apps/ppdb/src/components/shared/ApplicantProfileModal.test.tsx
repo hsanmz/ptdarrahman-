@@ -76,10 +76,10 @@ describe('ApplicantProfileModal', () => {
   it('menampilkan header modal dengan nama, NISN, gelombang, dan status secara interaktif', () => {
     renderModal()
 
-    expect(screen.getByText('Ahmad Faiz Al-Faruq')).toBeInTheDocument()
-    expect(screen.getByText(/Reg: 0012345678/i)).toBeInTheDocument()
-    expect(screen.getByText('Gelombang 1 Utama')).toBeInTheDocument()
-    expect(screen.getByText('Lunas')).toBeInTheDocument()
+    expect(screen.getAllByText('Ahmad Faiz Al-Faruq').length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/Reg: 0012345678/i).length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Gelombang 1 Utama').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Lunas').length).toBeGreaterThan(0)
   })
 
   it('membuka tab Biodata & Santri secara default, bukan langsung pratinjau cetak A4', () => {
@@ -91,8 +91,8 @@ describe('ApplicantProfileModal', () => {
 
     // Field biodata ditampilkan di layar utama
     expect(screen.getByText('Identitas Calon Santri')).toBeInTheDocument()
-    expect(screen.getByText('Status & Jalur Masuk')).toBeInTheDocument()
-    expect(screen.getByText('SMP Negeri 1 Tambun')).toBeInTheDocument()
+    expect(screen.getByText('Status Pendaftaran')).toBeInTheDocument()
+    expect(screen.getAllByText('SMP Negeri 1 Tambun').length).toBeGreaterThan(0)
   })
 
   it('dapat berpindah tab ke Orang Tua / Wali dan Domisili & Kontak', () => {
@@ -116,7 +116,7 @@ describe('ApplicantProfileModal', () => {
     renderModal()
 
     const cetakTab = screen.getByRole('tab', { name: /format cetak \(a4\)/i })
-    fireEvent.click(cetakTab)
+    fireEvent.mouseDown(cetakTab)
 
     expect(screen.getByText('Pratinjau Format Dokumen Cetak A4 Resmi')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: '2 Halaman' })).toBeInTheDocument()

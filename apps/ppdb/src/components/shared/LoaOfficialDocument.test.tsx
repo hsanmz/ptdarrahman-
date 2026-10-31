@@ -53,7 +53,14 @@ describe('LoaOfficialDocument — Presisi A4 & Konsistensi Layout', () => {
   it('tidak menampilkan label teks VERIFIED DIGITAL PANITIA PPDB di samping QR code', () => {
     render(<LoaOfficialDocument data={mockLoaData} page="both" />)
     expect(screen.queryByText(/VERIFIED DIGITAL/i)).toBeNull()
-    expect(screen.queryByText(/PANITIA PPDB/i)).toBeNull()
+    expect(screen.queryByText(/^PANITIA PPDB$/i)).toBeNull()
+  })
+
+  it('menampilkan Office of Admission PPDB PTDARRAHMAN dan tidak menampilkan PPDB Ar-Rahman', () => {
+    render(<LoaOfficialDocument data={mockLoaData} page="both" />)
+    expect(screen.getAllByText(/Office of Admission PPDB PTDARRAHMAN/i).length).toBeGreaterThan(0)
+    expect(screen.queryByText(/Office of Admission PPDB Ar-Rahman/i)).toBeNull()
+    expect(screen.queryByText(/PPDB Ar-Rahman/i)).toBeNull()
   })
 
   it('tidak menampilkan bulatan hitam angka 1 dan 2 pada Tata Cara Pembayaran', () => {

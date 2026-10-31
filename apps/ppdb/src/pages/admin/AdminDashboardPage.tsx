@@ -1,20 +1,19 @@
 import { useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import {
   Users, FileText, CreditCard, Activity, CalendarDays, CheckCircle2,
-  AlertTriangle, ArrowRight, XCircle, Hourglass, ShieldCheck, CalendarCheck, Clock, Tag, type LucideIcon,
+  AlertTriangle, ArrowRight, XCircle, ReceiptText, UserX, type LucideIcon,
 } from 'lucide-react'
-import { Card, Button, Skeleton, Badge } from "@/components/ui"
+import { Card, Button, Skeleton } from "@/components/ui"
 import { useQuery } from '@tanstack/react-query'
 import { useToast } from '../../components/Toast'
-import { useAuth } from '@/contexts/AuthContext'
 import { apiFetch } from '@/api/client'
 import RegistrationTrend, { type TrendPoint } from '@/components/shared/RegistrationTrend'
 import PageHeaderCard from '@/components/shared/PageHeaderCard'
 import { cn } from '@/lib/utils'
 
 interface DashboardStats {
-  active_wave: { id: string; name: string } | null
+  active_wave: { id: string; name: string; quota: number; paid: number } | null
   active_period_name: string | null
   applicants: {
     total: number
@@ -45,9 +44,13 @@ interface StatCardProps {
   iconText: string
   to?: string
   actionable?: boolean
+  progress?: { value: number; max: number }
 }
 
-function StatCard({ label, value, icon: Icon, chip, iconText, to, actionable }: StatCardProps) {
+function StatCard({ label, value, icon: Icon, chip, iconText, to, actionable, progress }: StatCardProps) {
+  const progressPct = progress && progress.max > 0
+    ? Math.min(100, Math.round((progress.value / progress.max) * 100))
+    : 0
   const card = (
     <Card className="group relative h-full overflow-hidden rounded-2xl border-slate-100 bg-white p-6 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md">
       <div className={cn('absolute -right-8 -top-8 h-28 w-28 rounded-full opacity-[0.08]', chip)} />
@@ -65,6 +68,19 @@ function StatCard({ label, value, icon: Icon, chip, iconText, to, actionable }: 
           </span>
         )}
       </div>
+      {progress && progress.max > 0 && (
+        <div className="mt-3">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+            <div
+              className={cn('h-full rounded-full transition-all', progress.value >= progress.max ? 'bg-amber-500' : 'bg-primary')}
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+          <p className="mt-1.5 text-xs text-slate-500">
+            {progress.value} dari {progress.max} kuota terisi
+          </p>
+        </div>
+      )}
     </Card>
   )
 
@@ -94,30 +110,11 @@ const TONE = {
 
 export default function AdminDashboardPage() {
   const { toast } = useToast()
-  const { user } = useAuth()
-  const navigate = useNavigate()
 
   const { data, isLoading: loading, isError } = useQuery<DashboardStats>({
     queryKey: ['dashboard-stats'],
     queryFn: () => apiFetch<DashboardStats>('/ppdb/dashboard/stats'),
   })
-
-  // Query sessions created by this admin
-  const { data: mySessionsData, isLoading: loadingSessions } = useQuery({
-    queryKey: ['my-admin-sessions', user?.id],
-    queryFn: async () => {
-      const [tahfidzRes, interviewRes] = await Promise.all([
-        apiFetch<any>('/selection/sessions?type=tahfidz').catch(() => ({ data: [] })),
-        apiFetch<any>('/selection/sessions?type=interview').catch(() => ({ data: [] })),
-      ])
-      const all: any[] = [...(tahfidzRes?.data || []), ...(interviewRes?.data || [])]
-      return all.filter((s) => s.created_by && user?.id && s.created_by === user.id)
-    },
-    enabled: !!user?.id,
-    refetchInterval: 15000,
-  })
-
-  const mySessions = mySessionsData || []
 
   useEffect(() => {
     if (isError) {
@@ -129,6 +126,9 @@ export default function AdminDashboardPage() {
   const activePeriodName = data?.active_period_name || null
   const hasWave = !!activeWaveName
 
+  const waveQuota = data?.active_wave?.quota ?? 0
+  const wavePaid = data?.active_wave?.paid ?? 0
+
   const statCards: StatCardProps[] = [
     {
       label: 'Total Pendaftar',
@@ -137,6 +137,15 @@ export default function AdminDashboardPage() {
       chip: 'bg-blue-500',
       iconText: 'text-white',
       to: '/admin/data-pendaftar',
+      progress: waveQuota > 0 ? { value: wavePaid, max: waveQuota } : undefined,
+    },
+    {
+      label: 'Formulir Terbayar',
+      value: data?.payments.success ?? '—',
+      icon: ReceiptText,
+      chip: 'bg-emerald-500',
+      iconText: 'text-white',
+      to: '/admin/pembayaran-formulir?status=paid',
     },
     {
       label: 'Dokumen Menunggu',
@@ -148,21 +157,12 @@ export default function AdminDashboardPage() {
       actionable: true,
     },
     {
-      label: 'Pembayaran Menunggu',
-      value: data?.payments.pending ?? '—',
-      icon: CreditCard,
-      chip: 'bg-indigo-500',
+      label: 'Pendaftar Expired',
+      value: data?.applicants.expired ?? '—',
+      icon: UserX,
+      chip: 'bg-red-500',
       iconText: 'text-white',
-      to: '/admin/pembayaran-formulir?status=pending',
-      actionable: true,
-    },
-    {
-      label: 'Status Sistem',
-      value: hasWave ? 'Aktif' : 'Standby',
-      icon: Activity,
-      chip: hasWave ? 'bg-emerald-500' : 'bg-slate-400',
-      iconText: 'text-white',
-      to: '/admin/periods',
+      to: '/admin/data-pendaftar?status=expired',
     },
   ]
 
@@ -173,13 +173,6 @@ export default function AdminDashboardPage() {
     { label: 'Pendaftar expired', value: data?.applicants.expired ?? 0, icon: AlertTriangle, tone: 'red', href: '/admin/data-pendaftar?status=expired' },
   ]
   const hasAttention = attentionItems.some((item) => item.value > 0)
-
-  const selectionRows = [
-    { label: 'Menunggu Seleksi', value: data?.applicants.selection ?? 0, icon: Hourglass, bar: 'bg-blue-500' },
-    { label: 'Lulus', value: data?.applicants.passed ?? 0, icon: ShieldCheck, bar: 'bg-emerald-500' },
-    { label: 'Tidak Lulus', value: data?.applicants.failed ?? 0, icon: XCircle, bar: 'bg-red-500' },
-  ]
-  const selectionTotal = (data?.applicants.selection || 0) + (data?.applicants.passed || 0) + (data?.applicants.failed || 0)
 
   return (
     <div className="space-y-8 pb-8">
@@ -264,166 +257,6 @@ export default function AdminDashboardPage() {
           </div>
         </Card>
       </div>
-
-
-      <Card className="rounded-2xl border-slate-100 bg-white p-4 sm:p-5 shadow-sm">
-        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h2 className="flex items-center gap-2 font-heading text-base font-bold text-slate-900">
-              <CalendarCheck className="h-5 w-5 text-emerald-600" />
-              Jadwal Seleksi & Wawancara Saya
-              {mySessions.length > 0 && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-mono font-semibold">
-                  {mySessions.length}
-                </span>
-              )}
-            </h2>
-            <p className="mt-0.5 text-xs text-slate-400">Jadwal seleksi tahfidz & wawancara yang Anda ampu</p>
-          </div>
-          <Link
-            to="/admin/jadwal-seleksi/tahfidz"
-            className="flex items-center text-xs font-semibold text-primary transition-colors hover:text-primary/80"
-          >
-            Lihat Jadwal Seleksi <ArrowRight className="ml-1 h-3.5 w-3.5" />
-          </Link>
-        </div>
-
-        {loadingSessions ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-28 w-full rounded-xl" />
-            ))}
-          </div>
-        ) : mySessions.length === 0 ? (
-          <div className="p-5 text-center bg-slate-50 rounded-xl border border-dashed border-slate-200">
-            <p className="text-xs text-muted-foreground">
-              Belum ada jadwal seleksi tahfidz atau wawancara yang Anda buat untuk gelombang ini.
-            </p>
-            <div className="mt-3 flex items-center justify-center gap-2">
-              <Button asChild variant="outline" size="sm" className="text-xs gap-1.5 rounded-lg">
-                <Link to="/admin/jadwal-seleksi/tahfidz">
-                  <CalendarCheck className="h-3.5 w-3.5 text-emerald-600" /> Jadwal Tahfidz
-                </Link>
-              </Button>
-              <Button asChild variant="outline" size="sm" className="text-xs gap-1.5 rounded-lg">
-                <Link to="/admin/jadwal-seleksi/wawancara">
-                  <CalendarCheck className="h-3.5 w-3.5 text-blue-600" /> Jadwal Wawancara
-                </Link>
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {mySessions.map((s: any) => {
-              const isInterview = s.session_type === 'interview'
-              const participantCount = s.participant_count || 0
-              const evaluatedCount = s.evaluated_count || 0
-
-              return (
-                <div
-                  key={s.id}
-                  className={cn(
-                    "flex flex-col justify-between p-4 rounded-xl border bg-white transition-all shadow-xs hover:shadow-md cursor-pointer",
-                    isInterview ? "border-l-4 border-l-blue-500" : "border-l-4 border-l-emerald-500"
-                  )}
-                  onClick={() => {
-                    navigate(isInterview ? `/admin/jadwal-seleksi/wawancara/${s.id}` : `/admin/jadwal-seleksi/tahfidz/${s.id}`)
-                  }}
-                >
-                  <div className="space-y-2">
-                    <div className="flex items-start justify-between gap-1">
-                      <div className="min-w-0 flex-1">
-                        <h4 className="font-bold text-xs text-slate-900 truncate">
-                          {s.name}
-                        </h4>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
-                          <span className="text-[10px] text-muted-foreground font-medium">
-                            {isInterview ? 'Wawancara Terpadu' : 'Seleksi Tahfidz'}
-                          </span>
-                          {s.wave_name && (
-                            <Badge variant="outline" className="text-[9px] py-0 px-1.5 bg-blue-50 text-blue-700 border-blue-200 font-medium inline-flex items-center gap-1">
-                              <Tag className="h-2.5 w-2.5 shrink-0" />
-                              <span>{s.wave_name}</span>
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <Badge
-                        variant={s.is_evaluated ? 'success' : participantCount > 0 ? 'secondary' : 'outline'}
-                        className="text-[9px] py-0 px-1.5 font-bold shrink-0"
-                      >
-                        {s.is_evaluated
-                          ? 'Selesai'
-                          : participantCount > 0
-                          ? `${evaluatedCount}/${participantCount} Dinilai`
-                          : '0 Peserta'}
-                      </Badge>
-                    </div>
-
-                    <div className="text-[11px] text-slate-600 space-y-1 bg-slate-50 p-2 rounded-lg">
-                      <div className="flex items-center gap-1.5">
-                        <CalendarDays className="h-3 w-3 text-slate-400 shrink-0" />
-                        <span>{s.session_date ? new Date(s.session_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) : '-'}</span>
-                        <span>•</span>
-                        <Clock className="h-3 w-3 text-slate-400 shrink-0" />
-                        <span>{s.start_time || '-'} – {s.end_time || 'Selesai'} WIB</span>
-                      </div>
-                      <div className="flex items-center justify-between font-semibold text-slate-900 border-t border-slate-200/60 pt-1">
-                        <span>{s.officer_name ? `Penguji: ${s.officer_name}` : 'PTDARRAHMAN'}</span>
-                        <span className="text-emerald-700 font-mono">{participantCount} Peserta</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px]">
-                    <span className="text-slate-500 truncate max-w-[140px]">
-                      {s.mode === 'online' ? 'Online (Zoom)' : (s.location || 'Kampus PTDARRAHMAN')}
-                    </span>
-                    <span className="text-primary font-bold flex items-center gap-0.5">
-                      Kelola Peserta <ArrowRight className="h-2.5 w-2.5" />
-                    </span>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
-      </Card>
-
-      {/* Status Seleksi */}
-      {!loading && selectionTotal > 0 && (
-        <Card className="rounded-2xl border-slate-100 bg-white p-4 sm:p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="flex items-center gap-2 font-heading text-base font-bold text-slate-900">
-              <Hourglass className="h-5 w-5 text-primary" />
-              Status Seleksi
-            </h2>
-            <Link to="/admin/selection" className="flex items-center text-xs font-semibold text-primary transition-colors hover:text-primary/80">
-              Buka Seleksi <ArrowRight className="ml-1 h-3.5 w-3.5" />
-            </Link>
-          </div>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {selectionRows.map((row) => {
-              const Icon = row.icon
-              const pct = Math.round(((row.value || 0) / selectionTotal) * 100)
-              return (
-                <div key={row.label} className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
-                  <div className="mb-3 flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-                      <Icon className={cn('h-4 w-4', row.bar)} />
-                      {row.label}
-                    </span>
-                    <span className="text-sm font-bold text-slate-900">{row.value}</span>
-                  </div>
-                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
-                    <div className={cn('h-full rounded-full transition-all', row.bar)} style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </Card>
-      )}
 
       {/* Empty State / No Active Wave */}
       {!loading && !hasWave && (

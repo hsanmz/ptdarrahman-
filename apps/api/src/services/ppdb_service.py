@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import random
+import re
 import string
 import uuid
 from datetime import date, datetime, timedelta
@@ -780,6 +781,7 @@ class PPDBService:
         transaction = PPDBPaymentTransaction(
             id=f"pay-{uuid.uuid4()}",
             applicant_id=applicant.id,
+            payment_type="form",
             method="qris",
             # Biaya formulir adalah master tingkat periode (satu nilai untuk
             # seluruh gelombang).
@@ -806,7 +808,9 @@ class PPDBService:
 
         try:
             # Kirim satu event registrasi dari template kanonikal PPDB.
-            wave_end = wave.end_date
+            wave_end = getattr(wave, "registration_end_date", None) or getattr(
+                wave, "end_date", None
+            )
             tanggal_tutup = (
                 wave_end.strftime("%d %B %Y") if wave_end else "sesuai jadwal"
             )
@@ -1555,7 +1559,14 @@ class PPDBService:
             return payments_by_status.get(key, 0)
 
         return {
-            "active_wave": {"id": active_wave.id, "name": active_wave.name},
+            "active_wave": {
+                "id": active_wave.id,
+                "name": active_wave.name,
+                "quota": active_wave.quota,
+                "paid": self.repository.count_paid_form_payments_in_wave(
+                    active_wave.id
+                ),
+            },
             "active_period_name": active_period_name,
             "applicants": {
                 "total": self.repository.count_applicants_in_wave(active_wave.id),
@@ -1766,12 +1777,15 @@ class PPDBService:
                 "wawancara": sel_res.notes_wawancara,
             }
 
+        from src.services.selection_service import clean_decision_notes
+
         return {
             "applicant": applicant,
             "categories": list(categories_map.values()),
             "cbt_results": cbt_results,
             "result_notes": result_notes,
             "evaluator_notes": sel_res.notes if sel_res else None,
+            "decision_notes": clean_decision_notes(sel_res.notes) if sel_res else "",
             "graduation_status": sel_res.graduation_status
             if sel_res
             else applicant.get("status"),
@@ -1800,6 +1814,7 @@ class PPDBService:
                 d = discounts.get(item.id)
                 discount_amount = 0
                 discount_desc = ""
+                item_nominal = int(item.nominal or 0)
                 # Early bird hanya untuk pendaftar yang slotnya sah: flag
                 # ditandai saat pembayaran formulir sukses (X pembayar awal),
                 # bukan untuk semua pendaftar di gelombang.
@@ -1808,34 +1823,32 @@ class PPDBService:
                     and d.early_discount_type
                     and d.early_discount_value
                     and wave
-                    and wave.early_discount_quota
+                    and getattr(wave, "early_discount_quota", None)
                     and applicant.get("early_discount_eligible")
                 ):
+                    val = float(d.early_discount_value or 0)
                     if d.early_discount_type == "percent":
-                        discount_amount = int(
-                            item.nominal * (d.early_discount_value / 100)
-                        )
-                        discount_desc = f"Diskon Early Bird {d.early_discount_value}%"
+                        discount_amount = int(item_nominal * (val / 100))
+                        discount_desc = f"Diskon Early Bird {val}%"
                     else:
-                        discount_amount = int(d.early_discount_value)
-                        discount_desc = (
-                            f"Diskon Early Bird Rp {d.early_discount_value:,}"
-                        )
+                        discount_amount = int(val)
+                        discount_desc = f"Diskon Early Bird Rp {int(val):,}"
                 elif d and d.discount_type and d.discount_value:
+                    val = float(d.discount_value or 0)
                     if d.discount_type == "percent":
-                        discount_amount = int(item.nominal * (d.discount_value / 100))
-                        discount_desc = f"Diskon Gelombang {d.discount_value}%"
+                        discount_amount = int(item_nominal * (val / 100))
+                        discount_desc = f"Diskon Gelombang {val}%"
                     else:
-                        discount_amount = int(d.discount_value)
-                        discount_desc = f"Diskon Gelombang Rp {d.discount_value:,}"
+                        discount_amount = int(val)
+                        discount_desc = f"Diskon Gelombang Rp {int(val):,}"
 
-                net_nominal = max(0, int(item.nominal - discount_amount))
+                net_nominal = max(0, int(item_nominal - discount_amount))
                 fee_items.append(
                     {
                         "id": item.id,
                         "name": item.name,
                         "nominal": net_nominal,
-                        "standard_nominal": int(item.nominal),
+                        "standard_nominal": item_nominal,
                         "discount_nominal": discount_amount,
                         "discount_description": discount_desc,
                         "description": item.description
@@ -1859,15 +1872,26 @@ class PPDBService:
 
         # Pastikan nomor registrasi terisi unik baku
         reg_no = applicant.get("registration_number")
-        if not reg_no and app_obj:
-            c_date = (app_obj.created_at or now).strftime("%d%m%y")
-            clean_id = (
-                "".join(c for c in app_obj.id if c.isalnum())[-5:].upper().zfill(5)
-            )
-            reg_no = f"REG-{c_date}{clean_id}"
-            app_obj.registration_number = reg_no
-            self.repository.db.commit()
-            applicant["registration_number"] = reg_no
+        if not reg_no and app_obj and getattr(app_obj, "status", None) == "passed":
+            try:
+                c_date = (app_obj.created_at or now).strftime("%d%m%y")
+                clean_id = (
+                    "".join(c for c in app_obj.id if c.isalnum())[-5:].upper().zfill(5)
+                )
+                candidate_reg_no = f"REG-{c_date}{clean_id}"
+                existing = (
+                    self.repository.db.query(PPDBApplicant.id)
+                    .filter(PPDBApplicant.registration_number == candidate_reg_no)
+                    .first()
+                )
+                if not existing or existing[0] == applicant_id:
+                    app_obj.registration_number = candidate_reg_no
+                    self.repository.db.commit()
+                    reg_no = candidate_reg_no
+                    applicant["registration_number"] = candidate_reg_no
+            except Exception as e:
+                self.repository.db.rollback()
+                logger.warning("Gagal auto-generate registration_number: %s", e)
 
         from src.models.ppdb import PPDBPeriod, PPDBWave
 
@@ -1888,7 +1912,12 @@ class PPDBService:
         wave = self.repository.db.get(PPDBWave, wave_id) if wave_id else None
         wave_name = wave.name if wave else (applicant.get("wave_name") or "Gelombang 1")
         # Minimal DP adalah master tingkat periode (dicantumkan pada LoA).
-        minimum_dp = int(period.minimum_dp) if period and period.minimum_dp else 5000000
+        try:
+            minimum_dp = (
+                int(period.minimum_dp) if period and period.minimum_dp else 5000000
+            )
+        except Exception:
+            minimum_dp = 5000000
 
         # Rincian biaya pendidikan: master komponen periode + diskon gelombang.
         fee_items = self._calculate_loa_fee_items(wave, applicant)
@@ -1916,6 +1945,14 @@ class PPDBService:
             if app_obj and app_obj.loa_signed_at
             else (app_obj.updated_at if app_obj and app_obj.updated_at else now)
         )
+        if isinstance(base_date, str):
+            try:
+                base_date = datetime.fromisoformat(base_date.replace("Z", "+00:00"))
+            except Exception:
+                base_date = now
+        elif not hasattr(base_date, "year"):
+            base_date = now
+
         y = base_date.year + (base_date.month + 6 - 1) // 12
         m = (base_date.month + 6 - 1) % 12 + 1
         d = min(base_date.day, 28)
@@ -1935,9 +1972,19 @@ class PPDBService:
         )
 
         loa_signed_at_raw = applicant.get("loa_signed_at")
-        loa_signed_at_iso = (
-            loa_signed_at_raw.isoformat() if loa_signed_at_raw is not None else None
-        )
+        if loa_signed_at_raw is not None and hasattr(loa_signed_at_raw, "isoformat"):
+            loa_signed_at_iso = loa_signed_at_raw.isoformat()
+        elif loa_signed_at_raw is not None:
+            loa_signed_at_iso = str(loa_signed_at_raw)
+        else:
+            loa_signed_at_iso = None
+
+        # Pastikan seluruh tipe tanggal / Decimal / UUID di applicant diserialisasi
+        for k, v in list(applicant.items()):
+            if isinstance(v, datetime | date):
+                applicant[k] = v.isoformat() if hasattr(v, "isoformat") else str(v)
+            elif hasattr(v, "__str__") and type(v).__name__ in ("Decimal", "UUID"):
+                applicant[k] = str(v)
 
         return {
             "letter_number": letter_number,
@@ -2205,41 +2252,92 @@ class PPDBService:
         if not applicant:
             raise HTTPException(status_code=404, detail="Pendaftar tidak ditemukan")
 
-        docs = self.repository.get_applicant_documents(applicant_id)
-        transcript = self.get_applicant_transcript(applicant_id)
-        loa = self.get_applicant_loa(applicant_id)
-        form_payments = (
-            self.repository.db.query(PPDBPaymentTransaction)
-            .filter(PPDBPaymentTransaction.applicant_id == applicant_id)
-            .order_by(PPDBPaymentTransaction.created_at.desc())
-            .all()
-        )
+        docs = self.repository.get_applicant_documents(applicant_id) or []
+
+        try:
+            transcript = self.get_applicant_transcript(applicant_id)
+        except Exception as e:
+            logger.warning("Gagal memuat transkrip pendaftar %s: %s", applicant_id, e)
+            transcript = None
+
+        try:
+            loa = self.get_applicant_loa(applicant_id)
+        except Exception as e:
+            logger.warning("Gagal memuat LoA pendaftar %s: %s", applicant_id, e)
+            loa = None
+
+        try:
+            form_payments = (
+                self.repository.db.query(PPDBPaymentTransaction)
+                .filter(PPDBPaymentTransaction.applicant_id == applicant_id)
+                .order_by(PPDBPaymentTransaction.created_at.desc())
+                .all()
+            )
+        except Exception as e:
+            logger.warning(
+                "Gagal memuat transaksi pembayaran formulir %s: %s", applicant_id, e
+            )
+            form_payments = []
 
         from src.models.auth import AuditLog
 
-        dossier_full_name = applicant.get("full_name")
-        audit = AuditLog(
-            id=str(uuid.uuid4()),
-            user_id=admin_user.get("id"),
-            user_username=admin_user.get("username"),
-            action="view_dossier",
-            entity_type="ppdb_dossier",
-            entity_id=applicant_id,
-            changes=(f"Melihat dossier pendaftar {dossier_full_name} ({applicant_id})"),
-            ip_address=ip_address,
-            created_at=datetime.now(WIB),
-        )
-        self.repository.db.add(audit)
-        self.repository.db.commit()
+        dossier_full_name = applicant.get("full_name") or "Pendaftar"
+        try:
+            admin_id = admin_user.get("id") if admin_user else None
+            # Pastikan user_id valid jika ada foreign key constraint
+            if admin_id:
+                user_exists = (
+                    self.repository.db.query(User.id)
+                    .filter(User.id == admin_id)
+                    .first()
+                )
+                if not user_exists:
+                    admin_id = None
 
-        raw_health = applicant.get("disease_history") or ""
-        if raw_health.startswith("{"):
+            audit = AuditLog(
+                id=str(uuid.uuid4()),
+                user_id=admin_id,
+                user_username=admin_user.get("username") if admin_user else None,
+                action="view_dossier",
+                entity_type="ppdb_dossier",
+                entity_id=applicant_id,
+                changes=(
+                    f"Melihat dossier pendaftar {dossier_full_name} ({applicant_id})"
+                ),
+                ip_address=ip_address,
+                created_at=datetime.now(WIB).replace(tzinfo=None),
+            )
+            self.repository.db.add(audit)
+            self.repository.db.commit()
+        except Exception as e:
+            self.repository.db.rollback()
+            logger.warning("Gagal mencatat audit log view_dossier: %s", e)
+
+        raw_health = applicant.get("disease_history")
+        if isinstance(raw_health, dict):
+            applicant["health_profile"] = raw_health
+        elif isinstance(raw_health, str) and raw_health.strip().startswith("{"):
             try:
                 applicant["health_profile"] = json.loads(raw_health)
             except Exception:
                 applicant["health_profile"] = None
         else:
             applicant["health_profile"] = None
+
+        # Pastikan seluruh tipe tanggal / Decimal / UUID di applicant diserialisasi
+        for k, v in list(applicant.items()):
+            if isinstance(v, datetime | date):
+                applicant[k] = v.isoformat() if hasattr(v, "isoformat") else str(v)
+            elif hasattr(v, "__str__") and type(v).__name__ in ("Decimal", "UUID"):
+                applicant[k] = str(v)
+
+        # Pastikan dokumen ter-serialisasi dengan aman
+        for d in docs:
+            for k, v in list(d.items()):
+                if isinstance(v, datetime | date):
+                    d[k] = v.isoformat() if hasattr(v, "isoformat") else str(v)
+                elif hasattr(v, "__str__") and type(v).__name__ in ("Decimal", "UUID"):
+                    d[k] = str(v)
 
         return {
             "applicant": applicant,
@@ -2250,11 +2348,17 @@ class PPDBService:
                 "form_payments": [
                     {
                         "id": p.id,
-                        "invoice_number": p.invoice_number,
+                        "invoice_number": getattr(p, "order_id", None) or p.id,
+                        "order_id": getattr(p, "order_id", None),
+                        "receipt_number": getattr(p, "receipt_number", None),
                         "amount": p.amount,
                         "status": p.status,
-                        "paid_at": p.paid_at.isoformat() if p.paid_at else None,
-                        "payment_method": p.payment_method,
+                        "paid_at": (
+                            p.paid_at.isoformat()
+                            if hasattr(p.paid_at, "isoformat")
+                            else (str(p.paid_at) if p.paid_at else None)
+                        ),
+                        "payment_method": getattr(p, "method", None) or "offline",
                     }
                     for p in form_payments
                 ],
@@ -2290,9 +2394,17 @@ class PPDBService:
                 f"Waktu Pendaftaran: {applicant.get('created_at') or '-'}",
                 "----------------------------------------",
             ]
-            if raw_health.startswith("{"):
+            hdata = None
+            if isinstance(raw_health, dict):
+                hdata = raw_health
+            elif isinstance(raw_health, str) and raw_health.strip().startswith("{"):
                 try:
                     hdata = json.loads(raw_health)
+                except Exception:
+                    hdata = None
+
+            if hdata:
+                try:
                     chronic_txt = "Tidak"
                     if hdata.get("chronic_disease"):
                         chronic_desc = hdata.get("chronic_disease_description") or ""
@@ -2379,7 +2491,9 @@ class PPDBService:
             )
 
             transcript = dossier.get("transcript") or {}
-            evaluator_notes = transcript.get("evaluator_notes", "-")
+            raw_notes = transcript.get("evaluator_notes") or ""
+            from src.services.selection_service import clean_decision_notes
+
             result_notes = transcript.get("result_notes") or {}
             note_lines = []
             for comp_key, comp_label in (
@@ -2389,8 +2503,22 @@ class PPDBService:
                 ("wawancara", "Ujian Wawancara"),
             ):
                 note_val = (result_notes.get(comp_key) or "").strip()
+                if not note_val and comp_key in ("tahfidz", "wawancara"):
+                    # Data lama: catatan komponen memakai tag [Tahfidz]: / [Wawancara]:.
+                    for line in raw_notes.splitlines():
+                        m = re.match(
+                            rf"^\[{comp_key.title()}\]\s*:\s*(.+)$", line.strip()
+                        )
+                        if m:
+                            note_val = m.group(1).strip()
+                            break
                 if note_val:
                     note_lines.append(f"Catatan {comp_label}: {note_val}")
+            # Keputusan evaluator murni — buang pesan otomatis CBT & tag komponen.
+            decision_txt = transcript.get("decision_notes") or clean_decision_notes(
+                raw_notes
+            )
+            evaluator_notes = decision_txt or "-"
             transcript_txt = (
                 f"TRANSKRIP HASIL SELEKSI PPDB\n"
                 f"Pesantren Tahfidz Qur'an dan Digital Ar-Rahman\n"
@@ -2406,9 +2534,10 @@ class PPDBService:
             )
             zf.writestr("transkrip_nilai.txt", transcript_txt)
 
+            loa_dict = dossier.get("loa") or {}
             loa_txt = (
-                f"{dossier['loa'].get('content', '')}\n\n"
-                f"Ketentuan: {dossier['loa'].get('fixed_clause', '')}\n"
+                f"{loa_dict.get('content', '')}\n\n"
+                f"Ketentuan: {loa_dict.get('fixed_clause', '')}\n"
             )
             zf.writestr("surat_penerimaan_loa.txt", loa_txt)
 
@@ -2417,7 +2546,12 @@ class PPDBService:
                 ext = (
                     d.original_name.split(".")[-1] if "." in d.original_name else "dat"
                 )
-                filename = f"dokumen_asli/{d.doc_type}_{d.id[:8]}.{ext}"
+                doc_type = (
+                    d.entity_type.split(":", 1)[1]
+                    if d.entity_type and ":" in d.entity_type
+                    else (d.entity_type or "doc")
+                )
+                filename = f"dokumen_asli/{doc_type}_{d.id[:8]}.{ext}"
                 if d.data:
                     zf.writestr(filename, d.data)
                 elif d.storage_path and os.path.exists(d.storage_path):
@@ -2428,22 +2562,36 @@ class PPDBService:
 
         from src.models.auth import AuditLog
 
-        zip_full_name = applicant.get("full_name")
-        audit = AuditLog(
-            id=str(uuid.uuid4()),
-            user_id=admin_user.get("id"),
-            user_username=admin_user.get("username"),
-            action="download_dossier_zip",
-            entity_type="ppdb_dossier",
-            entity_id=applicant_id,
-            changes=(
-                f"Mengunduh ZIP dossier pendaftar {zip_full_name} ({applicant_id})"
-            ),
-            ip_address=ip_address,
-            created_at=datetime.now(WIB),
-        )
-        self.repository.db.add(audit)
-        self.repository.db.commit()
+        zip_full_name = applicant.get("full_name") or "Pendaftar"
+        try:
+            admin_id = admin_user.get("id") if admin_user else None
+            if admin_id:
+                user_exists = (
+                    self.repository.db.query(User.id)
+                    .filter(User.id == admin_id)
+                    .first()
+                )
+                if not user_exists:
+                    admin_id = None
+
+            audit = AuditLog(
+                id=str(uuid.uuid4()),
+                user_id=admin_id,
+                user_username=admin_user.get("username") if admin_user else None,
+                action="download_dossier_zip",
+                entity_type="ppdb_dossier",
+                entity_id=applicant_id,
+                changes=(
+                    f"Mengunduh ZIP dossier pendaftar {zip_full_name} ({applicant_id})"
+                ),
+                ip_address=ip_address,
+                created_at=datetime.now(WIB).replace(tzinfo=None),
+            )
+            self.repository.db.add(audit)
+            self.repository.db.commit()
+        except Exception as e:
+            self.repository.db.rollback()
+            logger.warning("Gagal mencatat audit log download_dossier_zip: %s", e)
 
         buffer.seek(0)
         zip_name = applicant.get("full_name", "pendaftar").replace(" ", "_")

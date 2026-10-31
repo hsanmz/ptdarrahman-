@@ -489,18 +489,24 @@ class PaymentService:
             if active_tx.status in ("success", "paid"):
                 return self._format_transaction_response(active_tx, applicant)
             if active_tx.status in OPEN_TRANSACTION_STATUSES:
-                if active_tx.payment_type == "form" and (
-                    amount is None or active_tx.amount == amount
+                # Transaksi terbuka hanya valid dipakai ulang jika SUDAH
+                # memiliki order_id dan qr_string dari gateway
+                if (
+                    (active_tx.payment_type or "form") == "form"
+                    and active_tx.order_id
+                    and active_tx.qr_string
+                    and (amount is None or active_tx.amount == amount)
                 ):
                     return self._format_transaction_response(active_tx, applicant)
-                raise HTTPException(
-                    status_code=400,
-                    detail=(
-                        "Anda memiliki transaksi QRIS yang belum terverifikasi. "
-                        "Silakan selesaikan atau batalkan transaksi tersebut "
-                        "terlebih dahulu sebelum membuat pembayaran baru."
-                    ),
-                )
+                if active_tx.order_id:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            "Anda memiliki transaksi QRIS yang belum terverifikasi. "
+                            "Silakan selesaikan atau batalkan transaksi tersebut "
+                            "terlebih dahulu sebelum membuat pembayaran baru."
+                        ),
+                    )
 
         # 2. Validasi aturan bisnis biaya formulir
         wave = (
@@ -608,22 +614,36 @@ class PaymentService:
             now_wib + timedelta(minutes=15)
         )
 
-        tx = PPDBPaymentTransaction(
-            id=str(uuid.uuid4()),
-            applicant_id=applicant.id,
-            order_id=order_id,
-            txn_id=created.txn_id,
-            payment_type="form",
-            amount=final_amount,
-            status="pending",
-            provider_status="pending",
-            method="qris_pakasir",
-            qr_string=created.qr_string,
-            expired_at=expired_dt,
-            created_at=now_wib,
-            updated_at=now_wib,
-        )
-        self.repo.save_transaction(tx)
+        if active_tx and not active_tx.order_id:
+            tx = active_tx
+            tx.order_id = order_id
+            tx.txn_id = created.txn_id
+            tx.payment_type = "form"
+            tx.amount = final_amount
+            tx.status = "pending"
+            tx.provider_status = "pending"
+            tx.method = "qris_pakasir"
+            tx.qr_string = created.qr_string
+            tx.expired_at = expired_dt
+            tx.updated_at = now_wib
+            self.repo.update_transaction(tx)
+        else:
+            tx = PPDBPaymentTransaction(
+                id=str(uuid.uuid4()),
+                applicant_id=applicant.id,
+                order_id=order_id,
+                txn_id=created.txn_id,
+                payment_type="form",
+                amount=final_amount,
+                status="pending",
+                provider_status="pending",
+                method="qris_pakasir",
+                qr_string=created.qr_string,
+                expired_at=expired_dt,
+                created_at=now_wib,
+                updated_at=now_wib,
+            )
+            self.repo.save_transaction(tx)
         return self._format_transaction_response(tx, applicant)
 
     def get_active_transaction(self, user_id: str) -> dict:

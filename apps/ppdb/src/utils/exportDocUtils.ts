@@ -2,7 +2,7 @@ import html2canvas from 'html2canvas'
 import { jsPDF } from 'jspdf'
 
 /**
- * Utilitas bersama untuk export dokumen resmi PPDB Ar-Rahman (A4 Portrait & Landscape).
+ * Utilitas bersama untuk export dokumen resmi PPDB PTDARRAHMAN (A4 Portrait & Landscape).
  * Memastikan aset font, gambar logo, favicon, dan SVG QR selesai dimuat secara presisi
  * sebelum rasterisasi canvas, sehingga hasil export identik 100% dengan preview.
  */

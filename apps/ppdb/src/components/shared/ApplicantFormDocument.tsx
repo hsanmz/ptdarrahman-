@@ -662,26 +662,18 @@ export default function ApplicantFormDocument({
             </p>
             <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-50 border border-emerald-200 text-emerald-800 text-[8.5px] font-medium mt-0.5">
               <ShieldCheck className="h-3 w-3 text-emerald-600 shrink-0" />
-              <span>Dokumen Sah & Terdaftar Resmi di Sistem PPDB Ar-Rahman</span>
+              <span>Dokumen Sah & Terdaftar Resmi di Sistem PPDB PTDARRAHMAN</span>
             </div>
           </div>
 
-          {/* Kolom Kanan: Office of Admission PPDB Ar-Rahman (Persis Format LoA) */}
+          {/* Kolom Kanan: Office of Admission PPDB PTDARRAHMAN (Persis Format LoA) */}
           <div className="text-right space-y-0.5 w-60">
             <p className="text-[10px] text-slate-600">Bekasi, {createdDateStr}</p>
             <p className="text-[11px] text-slate-600 leading-tight">Hormat Kami,</p>
-            <p className="text-[11px] font-bold text-slate-900 leading-tight">Office of Admission PPDB Ar-Rahman</p>
-            <div className="flex justify-end items-center gap-1.5 py-0.5">
+            <p className="text-[11px] font-bold text-slate-900 leading-tight">Office of Admission PPDB PTDARRAHMAN</p>
+            <div className="flex justify-end py-0.5">
               <div className="p-0.5 bg-white border border-slate-200 rounded shadow-2xs">
                 <QRCodeSVG value={verifyUrl} size={36} level="M" />
-              </div>
-              <div className="text-right">
-                <span className="text-[8.5px] font-mono text-emerald-700 block font-semibold leading-tight">
-                  VERIFIED DIGITAL
-                </span>
-                <span className="text-[8px] text-slate-400 block font-mono leading-tight">
-                  PANITIA PPDB
-                </span>
               </div>
             </div>
             <p className="text-[11px] font-bold underline text-slate-900 leading-tight">

@@ -1,5 +1,5 @@
 import { HealthIdentificationViewer } from './HealthIdentificationViewer'
-import { resultStatusLabel } from '@/lib/selectionStatus'
+import { cleanDecisionNotes, resultStatusLabel } from '@/lib/selectionStatus'
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { apiFetch, apiFetchBlob } from '@/api/client'
@@ -612,14 +612,18 @@ export default function ApplicantDossierModal({
                       </p>
                     )}
 
-                    {transcript?.evaluator_notes && (
-                      <div className="bg-slate-50 p-3 rounded-lg border text-xs">
-                        <span className="font-semibold text-slate-700 block mb-1">
-                          Catatan Dewan Penguji / Evaluator:
-                        </span>
-                        <p className="text-slate-600 whitespace-pre-wrap">{transcript.evaluator_notes}</p>
-                      </div>
-                    )}
+                    {(() => {
+                      const decisionNotes = transcript?.decision_notes ?? cleanDecisionNotes(transcript?.evaluator_notes)
+                      if (!decisionNotes) return null
+                      return (
+                        <div className="bg-slate-50 p-3 rounded-lg border text-xs">
+                          <span className="font-semibold text-slate-700 block mb-1">
+                            Catatan Dewan Penguji / Evaluator:
+                          </span>
+                          <p className="text-slate-600 whitespace-pre-line italic border-l-2 border-slate-300 pl-2.5">{decisionNotes}</p>
+                        </div>
+                      )
+                    })()}
                   </div>
                 </TabsContent>
 

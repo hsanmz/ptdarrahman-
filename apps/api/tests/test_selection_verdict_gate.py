@@ -43,6 +43,9 @@ def db():
 def active_wave(db: Session):
     db.query(PPDBWave).update({"status": "inactive"})
     db.query(PPDBPeriod).update({"status": "inactive"})
+    db.query(SelectionScore).delete()
+    db.query(SelectionCriteria).delete()
+    db.query(SelectionCategory).delete()
     db.commit()
 
     now = datetime.now()

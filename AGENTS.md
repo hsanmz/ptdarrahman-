@@ -1,4 +1,4 @@
-# Panduan Agent — PPDB Ar-Rahman
+# Panduan Agent — PPDB PTDARRAHMAN
 
 > Dokumen ini adalah panduan utama bagi AI agent yang bekerja di monorepo ini. Gunakan sebagai referensi pertama sebelum membaca kode. Selalu prioritaskan dokumen di `docs/` sebagai acuan aturan bisnis terbaru — jangan menerapkan flow lama dari arsip kode atau README lama tanpa konfirmasi.
 

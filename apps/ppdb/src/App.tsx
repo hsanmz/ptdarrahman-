@@ -31,6 +31,7 @@ import AdminProfilePage from './pages/admin/ProfilePage'
 import SelectionPage from './pages/admin/ppdb/SelectionPage'
 import LoaPage from './pages/admin/ppdb/LoaPage'
 import ArsipPendaftarPage from './pages/admin/ppdb/ArsipPendaftarPage'
+import ArsipDossierDetailPage from './pages/admin/ppdb/ArsipDossierDetailPage'
 import VerifikasiDokumenPage from './pages/admin/ppdb/VerifikasiDokumenPage'
 import VerifikasiDokumenDetailPage from './pages/admin/ppdb/VerifikasiDokumenDetailPage'
 import PembayaranFormulirPage from './pages/admin/ppdb/PembayaranFormulirPage'
@@ -101,6 +102,7 @@ export default function App() {
               <Route path="penilaian" element={<PenilaianPage />} />
               <Route path="review-loa" element={<ReviewLoaPage />} />
               <Route path="arsip" element={<ArsipPendaftarPage />} />
+              <Route path="arsip/:id" element={<ArsipDossierDetailPage />} />
               <Route path="periods" element={<PeriodsPage />} />
               <Route path="notifications" element={<NotificationsPage />} />
               <Route path="selection" element={<SelectionPage />} />

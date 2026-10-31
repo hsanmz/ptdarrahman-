@@ -242,7 +242,7 @@ export function exportAllApplicantsToWord(
     <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
     <head>
       <meta charset='utf-8'>
-      <title>Rekapitulasi Data Formulir Pendaftar PPDB Ar-Rahman - ${periodName}</title>
+      <title>Rekapitulasi Data Formulir Pendaftar PPDB PTDARRAHMAN - ${periodName}</title>
       <!--[if gte mso 9]>
       <xml>
         <w:WordDocument>
@@ -434,13 +434,12 @@ export function exportAllApplicantsToWord(
             <td width="40%" style="text-align: right;">
               <div style="font-size: 8pt; color: #475569;">Bekasi, ${nowStr.split(' pukul')[0]}</div>
               <div style="font-size: 8pt; color: #475569; margin-top: 2pt;">Hormat Kami,</div>
-              <div style="font-size: 9.5pt; font-weight: bold; color: #0f172a; margin-top: 1pt;">Office of Admission PPDB Ar-Rahman</div>
+              <div style="font-size: 9.5pt; font-weight: bold; color: #0f172a; margin-top: 1pt;">Office of Admission PPDB PTDARRAHMAN</div>
               <div style="margin: 6pt 0 4pt 0;">
                 <table border="0" cellspacing="0" cellpadding="0" style="margin-left: auto;">
                   <tr>
                     <td style="border: 1pt solid #cbd5e1; padding: 4pt 8pt; background: #f0fdf4; border-radius: 4pt; text-align: center;">
-                      <span style="font-family: monospace; font-size: 8pt; font-weight: bold; color: #065f46;">[ QR VERIFIKASI RESMI DIGITAL ]</span><br/>
-                      <span style="font-size: 7pt; color: #047857; font-family: monospace;">VERIFIED DIGITAL · PANITIA PPDB</span>
+                      <span style="font-family: monospace; font-size: 8pt; font-weight: bold; color: #065f46;">[ QR VERIFIKASI RESMI DIGITAL ]</span>
                     </td>
                   </tr>
                 </table>
@@ -732,17 +731,13 @@ export function exportAllApplicantsToPdf(
         <div class="signature-box" style="text-align: right; width: 280px; font-size: 8pt;">
           <div style="color: #64748b;">Bekasi, ${nowStr.split(' pukul')[0]}</div>
           <div style="color: #64748b; margin-top: 2px;">Hormat Kami,</div>
-          <div style="font-weight: bold; color: #0f172a; font-size: 9pt; margin-top: 1px;">Office of Admission PPDB Ar-Rahman</div>
-          <div style="display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin: 6px 0;">
+          <div style="font-weight: bold; color: #0f172a; font-size: 9pt; margin-top: 1px;">Office of Admission PPDB PTDARRAHMAN</div>
+          <div style="display: flex; justify-content: flex-end; margin: 6px 0;">
             <div style="border: 1px solid #cbd5e1; padding: 3px; border-radius: 4px; background: #ffffff;">
               <svg width="42" height="42" viewBox="0 0 33 33" shape-rendering="crispEdges">
                 <rect width="33" height="33" fill="#ffffff"/>
                 <path d="M0 0h7v7H0zm1 1v5h5V1zm1 1h3v3H2zm7-2h1v3h-1zm2 0h2v1h-2zm3 0h1v1h-1zm2 0h1v2h-1zm2 0h1v1h-1zm2 0h7v7h-7zm1 1v5h5V1zm1 1h3v3h-3zm-11 1h1v1h-1zm3 0h2v1h-2zm-5 1h1v1h-1zm6 0h1v1h-1zm-4 1h1v2h-1zm2 0h1v1h-1zm1 0h2v1h-2zm-3 1h1v1h-1zm5 0h1v2h-1zm-6 1h1v2h-1zm3 0h1v1h-1zm-8 2h1v1H0zm2 0h2v1H2zm3 0h1v2H5zm2 0h1v1H7zm2 0h1v1H9zm2 0h3v1h-3zm4 0h1v1h-1zm3 0h1v1h-1zm2 0h1v1h-1zm2 0h1v2h-1zm2 0h1v1h-1zm2 0h2v1h-2zm-19 1h1v2H6zm3 0h2v1H9zm3 0h1v2h-1zm3 0h2v1h-2zm3 0h1v1h-1zm3 0h1v1h-1zm3 0h1v1h-1zm2 0h1v2h-1zm-22 1h1v1H3zm4 0h1v1H7zm4 0h1v1h-1zm5 0h2v1h-2zm3 0h1v1h-1zm-18 1h1v1H1zm2 0h1v1H3zm2 0h1v1H5zm6 0h1v1h-1zm2 0h1v1h-1zm3 0h1v1h-1zm2 0h2v1h-2zm4 0h1v1h-1zm-17 1h1v2H2zm2 0h1v1H4zm3 0h2v1H7zm3 0h2v1h-2zm3 0h1v1h-1zm2 0h2v1h-2zm4 0h1v2h-1zm-14 1h1v1H5zm8 0h1v1h-1zm3 0h1v1h-1zm2 0h1v1h-1zm-19 1h1v2H0zm2 0h1v1H2zm3 0h1v1H5zm4 0h1v1H9zm2 0h1v1h-1zm2 0h1v1h-1zm3 0h1v1h-1zm3 0h2v1h-2zm3 0h1v1h-1zm2 0h1v1h-1zm1 0h2v1h-2zm-20 1h2v1H1zm4 0h1v1H5zm2 0h1v1H7zm3 0h1v1h-1zm4 0h1v1h-1zm2 0h1v1h-1zm3 0h1v1h-1zm-19 1h7v7H0zm1 1v5h5v-5zm1 1h3v3H2zm7-2h1v1h-1zm3 0h1v1h-1zm3 0h1v2h-1zm2 0h1v1h-1zm2 0h1v1h-1zm2 0h1v1h-1zm3 0h1v1h-1zm-15 1h1v1H9zm5 0h1v1h-1zm3 0h1v1h-1zm2 0h1v1h-1zm-10 1h1v1H9zm2 0h1v1h-1zm3 0h1v2h-1zm2 0h1v1h-1zm3 0h1v1h-1zm-9 1h1v2H8zm2 0h1v1h-1zm3 0h1v1h-1zm3 0h1v1h-1zm-8 1h1v1H7zm3 0h1v1h-1zm5 0h1v1h-1zm-7 1h1v1H8zm2 0h1v1h-1zm4 0h1v1h-1zm-6 1h2v1H8zm3 0h2v1h-2zm3 0h1v1h-1z" fill="#065f46"/>
               </svg>
-            </div>
-            <div style="text-align: right;">
-              <span style="font-family: monospace; font-size: 7.5pt; font-weight: bold; color: #065f46; display: block;">VERIFIED DIGITAL</span>
-              <span style="font-size: 6.5pt; color: #64748b; font-family: monospace; display: block;">PANITIA PPDB</span>
             </div>
           </div>
           <div style="font-weight: bold; text-decoration: underline; color: #0f172a; font-size: 9pt;">${committeeHead}</div>

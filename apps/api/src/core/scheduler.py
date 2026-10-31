@@ -1,6 +1,6 @@
 """apps/api/src/core/scheduler.py
 
-Automated Scheduler Service for PPDB Ar-Rahman.
+Automated Scheduler Service for PPDB PTDARRAHMAN.
 Features:
 - Background worker thread with Asia/Jakarta timezone.
 - Periodic cleanup of expired / revoked auth tokens & sessions.

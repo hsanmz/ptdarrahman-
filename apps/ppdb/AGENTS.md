@@ -44,7 +44,7 @@ Aplikasi frontend Penerimaan Peserta Didik Baru (PPDB) untuk Pesantren Tahfidz Q
 - `/applicant/kartu-ujian` (`ExamCardPage`): Unduh kartu ujian/identitas pendaftar.
 
 ### 3. Admin Protected Routes (`role="admin"`, wrapped in `AdminLayout`)
-- `/admin/dashboard` (`AdminDashboardPage`): Statistik pendaftar, analitik ringkas, dan jadwal seleksi/wawancara milik admin.
+- `/admin/dashboard` (`AdminDashboardPage`): Statistik pendaftar, tren registrasi, panel perlu perhatian, dan status standby gelombang.
 - `/admin/data-pendaftar` (`DataPendaftarPage`): Ringkasan dan tabel pendaftar aktif (gelombang aktif).
 - `/admin/verifikasi-dokumen` (`VerifikasiDokumenPage`): Daftar pendaftar untuk verifikasi berkas persyaratan.
 - `/admin/verifikasi-dokumen/:id` (`VerifikasiDokumenDetailPage`): Detail verifikasi berkas dan kuesioner kesehatan per pendaftar (dua kolom dengan DocTrigger).
@@ -65,7 +65,8 @@ Aplikasi frontend Penerimaan Peserta Didik Baru (PPDB) untuk Pesantren Tahfidz Q
 - `/admin/review-loa` (`ReviewLoaPage`): Monitoring seluruh penerima LoA resmi (lulus), status tanda tangan digital orang tua & santri, dan unduh berkas LoA.
 - `/admin/periods` (`PeriodsPage`): Manajemen periode, master komponen biaya (`PeriodFeeItemsModal`), gelombang pendaftaran, dan diskonasi (`WavesSheet`).
 - `/admin/rubrik` & `/admin/selection` (`SelectionPage`): Konfigurasi kriteria dan bobot rubrik penilaian seleksi.
-- `/admin/arsip` (`ArsipPendaftarPage`): Pencarian arsip dossier lengkap lintas periode/gelombang dan ekspor bundle ZIP.
+- `/admin/arsip` (`ArsipPendaftarPage`): Pencarian arsip lintas periode/gelombang (klik baris pendaftar langsung membuka halaman detail arsip berkas).
+- `/admin/arsip/:id` (`ArsipDossierDetailPage`): Halaman detail berkas arsip & dossier pendaftar dengan 2 panel independent scroll: panel kiri pratinjau seluruh berkas (Formulir, Dokumen Upload terverifikasi, Lembar Penilaian, dan LoA dalam 1x scroll vertikal kontinu) dan panel kanan (atas: pusat unduhan ZIP/PDF/PNG/Cetak, bawah: navigator daftar berkas aktif).
 - `/admin/notifications` (`NotificationsPage`): Riwayat pengiriman dan template notifikasi WhatsApp.
 - `/admin/profile` (`AdminProfilePage`): Pengaturan profil admin, ganti password, avatar editor, dan manajemen sesi login multi-perangkat.
 

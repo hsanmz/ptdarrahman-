@@ -42,6 +42,7 @@ import { useToast } from '@/components/Toast'
 import { useCanPage } from '@/hooks/useCan'
 import { cn } from '@/lib/utils'
 import {
+  cleanDecisionNotes,
   resultStatusMeta,
   resultStatusLabel,
 } from '@/lib/selectionStatus'
@@ -190,12 +191,9 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
   const [verdictMode, setVerdictMode] = useState<null | 'passed' | 'conditional' | 'waitlist' | 'failed' | 'selection'>(null)
   const [verdictReason, setVerdictReason] = useState('')
   const [isDownloading, setIsDownloading] = useState<'pdf' | 'image' | null>(null)
-  const [noteDrafts, setNoteDrafts] = useState<Record<NoteField, string>>({
-    notes_akademik: '',
-    notes_psikologi: '',
-    notes_tahfidz: '',
-    notes_wawancara: '',
-  })
+  // Draf catatan: nilai server jadi basis; suntingan diperingkat per applicant id
+  // dan langsung lepas saat tersimpan, jadi refetch tidak menyetel ulang textarea.
+  const [noteEdits, setNoteEdits] = useState<Record<string, Partial<Record<NoteField, string>>>>({})
 
   const { data, isLoading } = useQuery({
     queryKey: ['applicant-transcript-view', applicant?.id],
@@ -206,17 +204,28 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
     enabled: open && !!applicant?.id,
   })
 
-  useEffect(() => {
-    if (!open) return
-    const resultNotes = (data?.result_notes || {}) as Record<string, string | null>
-    const legacy = parseLegacyComponentNotes(data?.evaluator_notes)
-    setNoteDrafts({
-      notes_akademik: resultNotes.akademik || '',
-      notes_psikologi: resultNotes.psikologi || '',
-      notes_tahfidz: resultNotes.tahfidz || legacy.notes_tahfidz || '',
-      notes_wawancara: resultNotes.wawancara || legacy.notes_wawancara || '',
+  const serverNotes = (data?.result_notes || {}) as Record<string, string | null>
+  const legacyServerNotes = parseLegacyComponentNotes(data?.evaluator_notes)
+  const fieldEdits = noteEdits[applicant?.id || ''] || {}
+  const draftFor = (field: NoteField): string => {
+    if (fieldEdits[field] !== undefined) return fieldEdits[field] as string
+    if (field === 'notes_akademik') return serverNotes.akademik || ''
+    if (field === 'notes_psikologi') return serverNotes.psikologi || ''
+    if (field === 'notes_tahfidz') return serverNotes.tahfidz || legacyServerNotes.notes_tahfidz || ''
+    return serverNotes.wawancara || legacyServerNotes.notes_wawancara || ''
+  }
+  const setDraft = (field: NoteField, value: string) =>
+    setNoteEdits(prev => ({
+      ...prev,
+      [applicant?.id || '']: { ...(prev[applicant?.id || ''] || {}), [field]: value },
+    }))
+  const clearDraft = (field: NoteField) =>
+    setNoteEdits(prev => {
+      const id = applicant?.id || ''
+      const current = { ...(prev[id] || {}) }
+      delete current[field]
+      return { ...prev, [id]: current }
     })
-  }, [open, data?.result_notes, data?.evaluator_notes])
 
   const verdictMutation = useMutation({
     mutationFn: (payload: { status: string; reason?: string }) =>
@@ -237,14 +246,16 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
 
   const notesMutation = useMutation({
     mutationFn: (field: NoteField) => {
-      const value = noteDrafts[field].trim()
+      const value = draftFor(field).trim()
       return api.apiFetch(`/selection/applicants/${applicant!.id}/result-notes`, {
         method: 'PUT',
         body: JSON.stringify({ [field]: value }),
       })
     },
-    onSuccess: () => {
+    onSuccess: (_r, field) => {
       toast('success', 'Catatan hasil seleksi tersimpan')
+      // Nilai server kini jadi sumber — suntingan lokal boleh lepas.
+      if (field) clearDraft(field)
       queryClient.invalidateQueries({ queryKey: ['applicant-transcript-view', applicant?.id] })
     },
     onError: (e: any) => toast('error', e.message || 'Gagal menyimpan catatan'),
@@ -274,7 +285,9 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
   const appData = data?.applicant || applicant
   const categories: any[] = data?.categories || []
   const cbtResults = data?.cbt_results || {}
-  const evaluatorNotes = data?.evaluator_notes
+  // Backend mengirim teks keputusan murni (decision_notes); fallback pembersihan
+  // untuk tangkapan data lama/transkrip cache — pesan otomatis CBT & tag komponen dibuang.
+  const evaluatorNotes = data?.decision_notes ?? cleanDecisionNotes(data?.evaluator_notes)
   const graduationStatus = data?.graduation_status || applicant.status
 
   // Kelengkapan nilai — hasil pendaftaran hanya aktif bila seluruh nilai masuk.
@@ -418,10 +431,10 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
               icon={Monitor}
               iconWrap="bg-indigo-50 text-indigo-700"
               result={cbtResults.akademik || null}
-              noteValue={noteDrafts.notes_akademik}
+              noteValue={draftFor('notes_akademik')}
               disabled={notesMutation.isPending}
               saving={notesMutation.isPending}
-              onNoteChange={(v) => setNoteDrafts(s => ({ ...s, notes_akademik: v }))}
+              onNoteChange={(v) => setDraft('notes_akademik', v)}
               onSaveNote={() => notesMutation.mutate('notes_akademik')}
             />
 
@@ -432,10 +445,10 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
               icon={Brain}
               iconWrap="bg-sky-50 text-sky-700"
               result={cbtResults.psikologi || null}
-              noteValue={noteDrafts.notes_psikologi}
+              noteValue={draftFor('notes_psikologi')}
               disabled={notesMutation.isPending}
               saving={notesMutation.isPending}
-              onNoteChange={(v) => setNoteDrafts(s => ({ ...s, notes_psikologi: v }))}
+              onNoteChange={(v) => setDraft('notes_psikologi', v)}
               onSaveNote={() => notesMutation.mutate('notes_psikologi')}
             />
 
@@ -504,8 +517,8 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                   </Button>
                 </div>
                 <Textarea
-                  value={noteDrafts.notes_tahfidz}
-                  onChange={(e) => setNoteDrafts(s => ({ ...s, notes_tahfidz: e.target.value }))}
+                  value={draftFor('notes_tahfidz')}
+                  onChange={(e) => setDraft('notes_tahfidz', e.target.value)}
                   rows={2}
                   placeholder="Catatan kelancaran hafalan, target juz, mantra keplelian, dan rekomendasi kelas..."
                   className="text-xs mt-1.5 resize-none"
@@ -578,8 +591,8 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                   </Button>
                 </div>
                 <Textarea
-                  value={noteDrafts.notes_wawancara}
-                  onChange={(e) => setNoteDrafts(s => ({ ...s, notes_wawancara: e.target.value }))}
+                  value={draftFor('notes_wawancara')}
+                  onChange={(e) => setDraft('notes_wawancara', e.target.value)}
                   rows={2}
                   placeholder="Catatan sikap wawancara, komitmen pendidikan, kesiapan keluarga, dan rekomendasi..."
                   className="text-xs mt-1.5 resize-none"
@@ -623,39 +636,47 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                 </Badge>
               </div>
 
-              {/* Catatan evaluator terakhir (hasil final) */}
+              {/* Catatan evaluator (hasil final) */}
               {evaluatorNotes && graduationStatus !== 'selection' && (
-                <div className="px-4 py-2.5 bg-white border-t border-slate-100">
-                  <p className="text-[11px] text-slate-700"><span className="font-semibold text-slate-800">Catatan Evaluator:</span> <span className="italic">{evaluatorNotes}</span></p>
+                <div className="px-4 py-3 bg-slate-50/70 border-t border-slate-100">
+                  <p className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-500 mb-1.5">
+                    Catatan Evaluator
+                  </p>
+                  <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-line italic border-l-2 border-slate-300 pl-2.5">
+                    {evaluatorNotes}
+                  </p>
                 </div>
               )}
 
               {/* Tombol Validasi — hanya tampil jika admin punya hak */}
               {canCrud && !verdictMode && (
-                <div className="px-4 py-3 border-t border-slate-200/80 bg-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                  <p className={cn(
-                    "text-xs",
-                    scoresComplete ? "text-muted-foreground" : "text-amber-700 font-medium flex items-start gap-1.5"
-                  )}>
+                <div className="px-4 py-3 border-t border-slate-200/80 bg-white space-y-2.5">
+                  {/* Pesan kelengkapan nilai — baris penuh, sendiri */}
+                  <p className="text-xs leading-relaxed">
                     {!scoresComplete ? (
                       isLoading ? (
-                        <span>Memuat data nilai pendaftar…</span>
+                        <span className="text-muted-foreground">Memuat data nilai pendaftar…</span>
                       ) : (
-                        <>
+                        <span className="flex items-start gap-1.5 text-amber-700 font-medium">
                           <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" />
                           <span>
-                            Hasil hanya dapat ditetapkan setelah seluruh nilai masuk. Nilai belum lengkap: {missingScores.join(', ')}.
+                            {(graduationStatus && graduationStatus !== 'selection')
+                              ? `Hasil sudah ditetapkan, tetapi nilai berikut belum masuk: ${missingScores.join(', ')}. Lengkapi nilai terlebih dahulu untuk mengubah kategori hasil.`
+                              : `Hasil hanya dapat ditetapkan setelah seluruh nilai masuk. Nilai belum lengkap: ${missingScores.join(', ')}.`}
                           </span>
-                        </>
+                        </span>
                       )
-                    ) : graduationStatus === 'selection' || !graduationStatus
-                      ? 'Tetapkan hasil pendaftaran pendaftar ini.'
-                      : 'Ubah kategori hasil yang sudah ditetapkan.'}
+                    ) : graduationStatus === 'selection' || !graduationStatus ? (
+                      <span className="text-muted-foreground">Tetapkan hasil pendaftaran pendaftar ini.</span>
+                    ) : (
+                      <span className="text-muted-foreground">Ubah kategori hasil yang sudah ditetapkan.</span>
+                    )}
                   </p>
-                  <div className="flex flex-wrap items-center gap-2 shrink-0 w-full sm:w-auto justify-start sm:justify-end">
+                  {/* Empat kategori hasil — grid rapi, lebar sama */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                     <Button
                       size="sm"
-                      className="h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white w-full sm:w-auto"
+                      className="h-8 text-xs gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white w-full"
                       onClick={() => setVerdictMode('passed')}
                       disabled={verdictMutation.isPending || !scoresComplete}
                     >
@@ -664,7 +685,7 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 text-xs gap-1.5 bg-sky-50 border-sky-200 text-sky-800 hover:bg-sky-100 w-full sm:w-auto"
+                      className="h-8 text-xs gap-1.5 bg-sky-50 border-sky-200 text-sky-800 hover:bg-sky-100 w-full"
                       onClick={() => setVerdictMode('conditional')}
                       disabled={verdictMutation.isPending || !scoresComplete}
                     >
@@ -673,7 +694,7 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                     <Button
                       size="sm"
                       variant="outline"
-                      className="h-8 text-xs gap-1.5 bg-violet-50 border-violet-200 text-violet-800 hover:bg-violet-100 w-full sm:w-auto"
+                      className="h-8 text-xs gap-1.5 bg-violet-50 border-violet-200 text-violet-800 hover:bg-violet-100 w-full"
                       onClick={() => setVerdictMode('waitlist')}
                       disabled={verdictMutation.isPending || !scoresComplete}
                     >
@@ -682,24 +703,26 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
                     <Button
                       size="sm"
                       variant="destructive"
-                      className="h-8 text-xs gap-1.5 w-full sm:w-auto"
+                      className="h-8 text-xs gap-1.5 w-full"
                       onClick={() => setVerdictMode('failed')}
                       disabled={verdictMutation.isPending || !scoresComplete}
                     >
                       <ThumbsDown className="h-3.5 w-3.5" /> Tidak Diterima
                     </Button>
-                    {(graduationStatus !== 'selection' && graduationStatus) && (
+                  </div>
+                  {(graduationStatus && graduationStatus !== 'selection') && (
+                    <div className="flex justify-end pt-0.5">
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-8 text-xs gap-1.5 text-slate-600 w-full sm:w-auto"
+                        className="h-7 text-[11px] gap-1.5 text-slate-600 border-slate-200 bg-white"
                         onClick={() => setVerdictMode('selection')}
                         disabled={verdictMutation.isPending}
                       >
-                        <RotateCcw className="h-3.5 w-3.5" /> Reset ke Dalam Proses
+                        <RotateCcw className="h-3 w-3" /> Reset ke Dalam Proses
                       </Button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -802,7 +825,12 @@ function ScoreDetailModal({ applicant, open, onOpenChange, onStatusChanged, logo
           applicant={appData}
           categories={categories}
           cbtResults={cbtResults}
-          resultNotes={noteDrafts}
+          resultNotes={{
+            notes_akademik: draftFor('notes_akademik'),
+            notes_psikologi: draftFor('notes_psikologi'),
+            notes_tahfidz: draftFor('notes_tahfidz'),
+            notes_wawancara: draftFor('notes_wawancara'),
+          }}
           evaluatorNotes={evaluatorNotes}
           graduationStatus={graduationStatus}
           logoUrl={logoUrl}

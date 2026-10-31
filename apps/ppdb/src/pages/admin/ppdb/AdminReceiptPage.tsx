@@ -93,7 +93,7 @@ export default function AdminReceiptPage() {
   const handleWhatsApp = () => {
     if (!shareUrl || !receipt) return
     const text = encodeURIComponent(
-      `*KUITANSI RESMI PEMBAYARAN PPDB AR-RAHMAN*\n\n` +
+      `*KUITANSI RESMI PEMBAYARAN PPDB PTDARRAHMAN*\n\n` +
       `No. Kuitansi: *${receipt.receipt_no}*\n` +
       `Nama: ${receipt.applicant_name}\n` +
       `Nominal: Rp ${Number(receipt.amount || 0).toLocaleString('id-ID')}\n` +

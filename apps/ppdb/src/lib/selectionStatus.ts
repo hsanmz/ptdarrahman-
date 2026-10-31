@@ -98,3 +98,18 @@ export const RESULT_STATUS_DECISION: Record<
 export function resultStatusDecision(status?: string | null) {
   return RESULT_STATUS_DECISION[status || 'selection'] || RESULT_STATUS_DECISION.selection
 }
+
+// Data lama: teks bersama result.notes menumpuk pesan otomatis CBT
+// ("Nilai Tes Akademik: 40.0 (Selesai pada ...)") dan tag komponen
+// "[Tahfidz]:" / "[Wawancara]:". Untuk tampilan Catatan Evaluator,
+// keduanya dibuang — skor CBT ada di kartu komponen, catatan komponen
+// ada di kolom/kotak masing-masing.
+export function cleanDecisionNotes(raw?: string | null): string {
+  if (!raw) return ''
+  let text = String(raw).replace(
+    /Nilai\s+Tes\s+(Akademik|Psikologi)\s*:[^\n]*/gi,
+    '',
+  )
+  text = text.replace(/\[\s*(Tahfidz|Wawancara)\s*\]\s*:[^\n]*/gi, '')
+  return text.replace(/\n{2,}/g, '\n').trim()
+}

@@ -5,7 +5,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui'
 import { Badge } from '@/components/ui'
 import { Printer, FileText, Award } from 'lucide-react'
-import { resultStatusLabel } from '@/lib/selectionStatus'
+import { cleanDecisionNotes, resultStatusLabel } from '@/lib/selectionStatus'
 
 interface ApplicantTranscriptModalProps {
   open: boolean
@@ -34,7 +34,7 @@ export default function ApplicantTranscriptModal({
 
   const applicant = data?.applicant
   const categories = data?.categories || []
-  const notes = data?.evaluator_notes
+  const notes = data?.decision_notes ?? cleanDecisionNotes(data?.evaluator_notes)
   const graduationStatus = data?.graduation_status
 
   // Hitung rata-rata skor kriteria jika ada
@@ -153,7 +153,7 @@ export default function ApplicantTranscriptModal({
             {notes && (
               <div className="p-3 border rounded bg-slate-50 text-xs space-y-1">
                 <span className="font-semibold text-slate-700 block">Catatan Tim Evaluator:</span>
-                <p className="text-slate-800 italic">{notes}</p>
+                <p className="text-slate-800 italic whitespace-pre-line border-l-2 border-slate-300 pl-2.5">{notes}</p>
               </div>
             )}
 

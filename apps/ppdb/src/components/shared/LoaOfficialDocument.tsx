@@ -300,10 +300,10 @@ export default function LoaOfficialDocument({ data, page = 'both' }: LoaOfficial
             )}
           </div>
 
-          {/* Pihak 2: Office of Admission PPDB Ar-Rahman */}
+          {/* Pihak 2: Office of Admission PPDB PTDARRAHMAN */}
           <div className="text-right space-y-0.5 w-60">
             <p className="text-xs text-slate-600 leading-tight">Hormat Kami,</p>
-            <p className="text-xs font-bold text-slate-900 leading-tight">Office of Admission PPDB Ar-Rahman</p>
+            <p className="text-xs font-bold text-slate-900 leading-tight">Office of Admission PPDB PTDARRAHMAN</p>
             <div className="flex justify-end py-1">
               <div className="p-0.5 bg-white border border-slate-200 rounded shadow-2xs">
                 <QRCodeSVG value={officialVerifyUrl} size={42} level="M" />
@@ -382,11 +382,11 @@ export default function LoaOfficialDocument({ data, page = 'both' }: LoaOfficial
             <tbody className="divide-y divide-slate-200">
               <tr>
                 <td className="py-1.5 px-3 font-semibold text-slate-800 align-top border border-slate-200">
-                  Dashboard Santri Ar-Rahman
+                  Dashboard Santri PTDARRAHMAN
                 </td>
                 <td className="py-1.5 px-3 text-slate-700 leading-relaxed border border-slate-200">
                   <ol className="list-decimal pl-4 space-y-0.5">
-                    <li>Akses dashboard resmi PPDB Ar-Rahman menggunakan nomor registrasi dan password akun pendaftaran Anda.</li>
+                    <li>Akses dashboard resmi PPDB PTDARRAHMAN menggunakan nomor registrasi dan password akun pendaftaran Anda.</li>
                     <li>Setelah LoA ditandatangani digital oleh orang tua / wali, pantau status administrasi dan berkas kelulusan Anda.</li>
                   </ol>
                 </td>
@@ -500,7 +500,7 @@ export default function LoaOfficialDocument({ data, page = 'both' }: LoaOfficial
 
           <div className="text-right space-y-0.5 w-60">
             <p className="text-xs text-slate-600 leading-tight">Hormat Kami,</p>
-            <p className="text-xs font-bold text-slate-900 leading-tight">Office of Admission PPDB Ar-Rahman</p>
+            <p className="text-xs font-bold text-slate-900 leading-tight">Office of Admission PPDB PTDARRAHMAN</p>
             <div className="flex justify-end py-1">
               <div className="p-0.5 bg-white border border-slate-200 rounded shadow-2xs">
                 <QRCodeSVG value={officialVerifyUrl} size={42} level="M" />

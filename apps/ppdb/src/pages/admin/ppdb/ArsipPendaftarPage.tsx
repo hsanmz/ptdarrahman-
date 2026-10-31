@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import * as api from '@/api/client'
 import {
@@ -19,7 +20,6 @@ import {
   Search,
   RotateCcw,
   Shield,
-  FileText,
   UserRoundSearch,
   Filter,
   ChevronRight,
@@ -27,7 +27,6 @@ import {
 import PageHeaderCard from '@/components/shared/PageHeaderCard'
 import PaginationControls from '@/components/shared/PaginationControls'
 import PaymentStatusBadge from '@/components/shared/PaymentStatusBadge'
-import ApplicantDossierModal from '@/components/shared/ApplicantDossierModal'
 import { cn } from '@/lib/utils'
 import { resultStatusMeta } from '@/lib/selectionStatus'
 
@@ -101,6 +100,7 @@ function SelectionStatusBadge({ status }: { status?: string }) {
 }
 
 export default function ArsipPendaftarPage() {
+  const navigate = useNavigate()
   const [periodFilter, setPeriodFilter] = useState<string>('')
   const [waveFilter, setWaveFilter] = useState<string>('')
   const [statusFilter, setStatusFilter] = useState<string>('')
@@ -108,9 +108,6 @@ export default function ArsipPendaftarPage() {
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [page, setPage] = useState<number>(1)
   const limit = 20
-
-  const [selectedApplicantId, setSelectedApplicantId] = useState<string | null>(null)
-  const [dossierOpen, setDossierOpen] = useState(false)
 
   // Fetch all periods for cross-period filtering
   const { data: periodsData } = useQuery<PeriodItem[]>({
@@ -176,11 +173,6 @@ export default function ArsipPendaftarPage() {
     setSearchInput('')
     setSearchQuery('')
     setPage(1)
-  }
-
-  const handleOpenDossier = (applicantId: string) => {
-    setSelectedApplicantId(applicantId)
-    setDossierOpen(true)
   }
 
   const activePeriodObj = periodsData?.find((p) => p.id === periodFilter)
@@ -359,17 +351,14 @@ export default function ArsipPendaftarPage() {
               <TableHead className="text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
                 Status Seleksi
               </TableHead>
-              <TableHead className="text-right text-[11px] font-bold uppercase tracking-wider text-slate-500 whitespace-nowrap">
-                Dossier Lengkap
-              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
-              <TableSkeletonRows cols={7} rows={6} />
+              <TableSkeletonRows cols={5} rows={6} />
             ) : applicants.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="py-12">
+                <TableCell colSpan={5} className="py-12">
                   <EmptyState
                     icon={UserRoundSearch}
                     title="Tidak Ada Data Terarsip"
@@ -382,8 +371,9 @@ export default function ArsipPendaftarPage() {
               applicants.map((a: any) => (
                 <TableRow
                   key={a.id}
-                  onClick={() => handleOpenDossier(a.id)}
-                  className="group transition-colors cursor-pointer hover:bg-emerald-50/40"
+                  onClick={() => navigate(`/admin/arsip/${a.id}`)}
+                  className="group transition-colors cursor-pointer hover:bg-emerald-50/50"
+                  title="Klik untuk membuka detail arsip & berkas lengkap calon santri"
                 >
                   <TableCell className="min-w-[180px]">
                     <div className="font-semibold text-slate-900 group-hover:text-emerald-700 transition-colors">
@@ -408,22 +398,10 @@ export default function ArsipPendaftarPage() {
                     <DocStatusBadge status={a.status} />
                   </TableCell>
                   <TableCell className="whitespace-nowrap">
-                    <SelectionStatusBadge status={a.status} />
-                  </TableCell>
-                  <TableCell className="text-right whitespace-nowrap">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 text-xs font-medium gap-1.5 border-emerald-300 text-emerald-800 hover:bg-emerald-50 shadow-sm"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        handleOpenDossier(a.id)
-                      }}
-                    >
-                      <FileText className="h-3.5 w-3.5 text-emerald-600" />
-                      Buka Dossier
-                      <ChevronRight className="h-3.5 w-3.5 text-emerald-400 group-hover:translate-x-0.5 transition-transform" />
-                    </Button>
+                    <div className="flex items-center justify-between gap-3">
+                      <SelectionStatusBadge status={a.status} />
+                      <ChevronRight className="h-4 w-4 text-slate-400 group-hover:text-emerald-600 group-hover:translate-x-0.5 transition-all" />
+                    </div>
                   </TableCell>
                 </TableRow>
               ))
@@ -437,18 +415,6 @@ export default function ArsipPendaftarPage() {
           onPageChange={(p) => setPage(p)}
         />
       </Card>
-
-      {/* Dossier Modal */}
-      {selectedApplicantId && (
-        <ApplicantDossierModal
-          open={dossierOpen}
-          onOpenChange={(v) => {
-            setDossierOpen(v)
-            if (!v) setSelectedApplicantId(null)
-          }}
-          applicantId={selectedApplicantId}
-        />
-      )}
     </div>
   )
 }

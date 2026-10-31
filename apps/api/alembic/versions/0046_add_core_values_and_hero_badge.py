@@ -1,4 +1,5 @@
-"""Migrasi lengkap 0046: gabungkan drop dead tables/columns + buat core_values + badge hero_slides.
+"""Migrasi lengkap 0046: gabungkan drop dead tables/columns,
+buat core_values, dan tambah badge hero_slides.
 
 Revision ID: 0046
 Revises: 0045
@@ -11,9 +12,8 @@ Menggabungkan:
 agar tidak menciptakan multiple heads di Alembic.
 """
 
-from collections.abc import Sequence
-
 import sqlalchemy as sa
+
 from alembic import op
 
 revision: str = "0046"
@@ -24,12 +24,42 @@ depends_on: str | None = None
 TABLE_CORE_VALUES = "core_values"
 
 _CATEGORIES = [
-    ("quran-centered", "Berpusat Al-Quran", "Al-Quran sebagai fondasi utama pendidikan dan pembentukan karakter", "book-quran"),
-    ("tech-innovation", "Inovasi Teknologi", "Menguasai teknologi digital terkini untuk masa depan", "laptop-code"),
-    ("global-perspective", "Perspektif Global", "Berwawasan internasional dengan akar budaya yang kuat", "globe"),
-    ("character-first", "Karakter Utama", "Akhlak mulia sebagai prioritas sebelum kecerdasan", "heart"),
-    ("excellence-oriented", "Orientasi Unggul", "Budaya keunggulan dalam setiap aspek kehidupan", "trophy"),
-    ("integrity-rooted", "Berakar Integritas", "Kejujuran dan amanah sebagai nilai hidup", "shield"),
+    (
+        "quran-centered",
+        "Berpusat Al-Quran",
+        "Al-Quran sebagai fondasi utama pendidikan dan pembentukan karakter",
+        "book-quran",
+    ),
+    (
+        "tech-innovation",
+        "Inovasi Teknologi",
+        "Menguasai teknologi digital terkini untuk masa depan",
+        "laptop-code",
+    ),
+    (
+        "global-perspective",
+        "Perspektif Global",
+        "Berwawasan internasional dengan akar budaya yang kuat",
+        "globe",
+    ),
+    (
+        "character-first",
+        "Karakter Utama",
+        "Akhlak mulia sebagai prioritas sebelum kecerdasan",
+        "heart",
+    ),
+    (
+        "excellence-oriented",
+        "Orientasi Unggul",
+        "Budaya keunggulan dalam setiap aspek kehidupan",
+        "trophy",
+    ),
+    (
+        "integrity-rooted",
+        "Berakar Integritas",
+        "Kejujuran dan amanah sebagai nilai hidup",
+        "shield",
+    ),
 ]
 
 NEW_SETTINGS = [
@@ -55,7 +85,7 @@ def _column_exists(table: str, column: str) -> bool:
 
 
 def upgrade() -> None:
-    # ── Bagian 1: Drop dead tables & columns (dari 0046_drop_dead_tables_and_columns) ──
+    # ── Bagian 1: Drop dead tables & columns (0046_drop_dead_tables_and_columns) ──
     if _table_exists("rate_limits"):
         op.drop_table("rate_limits")
 
@@ -79,14 +109,23 @@ def upgrade() -> None:
             )
         )
 
-    # ── Bagian 2: Core values + hero badge (dari 0046_add_core_values_and_hero_badge) ──
+    # ── Bagian 2: Core values + hero badge (0046_add_core_values_and_hero_badge) ──
     # 1. Tambah kolom badge ke hero_slides (hanya jika belum ada)
     if not _column_exists("hero_slides", "badge_text"):
-        op.add_column("hero_slides", sa.Column("badge_text", sa.String(100), nullable=True, server_default=None))
+        op.add_column(
+            "hero_slides",
+            sa.Column("badge_text", sa.String(100), nullable=True, server_default=None),
+        )
     if not _column_exists("hero_slides", "badge_year"):
-        op.add_column("hero_slides", sa.Column("badge_year", sa.String(10), nullable=True, server_default=None))
+        op.add_column(
+            "hero_slides",
+            sa.Column("badge_year", sa.String(10), nullable=True, server_default=None),
+        )
     # Set default badge on rows that don't have one
-    op.execute("UPDATE hero_slides SET badge_text = 'Penghargaan Nasional' WHERE badge_text IS NULL OR badge_text = ''")
+    op.execute(
+        "UPDATE hero_slides SET badge_text = 'Penghargaan Nasional' "
+        "WHERE badge_text IS NULL OR badge_text = ''"
+    )
 
     # 2. Buat tabel core_values + seed (hanya jika belum ada)
     if not _table_exists(TABLE_CORE_VALUES):
@@ -98,34 +137,55 @@ def upgrade() -> None:
             sa.Column("description", sa.Text, nullable=False),
             sa.Column("icon", sa.String(50), nullable=False, server_default="sparkles"),
             sa.Column("order", sa.Integer, nullable=False, server_default="0"),
-            sa.Column("created_at", sa.DateTime, nullable=False, server_default=sa.func.now()),
-            sa.Column("updated_at", sa.DateTime, nullable=False, server_default=sa.func.now()),
+            sa.Column(
+                "created_at", sa.DateTime, nullable=False, server_default=sa.func.now()
+            ),
+            sa.Column(
+                "updated_at", sa.DateTime, nullable=False, server_default=sa.func.now()
+            ),
         )
-        from uuid import uuid4
         from datetime import datetime
+        from uuid import uuid4
+
         now = datetime.utcnow()
         for idx, (cat_id, title, desc, icon) in enumerate(_CATEGORIES):
             uid = str(uuid4())
             op.execute(
                 f"INSERT INTO {TABLE_CORE_VALUES}"
-                f" (id, category_id, title, description, icon, `order`, created_at, updated_at)"
-                f" VALUES ('{uid}', '{cat_id}', '{title}', '{desc}', '{icon}', {idx}, '{now.isoformat()}', '{now.isoformat()}')"
+                f" (id, category_id, title, description, icon, `order`,"
+                f" created_at, updated_at)"
+                f" VALUES ('{uid}', '{cat_id}', '{title}', '{desc}', '{icon}',"
+                f" {idx}, '{now.isoformat()}', '{now.isoformat()}')"
             )
 
     # 3. Tambah setting keys baru
+    bind = op.get_bind()
+    is_sqlite = bind.dialect.name == "sqlite"
     for key, value in NEW_SETTINGS:
-        op.execute(
-            sa.text(
-                f"INSERT IGNORE INTO site_settings (`key`, value, created_at, updated_at)"
-                f" VALUES (:k, :v, NOW(), NOW())"
-            ).bindparams(k=key, v=value)
-        )
+        if is_sqlite:
+            op.execute(
+                sa.text(
+                    "INSERT OR IGNORE INTO site_settings "
+                    "(`key`, value, created_at, updated_at)"
+                    " VALUES (:k, :v, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"
+                ).bindparams(k=key, v=value)
+            )
+        else:
+            op.execute(
+                sa.text(
+                    "INSERT IGNORE INTO site_settings "
+                    "(`key`, value, created_at, updated_at)"
+                    " VALUES (:k, :v, NOW(), NOW())"
+                ).bindparams(k=key, v=value)
+            )
 
 
 def downgrade() -> None:
     # 1. Hapus setting keys
     for key, _ in NEW_SETTINGS:
-        op.execute(sa.text(f"DELETE FROM site_settings WHERE key = :k").bindparams(k=key))
+        op.execute(
+            sa.text("DELETE FROM site_settings WHERE key = :k").bindparams(k=key)
+        )
 
     # 2. Hapus tabel core_values
     op.drop_table(TABLE_CORE_VALUES)

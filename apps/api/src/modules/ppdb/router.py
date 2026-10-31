@@ -566,7 +566,15 @@ def get_applicant_dossier(
     service: PPDBService = Depends(get_ppdb_service),
 ):
     ip_addr = request.client.host if request.client else None
-    return service.get_applicant_dossier(id, admin_user=user, ip_address=ip_addr)
+    try:
+        return service.get_applicant_dossier(id, admin_user=user, ip_address=ip_addr)
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("Gagal memuat dossier pendaftar %s: %s", id, e)
+        raise HTTPException(
+            status_code=500, detail=f"Gagal memuat berkas dossier pendaftar: {str(e)}"
+        )
 
 
 @router.get("/archive/applicants/{id}/dossier/zip")

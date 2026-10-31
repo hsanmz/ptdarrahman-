@@ -49,7 +49,7 @@ def upgrade() -> None:
             "Mohon untuk mempersiapkan diri dan hadir tepat waktu agar proses "
             "evaluasi berjalan lancar. Jangan sampai terlambat ya!\n\n"
             "Terima kasih,\n"
-            "Panitia PPDB Ar-Rahman"
+            "Panitia PPDB PTDARRAHMAN"
         )
         bind.execute(
             sa.text(

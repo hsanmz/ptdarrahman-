@@ -410,7 +410,7 @@ async def whatsapp_test(
         raise HTTPException(status_code=400, detail="Nomor telepon wajib diisi")
     message = body.message.strip() or (
         "Assalamualaikum Wr. Wb.\n\n"
-        "Ini adalah pesan uji coba dari panel PPDB Ar-Rahman. "
+        "Ini adalah pesan uji coba dari panel PPDB PTDARRAHMAN. "
         "Jika Anda menerima pesan ini, notifikasi WhatsApp sudah terkoneksi."
     )
     resp = await _proxy_json(

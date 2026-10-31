@@ -531,14 +531,10 @@ const OfficialAssessmentSheet = forwardRef<HTMLDivElement, OfficialAssessmentShe
             {/* Sisi Kanan: Pengesahan Panitia PPDB seperti di LoA */}
             <div className="text-right space-y-0.5 w-60">
               <p className="text-[9.5px] text-slate-600">Bekasi, {currentDateStr}</p>
-              <p className="text-[10px] font-bold text-slate-900 leading-tight">Office of Admission PPDB Ar-Rahman</p>
-              <div className="flex justify-end items-center gap-1.5 py-0.5">
+              <p className="text-[10px] font-bold text-slate-900 leading-tight">Office of Admission PPDB PTDARRAHMAN</p>
+              <div className="flex justify-end py-0.5">
                 <div className="p-0.5 bg-white border border-slate-200 rounded shadow-2xs">
                   <QRCodeSVG value={officialVerifyUrl} size={36} level="M" />
-                </div>
-                <div className="text-right">
-                  <span className="text-[8.5px] font-mono text-emerald-700 block font-bold leading-tight">VERIFIED DIGITAL</span>
-                  <span className="text-[7.5px] text-slate-400 block font-mono leading-tight">PANITIA PPDB</span>
                 </div>
               </div>
               <p className="text-[10px] font-bold underline text-slate-900 leading-tight">

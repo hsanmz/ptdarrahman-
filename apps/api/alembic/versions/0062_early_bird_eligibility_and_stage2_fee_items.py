@@ -142,6 +142,30 @@ def upgrade() -> None:
             sa.Column("updated_at", sa.DateTime(), nullable=False),
         )
 
+    if "ppdb_wave_fee_discounts" not in tables:
+        op.create_table(
+            "ppdb_wave_fee_discounts",
+            sa.Column("id", sa.String(36), primary_key=True),
+            sa.Column(
+                "wave_id",
+                sa.String(50),
+                sa.ForeignKey("ppdb_waves.id", ondelete="CASCADE"),
+                nullable=False,
+            ),
+            sa.Column(
+                "fee_item_id",
+                sa.String(36),
+                sa.ForeignKey("ppdb_period_fee_items.id", ondelete="CASCADE"),
+                nullable=False,
+            ),
+            sa.Column("discount_type", sa.String(10), nullable=True),
+            sa.Column("discount_value", sa.Float(), nullable=True),
+            sa.Column("early_discount_type", sa.String(10), nullable=True),
+            sa.Column("early_discount_value", sa.Float(), nullable=True),
+            sa.Column("created_at", sa.DateTime(), nullable=False),
+            sa.Column("updated_at", sa.DateTime(), nullable=False),
+        )
+
     applicant_cols = _column_names(conn, "ppdb_applicants")
     if "early_discount_eligible" not in applicant_cols:
         op.add_column(
@@ -199,6 +223,9 @@ def downgrade() -> None:
 
     if _PERIOD_FEE_ITEM_TABLE in tables and not _has_period_fee_item_rows(conn):
         op.drop_table(_PERIOD_FEE_ITEM_TABLE)
+
+    if "ppdb_wave_fee_discounts" in tables:
+        op.drop_table("ppdb_wave_fee_discounts")
 
     cols = _column_names(conn, "ppdb_applicants")
     if "early_discount_eligible" in cols:

@@ -2,7 +2,7 @@
 # ============================================================
 # PTDARRAHMAN — One-Command Project Setup
 # ============================================================
-# Skrip ini menyiapkan seluruh monorepo PPDB Ar-Rahman dalam
+# Skrip ini menyiapkan seluruh monorepo PPDB PTDARRAHMAN dalam
 # satu perintah. Dua opsi tersedia:
 #
 #   ./setup.sh docker     → Build & jalankan seluruh stack via Docker

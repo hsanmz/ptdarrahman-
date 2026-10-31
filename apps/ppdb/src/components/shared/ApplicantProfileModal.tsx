@@ -923,7 +923,7 @@ export default function ApplicantProfileModal({
               <span className="hidden sm:inline">
                 Sistem PPDB Resmi — Pesantren Tahfidz Qur&apos;an & Digital Ar-Rahman
               </span>
-              <span className="sm:hidden">PPDB Ar-Rahman</span>
+              <span className="sm:hidden">PPDB PTDARRAHMAN</span>
             </div>
             <Button
               type="button"

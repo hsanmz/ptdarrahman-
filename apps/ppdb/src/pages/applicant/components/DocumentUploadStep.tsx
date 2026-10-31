@@ -121,7 +121,7 @@ export default function DocumentUploadStep({
                 <Badge variant="success" className="text-[10px] font-semibold">Lolos Verifikasi</Badge>
               </div>
               <p className="text-xs text-emerald-800 mt-1 leading-relaxed">
-                Berkas pendaftaran Anda telah diperiksa dan disetujui resmi oleh Panitia PPDB Ar-Rahman. Seluruh berkas telah dikunci untuk arsip seleksi penerimaan santri baru.
+                Berkas pendaftaran Anda telah diperiksa dan disetujui resmi oleh Panitia PPDB PTDARRAHMAN. Seluruh berkas telah dikunci untuk arsip seleksi penerimaan santri baru.
               </p>
             </div>
           </CardContent>

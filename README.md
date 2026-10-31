@@ -120,7 +120,7 @@ Project ini menggunakan arsitektur modular **pnpm workspace** yang diorkestrasi 
 
 ## 🔬 System Design
 
-> **Arsitektur Sistem Teknis & Alur Operasional Monorepo PPDB Ar-Rahman**
+> **Arsitektur Sistem Teknis & Alur Operasional Monorepo PPDB PTDARRAHMAN**
 > Bagian ini memuat rancangan sistem teknis menyeluruh (System Design) dari ekosistem digital Pesantren Tahfidz Qur'an dan Digital Ar-Rahman. Untuk panduan antarmuka visual, palet warna, tipografi, dan komponen UI, rujuk ke [DESIGN.md](DESIGN.md).
 
 ---
