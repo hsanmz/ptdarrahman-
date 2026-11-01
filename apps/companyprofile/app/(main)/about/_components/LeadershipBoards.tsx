@@ -51,7 +51,7 @@ export default function LeadershipBoards({ boards }: { boards: LeadershipBoard[]
 
               <ul className="grid md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                 {board.members.map((member) => {
-                  const photo = (member as { image?: string }).image
+                  const photo = member.image
                   return (
                     <li
                       key={`${member.name}-${member.position}`}

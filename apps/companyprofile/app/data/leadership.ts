@@ -20,32 +20,32 @@ export const fallbackLeadershipBoards: LeadershipBoard[] = [
     board: 'yayasan',
     title: BOARD_TITLES.yayasan,
     members: [
-      { name: 'Indra Setiawan', position: 'Pembina' },
+      { name: 'Indra Setiawan', position: 'Pembina', image: 'https://arrahmanic.org/assets/images/pengurus/Pa%20Indra%20Setiawan.png' },
       { name: 'Tri Indra Basoeki', position: 'Pembina' },
-      { name: 'Rini Widiastuti Rahayu', position: 'Pengawas' },
-      { name: 'Eko Santoso', position: 'Ketua' },
-      { name: 'Chandra Sari Nugraheni', position: 'Bendahara' },
-      { name: 'Noor Kartika Muliawati', position: 'Sekretaris' },
-      { name: 'Rachmania Kurniawati', position: 'Sekretaris' },
+      { name: 'Rini Widiastuti Rahayu', position: 'Pengawas', image: 'https://arrahmanic.org/assets/images/pengurus/Bu%20Rini%20Widiastuti.png' },
+      { name: 'Eko Santoso', position: 'Ketua', image: 'https://arrahmanic.org/assets/images/pengurus/Pa%20Eko.png' },
+      { name: 'Chandra Sari Nugraheni', position: 'Bendahara', image: 'https://arrahmanic.org/assets/images/pengurus/bu%20chandra.png' },
+      { name: 'Noor Kartika Muliawati', position: 'Sekretaris', image: 'https://arrahmanic.org/assets/images/pengurus/Bu%20Noor.png' },
+      { name: 'Rachmania Kurniawati', position: 'Sekretaris', image: 'https://arrahmanic.org/assets/images/pengurus/Bu%20Rachmania.png' },
     ],
   },
   {
     board: 'islamic-center',
     title: BOARD_TITLES['islamic-center'],
     members: [
-      { name: 'Chandra Sari Nugraheni', position: 'President Director' },
-      { name: 'Fathya Irsalina M', position: 'AVP Performance Management' },
-      { name: 'Mira Susanti', position: 'AVP Internal Auditor' },
-      { name: 'Leo Latul Agusta', position: 'Director of Education Center' },
-      { name: 'Ahmad Mahfud', position: 'Director of Support & Development' },
-      { name: 'Dewi Nareswari', position: 'Vice President of Branding & Development' },
-      { name: 'Dahniar', position: 'Vice President of Finance & Support' },
-      { name: 'Ruswandri', position: 'Head of Lembaga Pengelolaan Ziswaf' },
-      { name: 'Silvi Laeli Kodaria', position: 'Head of Sekolah Alam Qurani Ar Rahman' },
+      { name: 'Chandra Sari Nugraheni', position: 'President Director', image: 'https://arrahmanic.org/assets/images/pengurus/bu%20chandra.png' },
+      { name: 'Fathya Irsalina M', position: 'AVP Performance Management', image: 'https://arrahmanic.org/assets/images/pengurus/ka%20fathya.png' },
+      { name: 'Mira Susanti', position: 'AVP Internal Auditor', image: 'https://arrahmanic.org/assets/images/pengurus/bu%20mira.png' },
+      { name: 'Leo Latul Agusta', position: 'Director of Education Center', image: 'https://arrahmanic.org/assets/images/pengurus/pa%20leo.png' },
+      { name: 'Ahmad Mahfud', position: 'Director of Support & Development', image: 'https://arrahmanic.org/assets/images/pengurus/pa%20mahfud.png' },
+      { name: 'Dewi Nareswari', position: 'Vice President of Branding & Development', image: 'https://arrahmanic.org/assets/images/pengurus/bu%20dewi.png' },
+      { name: 'Dahniar', position: 'Vice President of Finance & Support', image: 'https://arrahmanic.org/assets/images/pengurus/bu%20niar.png' },
+      { name: 'Ruswandri', position: 'Head of Lembaga Pengelolaan Ziswaf', image: 'https://arrahmanic.org/assets/images/pengurus/pa%20ruswandri.png' },
+      { name: 'Silvi Laeli Kodaria', position: 'Head of Sekolah Alam Qurani Ar Rahman', image: 'https://arrahmanic.org/assets/images/pengurus/bu%20silvi.png' },
       // Nama resmi lembaga sesuai standar naming: Pesantren Tahfidz Qur'an dan Digital Ar-Rahman.
-      { name: 'Ziyad Khairy', position: "Head of Pesantren Tahfidz Qur'an dan Digital Ar-Rahman" },
-      { name: 'Ahmad Khaeruddin', position: 'Head of Lembaga Pendidikan Al Quran' },
-      { name: 'Susilawati', position: 'Head of Lembaga Pembinaan Masyarakat' },
+      { name: 'Ziyad Khairy', position: "Head of Pesantren Tahfidz Qur'an dan Digital Ar-Rahman", image: 'https://arrahmanic.org/assets/images/pengurus/ustd%20ziyad.png' },
+      { name: 'Ahmad Khaeruddin', position: 'Head of Lembaga Pendidikan Al Quran', image: 'https://arrahmanic.org/assets/images/pengurus/ustd%20ahmad.png' },
+      { name: 'Susilawati', position: 'Head of Lembaga Pembinaan Masyarakat', image: 'https://arrahmanic.org/assets/images/pengurus/bu%20susi.png' },
     ],
   },
 ]
@@ -93,7 +93,7 @@ export function groupLeadership(items: LeadershipMember[]): LeadershipBoard[] {
     const members = bucket.members
       .map((m, i) => ({ m, i }))
       .sort((a, b) => a.m.order - b.m.order || a.i - b.i)
-      .map(({ m }) => ({ name: m.name, position: m.position }))
+      .map(({ m }) => ({ name: m.name, position: m.position, image: m.image }))
     return { board, title: bucket.title, members }
   })
 }
