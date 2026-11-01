@@ -2,7 +2,7 @@
 #
 # sync-build.sh — Satu perintah untuk: sync Windows -> WSL + build + start.
 # Edit kode di copy Windows, lalu jalankan dari PowerShell:
-#   wsl -e bash /mnt/c/Users/farre/project-ppdb/scripts/sync-build.sh
+#   wsl -e bash <path-ke-repo>/scripts/sync-build.sh
 # (fasta: sewaktu-waktu cukup jalankan satu perintah ini, ga perlu tanya siapa-siapa)
 # ============================================================
 set -euo pipefail

@@ -93,6 +93,8 @@ docker-compose.yml
 
 ## 4. Langkah Setup (verbatim)
 
+> **💡 Shortcut Otomatis:** Di Linux / WSL ext4, Anda dapat langsung menjalankan `./setup.sh docker` (atau `.\setup.ps1 docker` di Windows PowerShell). Skrip akan otomatis memeriksa prasyarat, menyiapkan file `.env`, men-generate secret, dan menyalakan container. Jika ingin menjalankan manual langkah demi langkah, ikuti instruksi di bawah:
+
 Ganti `<user>` dengan username WSL (contoh: `hugoedmoundo`).
 
 ```bash

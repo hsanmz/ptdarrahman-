@@ -6,6 +6,8 @@ struktur project tetap bersih. Bukan bagian dari aplikasi (tidak di-import oleh
 
 ## Tooling
 
+- `../setup.sh` — Skrip setup universal satu-perintah untuk Linux (semua distro) & macOS.
+- `../setup.ps1` — Skrip setup universal satu-perintah untuk Windows PowerShell / Terminal.
 - `sync-build.sh` — Sinkronisasi salinan Windows → WSL lalu build + start Docker Compose
   (`docker compose up -d --build`). Menjalankan normalisasi line-ending CRLF→LF sebelum build.
   Dijalankan dari PowerShell:

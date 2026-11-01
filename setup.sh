@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# PTDARRAHMAN — One-Command Project Setup
+# PTDARRAHMAN — One-Command Project Setup (Linux & macOS)
 # ============================================================
 # Skrip ini menyiapkan seluruh monorepo PPDB PTDARRAHMAN dalam
 # satu perintah. Dua opsi tersedia:
@@ -10,8 +10,8 @@
 #                           langsung di host (tanpa Docker)
 #
 # Prasyarat otomatis diperiksa (Node, pnpm, Python, Docker).
-# File .env disiapkan dari .env.example jika belum ada, dan
-# secret yang hilang di-generate otomatis.
+# Kompatibel dengan seluruh distro Linux (Ubuntu, Debian, Arch,
+# Fedora, Alpine, openSUSE) dan macOS.
 # ============================================================
 
 set -euo pipefail
@@ -21,6 +21,7 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 info()    { echo -e "${BLUE}[INFO]${NC} $*"; }
@@ -28,26 +29,63 @@ success() { echo -e "${GREEN}[OK]${NC} $*"; }
 warn()    { echo -e "${YELLOW}[WARN]${NC} $*"; }
 error()   { echo -e "${RED}[ERROR]${NC} $*"; exit 1; }
 
-# ── Detect script root ──────────────────────────────────────
+# ── Deteksi Root Direktori Dinamis ──────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+# ── Deteksi WSL Mount Warning (Performa) ────────────────────
+if [ -n "${WSL_DISTRO_NAME:-}" ] || grep -qi microsoft /proc/version 2>/dev/null; then
+    if [[ "$SCRIPT_DIR" == /mnt/* ]]; then
+        warn "Terdeteksi dijalankan dari direktori mount Windows ($SCRIPT_DIR)."
+        warn "I/O file di mount /mnt/c/ jauh lebih lambat untuk Docker & Node."
+        info "Tips performa: Untuk kecepatan maksimal di WSL, clone ke ~/project-ppdb (ext4)."
+        echo ""
+    fi
+fi
+
 # ============================================================
-# Prasyarat
+# Deteksi Binary & Package Manager
 # ============================================================
 
 check_cmd() {
-    if ! command -v "$1" &>/dev/null; then
-        return 1
+    command -v "$1" &>/dev/null
+}
+
+# Deteksi Python binary yang tersedia (python3 atau python)
+PYTHON_BIN=""
+if check_cmd python3; then
+    PYTHON_BIN="python3"
+elif check_cmd python; then
+    # Pastikan ini Python 3
+    if python -c "import sys; sys.exit(0 if sys.version_info[0] >= 3 else 1)" 2>/dev/null; then
+        PYTHON_BIN="python"
     fi
-    return 0
+fi
+
+detect_pkg_hint() {
+    local missing_tool="$1"
+    if check_cmd apt-get; then
+        echo "  Debian/Ubuntu: sudo apt update && sudo apt install -y $missing_tool"
+    elif check_cmd pacman; then
+        echo "  Arch Linux:    sudo pacman -S $missing_tool"
+    elif check_cmd dnf; then
+        echo "  Fedora/RHEL:   sudo dnf install -y $missing_tool"
+    elif check_cmd apk; then
+        echo "  Alpine Linux:  sudo apk add $missing_tool"
+    elif check_cmd zypper; then
+        echo "  openSUSE:      sudo zypper install -y $missing_tool"
+    elif check_cmd brew; then
+        echo "  macOS (Homebrew): brew install $missing_tool"
+    fi
 }
 
 check_prerequisites() {
     local missing=()
+    local hints=()
 
     if ! check_cmd node; then
         missing+=("Node.js (v20+)")
+        hints+=("Node.js: kunjungi https://nodejs.org/ atau gunakan nvm / $(detect_pkg_hint nodejs)")
     else
         local node_ver
         node_ver=$(node -v | sed 's/v//' | cut -d. -f1)
@@ -57,29 +95,132 @@ check_prerequisites() {
     fi
 
     if ! check_cmd pnpm; then
-        missing+=("pnpm (npm install -g pnpm)")
+        missing+=("pnpm")
+        hints+=("pnpm: jalankan 'npm install -g pnpm' atau 'corepack enable'")
     fi
 
-    if ! check_cmd python3; then
+    if [ -z "$PYTHON_BIN" ]; then
         missing+=("Python 3.12+")
+        hints+=("Python 3: $(detect_pkg_hint python3)")
     fi
 
-    if [ "${1:-}" = "docker" ] && ! check_cmd docker; then
-        missing+=("Docker")
+    if [ "${1:-}" = "docker" ]; then
+        if ! check_cmd docker; then
+            missing+=("Docker")
+            hints+=("Docker: kunjungi https://docs.docker.com/get-docker/")
+        else
+            # Cek apakah docker daemon aktif
+            if ! docker info >/dev/null 2>&1; then
+                warn "Docker CLI ditemukan, namun Docker Daemon belum aktif."
+                if check_cmd systemctl; then
+                    info "Coba jalankan: sudo systemctl start docker"
+                fi
+            fi
+        fi
     fi
 
     if [ ${#missing[@]} -gt 0 ]; then
-        error "Prasyarat belum terpenuhi:\n  ${missing[*]}\n\nInstall dulu lalu jalankan ulang skrip ini."
+        echo ""
+        echo -e "${RED}[ERROR] Prasyarat belum terpenuhi:${NC}"
+        for m in "${missing[@]}"; do
+            echo "  - $m"
+        done
+        echo ""
+        echo -e "${CYAN}Panduan instalasi:${NC}"
+        for h in "${hints[@]}"; do
+            echo "  * $h"
+        done
+        echo ""
+        exit 1
     fi
 }
 
 # ============================================================
-# Generate random secret
+# Helper Manipulasi .env (Cross-Platform & Bebas Masalah Sed)
 # ============================================================
+
+# Generate cryptographically secure random secret
 gen_secret() {
-    python3 -c "import secrets; print(secrets.token_hex(32))" 2>/dev/null || \
-    node -e "console.log(require('crypto').randomBytes(32).toString('hex'))" 2>/dev/null || \
-    echo "CHANGE_ME_$(date +%s)_$(head -c 16 /dev/urandom | xxd -p)"
+    local length="${1:-32}"
+    if [ -n "$PYTHON_BIN" ]; then
+        $PYTHON_BIN -c "import secrets; print(secrets.token_hex($length))" 2>/dev/null && return 0
+    fi
+    if check_cmd node; then
+        node -e "console.log(require('crypto').randomBytes($length).toString('hex'))" 2>/dev/null && return 0
+    fi
+    if check_cmd openssl; then
+        openssl rand -hex "$length" 2>/dev/null && return 0
+    fi
+    head -c "$length" /dev/urandom | od -An -tx1 | tr -d ' \n' 2>/dev/null || echo "SEC_$(date +%s)_RANDOM"
+}
+
+# Ambil nilai key dari file .env (menghilangkan \r jika file CRLF)
+get_env_val() {
+    local file="$1"
+    local key="$2"
+    if [ -f "$file" ]; then
+        grep "^${key}=" "$file" 2>/dev/null | cut -d= -f2- | tr -d '\r' || true
+    fi
+}
+
+# Set atau update nilai key di file .env secara portable (macOS/Linux aman dari beda 'sed -i')
+set_env_val() {
+    local file="$1"
+    local key="$2"
+    local val="$3"
+
+    [ ! -f "$file" ] && return 0
+
+    if [ -n "$PYTHON_BIN" ]; then
+        $PYTHON_BIN -c "
+import sys
+p, k, v = sys.argv[1], sys.argv[2], sys.argv[3]
+try:
+    with open(p, 'r', encoding='utf-8', errors='ignore') as f:
+        lines = f.readlines()
+    found = False
+    new_lines = []
+    for line in lines:
+        if line.startswith(k + '='):
+            new_lines.append(f'{k}={v}\n')
+            found = True
+        else:
+            new_lines.append(line)
+    if not found:
+        if new_lines and not new_lines[-1].endswith('\n'):
+            new_lines[-1] += '\n'
+        new_lines.append(f'{k}={v}\n')
+    with open(p, 'w', encoding='utf-8') as f:
+        f.writelines(new_lines)
+except Exception:
+    pass
+" "$file" "$key" "$val" 2>/dev/null && return 0
+    fi
+
+    # Fallback Node.js jika Python belum siap
+    if check_cmd node; then
+        node -e "
+const fs = require('fs');
+const [,, p, k, v] = process.argv;
+try {
+    let c = fs.readFileSync(p, 'utf8');
+    const regex = new RegExp('^' + k + '=.*$', 'm');
+    if (regex.test(c)) {
+        c = c.replace(regex, k + '=' + v);
+    } else {
+        c = c.trimEnd() + '\n' + k + '=' + v + '\n';
+    }
+    fs.writeFileSync(p, c, 'utf8');
+} catch(e) {}
+" "$file" "$key" "$val" 2>/dev/null && return 0
+    fi
+
+    # Fallback portable sed (buat file temp .bak lalu hapus)
+    if grep -q "^${key}=" "$file"; then
+        sed -i.bak "s|^${key}=.*|${key}=${val}|" "$file" 2>/dev/null && rm -f "${file}.bak"
+    else
+        echo "${key}=${val}" >> "$file"
+    fi
 }
 
 # ============================================================
@@ -98,10 +239,9 @@ setup_env_files() {
         need_api=true
         info "  apps/api/.env dibuat dari .env.example"
     else
-        # Cek apakah secret masih kosong / placeholder
-        if ! grep -q "JWT_SECRET=" "$api_env" || \
-           grep -q "JWT_SECRET=$" "$api_env" || \
-           grep -q "JWT_SECRET=ganti_dengan" "$api_env"; then
+        local existing_jwt
+        existing_jwt=$(get_env_val "$api_env" "JWT_SECRET")
+        if [ -z "$existing_jwt" ] || [[ "$existing_jwt" == *"ganti_dengan"* ]]; then
             need_api=true
         fi
         if ! grep -q "PAKASIR_WEBHOOK_SECRET=" "$api_env"; then
@@ -112,70 +252,61 @@ setup_env_files() {
     if [ "$need_api" = true ]; then
         local jwt_secret cron_secret wa_api_key wa_webhook_secret
 
-        # Ambil nilai yang sudah ada jika sudah ada (jangan timpa yang sudah diisi user)
-        jwt_secret=$(grep "^JWT_SECRET=" "$api_env" 2>/dev/null | cut -d= -f2- || true)
-        if [ -z "$jwt_secret" ] || [ "$jwt_secret" = "ganti_dengan_string_panjang_acak_minimal_32_karakter" ]; then
-            jwt_secret=$(gen_secret)
+        jwt_secret=$(get_env_val "$api_env" "JWT_SECRET")
+        if [ -z "$jwt_secret" ] || [[ "$jwt_secret" == *"ganti_dengan"* ]]; then
+            jwt_secret=$(gen_secret 32)
         fi
 
-        cron_secret=$(grep "^CRON_SECRET=" "$api_env" 2>/dev/null | cut -d= -f2- || true)
-        if [ -z "$cron_secret" ] || [ "$cron_secret" = "ganti_dengan_string_panjang_acak_minimal_16_karakter" ]; then
-            cron_secret=$(python3 -c "import secrets; print(secrets.token_hex(16))" 2>/dev/null || gen_secret)
+        cron_secret=$(get_env_val "$api_env" "CRON_SECRET")
+        if [ -z "$cron_secret" ] || [[ "$cron_secret" == *"ganti_dengan"* ]]; then
+            cron_secret=$(gen_secret 16)
         fi
 
-        wa_api_key=$(grep "^WA_SERVICE_API_KEY=" "$api_env" 2>/dev/null | cut -d= -f2- || true)
-        if [ -z "$wa_api_key" ]; then
-            wa_api_key=$(gen_secret)
+        wa_api_key=$(get_env_val "$api_env" "WA_SERVICE_API_KEY")
+        if [ -z "$wa_api_key" ] || [[ "$wa_api_key" == *"ganti_dengan"* ]]; then
+            wa_api_key=$(gen_secret 32)
         fi
 
-        wa_webhook_secret=$(grep "^WA_WEBHOOK_SECRET=" "$api_env" 2>/dev/null | cut -d= -f2- || true)
-        if [ -z "$wa_webhook_secret" ]; then
-            wa_webhook_secret=$(gen_secret)
+        wa_webhook_secret=$(get_env_val "$api_env" "WA_WEBHOOK_SECRET")
+        if [ -z "$wa_webhook_secret" ] || [[ "$wa_webhook_secret" == *"ganti_dengan"* ]]; then
+            wa_webhook_secret=$(gen_secret 32)
         fi
 
-        # Tulis / update file
-        if [ ! -f "$api_env" ]; then
-            cp "$api_example" "$api_env"
-        fi
+        set_env_val "$api_env" "JWT_SECRET" "$jwt_secret"
+        set_env_val "$api_env" "CRON_SECRET" "$cron_secret"
+        set_env_val "$api_env" "WA_SERVICE_API_KEY" "$wa_api_key"
+        set_env_val "$api_env" "WA_WEBHOOK_SECRET" "$wa_webhook_secret"
 
-        # Update nilai dengan sed (portable)
-        sed -i "s|^JWT_SECRET=.*|JWT_SECRET=$jwt_secret|" "$api_env"
-        sed -i "s|^CRON_SECRET=.*|CRON_SECRET=$cron_secret|" "$api_env"
-        sed -i "s|^WA_SERVICE_API_KEY=.*|WA_SERVICE_API_KEY=$wa_api_key|" "$api_env"
-        sed -i "s|^WA_WEBHOOK_SECRET=.*|WA_WEBHOOK_SECRET=$wa_webhook_secret|" "$api_env"
-
-        # Set APP_ENV=development untuk local, production untuk docker
         if [ "${SETUP_MODE:-}" = "local" ]; then
-            sed -i "s|^APP_ENV=.*|APP_ENV=development|" "$api_env"
+            set_env_val "$api_env" "APP_ENV" "development"
         else
-            sed -i "s|^APP_ENV=.*|APP_ENV=production|" "$api_env"
+            set_env_val "$api_env" "APP_ENV" "production"
         fi
 
-        success "  apps/api/.env: JWT_SECRET, CRON_SECRET, WA_SERVICE_API_KEY, WA_WEBHOOK_SECRET diisi"
+        success "  apps/api/.env: Secrets otomatis diisi & diamankan"
     else
-        success "  apps/api/.env: sudah lengkap"
+        success "  apps/api/.env: Sudah lengkap"
     fi
 
     # ── apps/whatsapp/.env ──────────────────────────────────
     local wa_env="apps/whatsapp/.env"
     local wa_example="apps/whatsapp/.env.example"
-    local wa_api_secret
 
     if [ ! -f "$wa_env" ]; then
         cp "$wa_example" "$wa_env"
         info "  apps/whatsapp/.env dibuat dari .env.example"
     fi
 
-    # Sync API_KEY dengan apps/api/.env WA_SERVICE_API_KEY
-    wa_api_key=$(grep "^WA_SERVICE_API_KEY=" "apps/api/.env" 2>/dev/null | cut -d= -f2- || true)
-    if [ -n "$wa_api_key" ] && [ "$wa_api_key" != "ganti_dengan_string_panjang_acak_minimal_32_karakter" ]; then
-        sed -i "s|^API_KEY=.*|API_KEY=$wa_api_key|" "$wa_env"
+    local sync_wa_key
+    sync_wa_key=$(get_env_val "$api_env" "WA_SERVICE_API_KEY")
+    if [ -n "$sync_wa_key" ] && [[ "$sync_wa_key" != *"ganti_dengan"* ]]; then
+        set_env_val "$wa_env" "API_KEY" "$sync_wa_key"
     fi
 
-    # Sync WEBHOOK_SECRET dengan apps/api/.env WA_WEBHOOK_SECRET
-    wa_webhook_secret=$(grep "^WA_WEBHOOK_SECRET=" "apps/api/.env" 2>/dev/null | cut -d= -f2- || true)
-    if [ -n "$wa_webhook_secret" ]; then
-        sed -i "s|^WEBHOOK_SECRET=.*|WEBHOOK_SECRET=$wa_webhook_secret|" "$wa_env"
+    local sync_wa_secret
+    sync_wa_secret=$(get_env_val "$api_env" "WA_WEBHOOK_SECRET")
+    if [ -n "$sync_wa_secret" ] && [[ "$sync_wa_secret" != *"ganti_dengan"* ]]; then
+        set_env_val "$wa_env" "WEBHOOK_SECRET" "$sync_wa_secret"
     fi
 
     success "  apps/whatsapp/.env: API_KEY & WEBHOOK_SECRET disinkronisasi"
@@ -183,7 +314,9 @@ setup_env_files() {
     # ── apps/ppdb/.env ──────────────────────────────────────
     local ppdb_env="apps/ppdb/.env"
     if [ ! -f "$ppdb_env" ]; then
-        echo "VITE_API_URL=http://localhost:8000" > "$ppdb_env"
+        local target_api_url="http://localhost:8000"
+        [ "${SETUP_MODE:-}" = "docker" ] && target_api_url="http://localhost:8080"
+        echo "VITE_API_URL=$target_api_url" > "$ppdb_env"
         info "  apps/ppdb/.env dibuat"
     fi
     success "  apps/ppdb/.env: OK"
@@ -191,15 +324,24 @@ setup_env_files() {
     # ── apps/superadmin/.env ────────────────────────────────
     local sa_env="apps/superadmin/.env"
     if [ ! -f "$sa_env" ]; then
-        cat > "$sa_env" << 'EOF'
-VITE_API_URL=http://localhost:8000
-EOF
-        info "  apps/superadmin/.env dibuat (tanpa VITE_WA_API_KEY — proxy via API)"
+        local target_sa_url="http://localhost:8000"
+        [ "${SETUP_MODE:-}" = "docker" ] && target_sa_url="http://localhost:8080"
+        echo "VITE_API_URL=$target_sa_url" > "$sa_env"
+        info "  apps/superadmin/.env dibuat"
     else
         # Hapus VITE_WA_API_KEY jika ada (keamanan: jangan expose WA API key ke client)
         if grep -q "VITE_WA_API_KEY" "$sa_env"; then
-            sed -i '/^VITE_WA_API_KEY=/d' "$sa_env"
-            warn "  apps/superadmin/.env: VITE_WA_API_KEY dihapus (keamanan — proxy via API backend)"
+            set_env_val "$sa_env" "VITE_WA_API_KEY" ""
+            # Gunakan python/node untuk hapus baris bersih jika ada
+            if [ -n "$PYTHON_BIN" ]; then
+                $PYTHON_BIN -c "
+with open('$sa_env', 'r') as f: lines = f.readlines()
+with open('$sa_env', 'w') as f:
+    for l in lines:
+        if not l.startswith('VITE_WA_API_KEY='): f.write(l)
+" 2>/dev/null || true
+            fi
+            warn "  apps/superadmin/.env: VITE_WA_API_KEY dibersihkan (keamanan)"
         fi
     fi
     success "  apps/superadmin/.env: OK"
@@ -207,8 +349,10 @@ EOF
     # ── apps/companyprofile/.env ────────────────────────────
     local cp_env="apps/companyprofile/.env"
     if [ ! -f "$cp_env" ]; then
-        cat > "$cp_env" << 'EOF'
-NEXT_PUBLIC_API_URL=http://localhost:8000
+        local target_cp_url="http://localhost:8000"
+        [ "${SETUP_MODE:-}" = "docker" ] && target_cp_url="http://localhost:8080"
+        cat > "$cp_env" << EOF
+NEXT_PUBLIC_API_URL=$target_cp_url
 NEXT_PUBLIC_FALLBACK_API_URL=
 NEXT_PUBLIC_PORTAL_URL=http://localhost:5174
 EOF
@@ -236,7 +380,7 @@ install_deps() {
 # ============================================================
 run_migrations() {
     info "Menjalankan Alembic migration..."
-    (cd apps/api && python3 -m alembic upgrade head 2>/dev/null || \
+    (cd apps/api && $PYTHON_BIN -m alembic upgrade head 2>/dev/null || \
         warn "  Alembic migration belum bisa dijalankan — mungkin database belum tersedia")
     success "Alembic migration selesai"
 }
@@ -246,11 +390,12 @@ run_migrations() {
 # ============================================================
 mode_docker() {
     info "Mode: Docker Compose"
+    export SETUP_MODE=docker
     check_prerequisites docker
 
     setup_env_files
 
-    info "Build & jalankan Docker Compose..."
+    info "Build & jalankan Docker Compose stack..."
     docker compose up -d --build
     success "Docker stack berjalan!"
 
@@ -276,8 +421,8 @@ mode_docker() {
 # ============================================================
 mode_local() {
     info "Mode: Local Vite Dev (Host Dev)"
-    check_prerequisites
     export SETUP_MODE=local
+    check_prerequisites
 
     setup_env_files
     install_deps
@@ -287,18 +432,17 @@ mode_local() {
 
     # Install Python dependencies
     info "Menginstal dependensi Python (API)..."
-    (cd apps/api && pip install -r requirements.txt 2>/dev/null || \
-        (cd apps/api && pip3 install -r requirements.txt) || \
+    (cd apps/api && $PYTHON_BIN -m pip install -r requirements.txt 2>/dev/null || \
         warn "  Tidak bisa install Python deps — pastikan pip tersedia")
 
     # Seed database dengan roles & admin default
     info "Menjalankan seed database..."
-    (cd apps/api && python3 scripts/seed.py 2>/dev/null || \
+    (cd apps/api && $PYTHON_BIN scripts/seed.py 2>/dev/null || \
         warn "  Seed belum bisa dijalankan — mungkin database belum tersedia")
 
     # ── Start backend (FastAPI) ──────────────────────────────
     info "Menjalankan FastAPI backend (port 8000)..."
-    (cd apps/api && python3 -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload) &
+    (cd apps/api && $PYTHON_BIN -m uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload) &
     BACKEND_PID=$!
     success "  Backend PID: $BACKEND_PID (port 8000)"
 

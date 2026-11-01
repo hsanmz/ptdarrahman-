@@ -513,17 +513,32 @@ Ringkasan Visual Identity Ar-Rahman:
 
 ## 🚀 Quick Start
 
-### Opsi 1: Menggunakan Skrip Otomatis (`setup.sh`) — Paling Cepat
+### Opsi 1: Skrip Otomatis Sekali Jalan (Multi-Platform & Multi-CLI) — Direkomendasikan
 
-Repository dilengkapi skrip setup otomatis yang memeriksa prasyarat, menyiapkan file `.env`, dan menjalankan stack:
+Repository dilengkapi skrip setup otomatis universal yang **otomatis mendeteksi folder kerja**, memeriksa dependensi prasyarat, menyiapkan file `.env`, meng-generate secret acak yang aman, dan menjalankan stack:
 
+#### 🐧 Linux (Semua Distro: Ubuntu, Debian, Arch, Fedora, Alpine) & 🍏 macOS:
 ```bash
-# Menjalankan seluruh stack via Docker Compose
+# Full stack via Docker Compose
 ./setup.sh docker
 
-# ATAU menjalankan frontend + backend langsung di host (tanpa Docker)
+# ATAU Local Dev langsung di host (Vite + FastAPI)
 ./setup.sh local
 ```
+
+#### 🪟 Windows (PowerShell / Windows Terminal / CMD):
+```powershell
+# Full stack via Docker Compose
+.\setup.ps1 docker
+
+# ATAU Local Dev langsung di host
+.\setup.ps1 local
+```
+
+> **Catatan Portabilitas:**
+> - Skrip secara dinamis mendeteksi lokasi direktori repo di mana pun di-clone tanpa ada absolute path yang di-hardcode.
+> - Menggunakan Docker Named Volumes (`uploads_data`, `redis_data`, `wa_session`, `wa_logs`), sehingga tidak terikat pada struktur path folder host pengguna.
+> - Kunci rahasia JWT, Cron, dan WhatsApp API otomatis dibuat & disinkronkan antar-service tanpa menimpa konfigurasi yang sudah ada.
 
 ### Opsi 2: Docker di WSL2 (Manual)
 

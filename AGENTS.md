@@ -364,7 +364,8 @@ Sistem menerapkan format cetak dan ekspor resmi A4 baku (`apps/ppdb/src/utils/ex
 | Hero 3D Globe | `docs/HERO_3D_GLOBE.md` | Arsitektur Three.js dan optimasi bundle |
 | Notifikasi WhatsApp | `docs/notifikasi-code-1790904241894.md` | Template dan event notifikasi WhatsApp |
 | Skrip & Tooling | `scripts/README.md` | Sinkronisasi Windows-WSL, normalisasi LF, tooling debug |
-| Skrip Setup Otomatis | `setup.sh` | One-command setup (`./setup.sh docker` & `./setup.sh local`) |
+| Skrip Setup Otomatis (Linux/macOS) | `setup.sh` | One-command setup (`./setup.sh docker` & `./setup.sh local`) |
+| Skrip Setup Otomatis (Windows PS) | `setup.ps1` | One-command setup (`.\setup.ps1 docker` & `.\setup.ps1 local`) |
 | Panduan Agent API | `apps/api/AGENTS.md` | Arsitektur backend (FastAPI, Alembic, Pakasir v2, Repositories) |
 | Panduan Agent PPDB | `apps/ppdb/AGENTS.md` | Arsitektur frontend PPDB (rute tahapan mandiri & backoffice) |
 | Panduan Agent Superadmin | `apps/superadmin/AGENTS.md` | Arsitektur panel Superadmin |
@@ -380,6 +381,10 @@ Sistem menerapkan format cetak dan ekspor resmi A4 baku (`apps/ppdb/src/utils/ex
 - **Jenjang & Jalur:** Jangan menambah field atau logika jenjang pendidikan atau jalur di mana pun (lihat [Bebas Jenjang & Bebas Jalur Pendidikan](#bebas-jenjang--bebas-jalur-pendidikan)).
 - **Standar Naming:** Jangan gunakan kata `Yayasan Pesantren Ar-Rahman` atau `Pesantren Ar-Rahman` (tanpa lanjutan tahfidz). Selalu gunakan `PTDARRAHMAN` untuk singkatan entitas/rekening, dan `Pesantren Tahfidz Qur'an dan Digital Ar-Rahman` untuk nama lengkap institusi.
 - **Arsip:** Filter lintas periode/gelombang hanya di `/admin/arsip` — jangan spread ke tabel operasional lain.
+- **Instruksi Setup Proyek (One-Command):** Jika user menginstruksikan untuk setup atau menjalankan seluruh stack:
+  - Di Linux / macOS / WSL: Jalankan `./setup.sh docker` (atau `./setup.sh local`).
+  - Di Windows PowerShell / CMD: Jalankan `.\setup.ps1 docker` (atau `.\setup.ps1 local`).
+  - **JANGAN** membuat skrip setup baru atau mengisi `.env` secara manual; kedua skrip ini sudah otomatis mendeteksi folder, menyiapkan semua file `.env`, men-generate secret, dan menyalakan stack.
 
 ### Keselarasan Port
 
