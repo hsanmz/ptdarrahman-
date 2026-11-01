@@ -4,6 +4,7 @@ import Link from 'next/link'
 import PageHeader from '@/app/components/layout/PageHeader'
 import FlowArt, { FlowSection } from '@/app/components/ui/story-scroll'
 import StoryScrollytelling from './_components/StoryScrollytelling'
+
 import LeadershipBoards from './_components/LeadershipBoards'
 
 import { useScrollReveal } from '@/app/hooks/useScrollAnimations'
@@ -65,6 +66,14 @@ export default function AboutClient({ leadership }: { leadership: LeadershipBoar
         subtitle="Temukan kisah, visi, dan misi di balik Pesantren Tahfidz Qur&rsquo;an dan Digital Arrahman"
         badge="KISAH KAMI"
       />
+      {/* Deskripsi PTD */}
+      <div className="max-w-3xl mx-auto mt-8 text-lg md:text-xl text-[var(--text-secondary)] leading-relaxed">
+        <p>Pak Eko adalah pendiri sekaligus ketua yayasan Pesantren Tahfidz Qur'an dan Digital Ar‑Rahman (PTD ARRAHMAN). Ia memiliki pengalaman lebih dari dua dekade dalam mengelola lembaga pesantren serta latar belakang di bidang teknologi informasi.</p>
+<p>PTD dibangun untuk menjawab kebutuhan pendidikan Islam yang terintegrasi dengan teknologi, karena generasi muda memerlukan penguasaan Al‑Qur’an sebagai landasan moral dan spiritual sekaligus keterampilan digital agar dapat berkontribusi dalam masyarakat yang semakin technologis.</p>
+<p>Sistem PTD menggabungkan program Tahfidz intensif dengan bimbingan guru hafizh berpengalaman bersama program Digital yang menawarkan kursus IT, desain UI/UX, dan multimedia, serta laboratorium komputer yang bekerja sama dengan industri teknologi untuk magang dan proyek riil; kurikulum terpadu mencakup pelajaran agama, bahasa, mata pelajaran umum, dan modul teknologi setiap semester, dengan evaluasi meliputi ujian hafalan, proyek digital, dan penilaian karakter, hasilnya dituangkan dalam Letter of Acceptance yang ditandatangani digital oleh santri dan orang tua.</p>
+<p>Tujuan PTD adalah mencetak generasi hafidz Al‑Qur’an yang berakhlak Qurani serta memberikan keterampilan teknologi yang relevan, mewujudkan integrasi nilai Islam dan inovasi, menyediakan pendidikan yang inklusif dan terjangkau melalui beasiswa serta diskon early‑bird, dan membangun komunitas santri yang mandiri, bertanggung jawab, terlibat dalam program kepemimpinan, sosial, serta proyek komunitas.</p>
+      </div>
+
 
       {/* Story: sticky-scroll storytelling — visual kiri menempel, cerita PTD mengalir */}
       <StoryScrollytelling />

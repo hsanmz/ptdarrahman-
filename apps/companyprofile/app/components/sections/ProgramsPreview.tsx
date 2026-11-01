@@ -134,7 +134,7 @@ export default function ProgramsPreview({ programs = [] }: { programs?: Program[
       </div>
 
       <div className="relative z-10 w-full flex-1 flex items-start pt-2 sm:pt-4">
-        <div ref={pinWrapRef} className="horiz-gallery-strip flex flex-col lg:flex-row gap-4 sm:gap-6 px-4 sm:px-6 md:px-12 w-max">
+        <div ref={pinWrapRef} className="horiz-gallery-strip flex gap-4 sm:gap-6 px-4 sm:px-6 md:px-12 w-max">
           {displayPrograms.map((prog) => {
             // `icon` sudah berupa komponen: dari CMS di-resolve lewat
             // `iconMap`, sedangkan data cadangan memakai komponen lucide langsung.
