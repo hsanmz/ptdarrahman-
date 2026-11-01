@@ -109,7 +109,7 @@ export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
 
   const slides = useMemo(
     () =>
-      filtered.map((item) => ({
+      filtered.slice(0, 5).map((item) => ({
         id: item.id,
         src: item.image,
         alt: item.content?.title ?? 'Galeri',
