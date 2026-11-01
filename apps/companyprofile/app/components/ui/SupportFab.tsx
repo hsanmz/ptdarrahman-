@@ -23,7 +23,7 @@ export default function SupportFab({
   phone = '6281283612352',
   whatsapp = '6281283612352',
   email = 'info@ptdarrahman.sch.id',
-  whatsappMessage = 'Assalamualaikum! Saya ingin bertanya tentang Pesantren Ar-Rahman.',
+  whatsappMessage = 'Assalamualaikum! Saya ingin bertanya tentang PTDARRAHMAN.',
 }: SupportFabProps) {
   const [open, setOpen] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)

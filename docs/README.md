@@ -24,6 +24,7 @@ Selamat datang di direktori dokumentasi teknis dan operasional **Pesantren Tahfi
 
 ### 1. Kebutuhan & Logika Bisnis
 - **[`REQUIREMENTS.md`](REQUIREMENTS.md)**: Spesifikasi aturan bisnis PPDB (periode tunggal, gelombang tunggal, bebas jenjang & bebas jalur, kuota atomik, penutupan otomatis, 10 pertanyaan kuesioner kesehatan, sistem ujian CBT Akademik & Psikologi, seleksi Tahfidz & Wawancara terpadu, `is_locked`, dan manajemen dossier arsip).
+- **[`QA-TESTING-REPORT.md`](QA-TESTING-REPORT.md)**: Laporan resmi pengujian menyeluruh (End-to-End Testing & QA Audit) 100% Passed (245 Passed, 1 XFAIL, 0 Failed) mencakup pengujian alur penuh siklus PPDB dari registrasi hingga penandatanganan LoA dan audit berkas arsip.
 
 ### 2. Infrastruktur & Deployment
 - **[`DOCKER_SETUP.md`](DOCKER_SETUP.md)**: Panduan langkah-demi-langkah deployment lokal di lingkungan Windows WSL2 & Docker Compose.

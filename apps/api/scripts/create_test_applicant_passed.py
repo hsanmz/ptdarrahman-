@@ -241,7 +241,7 @@ def _ensure_session(
         end_time="09:45",
         mode=mode,
         officer_name=officer_name,
-        location="Ruang Seleksi Pesantren Ar-Rahman" if mode == "offline" else None,
+        location="Ruang Seleksi PTDARRAHMAN" if mode == "offline" else None,
         meeting_url=(
             f"https://zoom.us/j/test-{session_type}" if mode == "online" else None
         ),

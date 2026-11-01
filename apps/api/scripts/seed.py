@@ -156,7 +156,7 @@ NOTIF_TEMPLATES = [
             "  Email: {email}\n"
             "  No. WhatsApp: {phone}\n\n"
             "Segera ganti password Anda setelah login pertama kali.\n\n"
-            "Terima kasih,\nAdmin PT Darrahman"
+            "Terima kasih,\nAdmin PTDARRAHMAN"
         ),
     },
     {
@@ -171,7 +171,7 @@ NOTIF_TEMPLATES = [
             "  Email: {email}\n"
             "  No. WhatsApp: {phone}\n\n"
             "Bila Anda tidak merasa melakukan perubahan ini, segera hubungi admin.\n\n"
-            "Terima kasih,\nAdmin PT Darrahman"
+            "Terima kasih,\nAdmin PTDARRAHMAN"
         ),
     },
     {
@@ -187,7 +187,7 @@ NOTIF_TEMPLATES = [
             "  Password: {password}\n"
             "  Link Login: {link_login}\n\n"
             "Segera login dan ganti password Anda jika diperlukan.\n\n"
-            "Terima kasih,\nAdmin PT Darrahman"
+            "Terima kasih,\nAdmin PTDARRAHMAN"
         ),
     },
     {

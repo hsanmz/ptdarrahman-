@@ -328,16 +328,20 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
         content: (
           <div className="space-y-2 text-xs text-slate-700 leading-relaxed">
             <p className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-              Total nilai seleksi calon santri dihitung dari dua pilar evaluasi:
+              Total nilai seleksi calon santri dihitung dari tiga pilar evaluasi terpadu:
             </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="p-3 rounded-xl border border-blue-200 bg-blue-50/50">
+                <p className="font-bold text-blue-900 text-xs">1. Ujian CBT</p>
+                <p className="text-[11px] text-blue-800 mt-1">Akademik & Psikologi berbasis Bank Soal (MCQ A-E) dengan auto-grading skor tersimpan pada catatan seleksi.</p>
+              </div>
               <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/50">
-                <p className="font-bold text-emerald-900 text-xs">1. Session Tahfidz</p>
-                <p className="text-[11px] text-emerald-800 mt-1">Diinput penguji di lembar evaluasi berdasarkan rubrik hafalan, tajwid & makhraj.</p>
+                <p className="font-bold text-emerald-900 text-xs">2. Session Tahfidz</p>
+                <p className="text-[11px] text-emerald-800 mt-1">Diinput penguji di lembar evaluasi berdasarkan rubrik hafalan, kelancaran, tajwid & makhraj.</p>
               </div>
               <div className="p-3 rounded-xl border border-purple-200 bg-purple-50/50">
-                <p className="font-bold text-purple-900 text-xs">2. Session Wawancara</p>
-                <p className="text-[11px] text-purple-800 mt-1">Diinput pewawancara di lembar evaluasi berdasarkan kesiapan dan komitmen santri/wali.</p>
+                <p className="font-bold text-purple-900 text-xs">3. Session Wawancara</p>
+                <p className="text-[11px] text-purple-800 mt-1">Diinput pewawancara berdasarkan kesiapan santri tinggal di asrama dan komitmen orang tua/wali.</p>
               </div>
             </div>
           </div>
@@ -915,37 +919,37 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
         icon: Archive,
         content: (
           <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-            Menu <strong>Arsip Pendaftar</strong> adalah satu-satunya tempat untuk melakukan <strong>pencarian data santri lintas seluruh periode dan gelombang</strong> tanpa terikat gelombang aktif operasional saat ini.
+            Menu <strong>Arsip Pendaftar</strong> adalah satu-satunya tempat untuk melakukan <strong>pencarian data santri lintas seluruh periode dan gelombang</strong> tanpa terikat gelombang aktif operasional saat ini. Klik baris pendaftar langsung membuka halaman detail berkas dossier.
           </p>
         ),
       },
       {
         number: 2,
-        title: 'Dossier Lengkap 1 Tindakan (One-Click Dossier)',
+        title: 'Halaman Detail Dossier & Pratinjau Berkas (/admin/arsip/:id)',
         icon: FileText,
         content: (
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed space-y-2">
-            <p className="font-semibold text-slate-900">Dossier santri mencakup seluruh riwayat pendaftaran:</p>
-            <ul className="list-disc list-inside space-y-1 text-slate-600">
-              <li>Biodata diri santri dan asal sekolah.</li>
-              <li>Data lengkap Orang Tua / Wali (Ayah, Ibu, Wali).</li>
-              <li>Kuesioner Identifikasi Kesehatan santri.</li>
-              <li>Seluruh dokumen persyaratan yang pernah diunggah & riwayat verifikasinya.</li>
-              <li>Jadwal & lembar evaluasi seleksi Tahfidz & Wawancara.</li>
-              <li>Keputusan pendaftaran dan LoA beserta status tanda tangan.</li>
-              <li>Riwayat transaksi pembayaran formulir pendaftaran.</li>
-            </ul>
+            <p className="font-semibold text-slate-900">Halaman dossier menyajikan pratinjau 4 dokumen resmi baku secara kontinu:</p>
+            <ol className="list-decimal list-inside space-y-1.5 text-slate-600">
+              <li><strong>Formulir Pendaftaran & Kuesioner Kesehatan:</strong> Dokumen A4 resmi (2 halaman) mencakup biodata, data ortu/wali, asal sekolah, dan 10 butir kesehatan.</li>
+              <li><strong>Berkas Persyaratan Upload:</strong> Hasil verifikasi dokumen asli (NISN, KK, Akta, Pas Foto, KTP Orang Tua/Wali, dan 4 Rapor Terakhir).</li>
+              <li><strong>Lembar Penilaian Evaluator & Transkrip Nilai:</strong> Lembar evaluasi A4 mencakup skor CBT Akademik & Psikologi (auto-graded), nilai Tahfidz, dan Wawancara.</li>
+              <li><strong>Letter of Acceptance (LoA) Resmi:</strong> Surat keputusan A4 (2 halaman) berstempel digital, QR HMAC, rincian biaya pendidikan, dan tanda tangan digital.</li>
+            </ol>
           </div>
         ),
       },
       {
         number: 3,
-        title: 'Unduhan Dokumen & Paket ZIP Dossier',
+        title: 'Pusat Unduhan & Paket ZIP Dossier Terpadu',
         icon: Sparkles,
         content: (
           <div className="space-y-2 text-xs text-slate-700">
             <p className="bg-slate-50 p-3 rounded-xl border border-slate-200">
-              Sistem mendukung unduhan berkas satuan serta <strong>Unduh Dossier ZIP Lengkap</strong> yang memuat rangkuman PDF biodata resmi beserta seluruh lampiran asli santri dalam folder terstruktur.
+              Panel kanan dossier menyediakan <strong>Unduh Dossier ZIP Lengkap</strong> (<code className="text-[11px] bg-slate-100 px-1 py-0.5 rounded">GET /ppdb/archive/applicants/:id/dossier/zip</code>) yang memuat formulir PDF serta seluruh berkas asli santri dalam arsip terstruktur. Tersedia juga opsi cetak langsung dan unduh per dokumen.
+            </p>
+            <p className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200/80 text-[11px] text-amber-900">
+              🛡️ <strong>Keamanan & Jejak Audit:</strong> Pembukaan dan pengunduhan berkas dossier dibatasi izin khusus panitia dan setiap aktivitas dicatat dalam log audit bersama alamat IP pemohon.
             </p>
           </div>
         ),
@@ -1257,20 +1261,20 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
         content: (
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed space-y-1.5">
             <p>
-              Unggah berkas-berkas wajib seperti <strong>Kartu Keluarga, Akta Kelahiran, Rapor/Ijazah, dan Pasfoto</strong>. Pastikan file jelas terbaca (format PDF atau JPG/PNG). Panitia akan memverifikasi berkas Anda.
+              Unggah berkas-berkas wajib persyaratan: <strong>NISN, Kartu Keluarga (KK), Akta Kelahiran, Pas Foto Santri, KTP Orang Tua/Wali, dan 4 Rapor Terakhir</strong>. Pastikan file jelas terbaca (format PDF atau JPG/PNG). Panitia akan memverifikasi berkas Anda.
             </p>
           </div>
         ),
       },
       {
         number: 3,
-        title: 'Tahap 3: Ujian Seleksi',
+        title: 'Tahap 3: Ujian Seleksi Terpadu & Wawancara',
         icon: GraduationCap,
         content: (
           <div className="space-y-2 text-xs text-slate-700 leading-relaxed">
             <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/50">
-              <strong className="text-emerald-950 block mb-0.5">Jadwal Seleksi Ditetapkan Panitia:</strong>
-              Jadwal tes Tahfidz dan Wawancara Anda ditetapkan panitia dan tampil di dashboard (tersedia mode Online via Zoom atau Offline di pesantren).
+              <strong className="text-emerald-950 block mb-0.5">Jadwal Seleksi Terpadu:</strong>
+              Setelah dokumen disetujui, Anda dijadwalkan mengikuti <strong>Ujian CBT (Akademik & Psikologi)</strong> via ruang ujian mandiri, <strong>Tes Tahfidz Al-Qur'an</strong>, dan <strong>Wawancara Terpadu</strong> bersama calon santri dan orang tua/wali (tersedia mode Online via Zoom atau Offline di pesantren).
             </div>
           </div>
         ),
@@ -1513,27 +1517,38 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
   },
 
   'applicant-selection': {
-    title: 'Tes Seleksi & Wawancara',
-    subtitle: 'Petunjuk tahapan ujian seleksi Tahfidz dan Wawancara.',
+    title: 'Tes Seleksi Masuk',
+    subtitle: 'Petunjuk tahapan ujian seleksi CBT (Akademik & Psikologi) dan Ujian Tahfidz.',
     sections: [
       {
         number: 1,
-        title: 'Tahapan Seleksi',
+        title: 'Komponen Ujian Seleksi',
         icon: Users,
         content: (
-          <p className="text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-            Calon santri menjalani dua tahapan seleksi utama: <strong>Ujian Tahfidz Al-Qur'an</strong> bersama asatidz penguji dan <strong>Wawancara Komitmen</strong> bersama calon santri dan orang tua/wali.
-          </p>
+          <div className="space-y-1.5 text-xs text-slate-600 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <p>
+              Calon santri menjalani tahapan seleksi terpadu yang meliputi:
+            </p>
+            <ul className="list-disc list-inside space-y-1 text-slate-700">
+              <li><strong>Ujian CBT Akademik & CBT Psikologi:</strong> Ujian daring/luring pilihan ganda (MCQ A-E) dengan autosave instan dan countdown timer.</li>
+              <li><strong>Ujian Tahfidz Al-Qur'an:</strong> Pengujian kelancaran tartil, tajwid, dan hafalan bersama asatidz penguji.</li>
+            </ul>
+          </div>
         ),
       },
       {
         number: 2,
-        title: 'Informasi Jadwal',
+        title: 'Jadwal & Akses Ruang Ujian',
         icon: Clock,
         content: (
-          <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-            Setelah berkas persyaratan disetujui panitia, jadwal penguji Anda ditetapkan oleh panitia; informasi jadwal tampil di halaman Tes Seleksi portal ini.
-          </p>
+          <div className="space-y-2 text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+            <p>
+              Jadwal pelaksanaan ujian tampil pada kartu masing-masing sesi di halaman ini. Untuk ujian CBT, pastikan Anda mencatat <strong>PIN Sesi</strong> dan menggunakan <strong>Kata Sandi Akun</strong> Anda saat memasuki ruang ujian.
+            </p>
+            <p className="text-[11px] text-amber-900 bg-amber-50 p-2.5 rounded-lg border border-amber-200">
+              ⚠️ <strong>Ketertiban Ujian:</strong> Jangan berpindah jendela/tab lebih dari 5 detik selama ujian CBT berlangsung untuk mencegah sistem membekukan (lock) lembar ujian Anda.
+            </p>
+          </div>
         ),
       },
     ],
@@ -1545,12 +1560,12 @@ export const SYSTEM_DOCS: Record<string, DocItem> = {
     sections: [
       {
         number: 1,
-        title: 'Pengumuman Hasil Seleksi',
+        title: 'Pengumuman Hasil Seleksi Terpadu',
         icon: Award,
         content: (
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed space-y-1.5">
             <p>
-              Hasil seleksi diumumkan secara transparan di halaman ini setelah seluruh penilaian (Tahfidz dan Wawancara) selesai direkapitulasi dan disidangkan oleh panitia penerimaan santri baru.
+              Hasil seleksi diumumkan secara transparan di halaman ini setelah seluruh penilaian terpadu (CBT Akademik, CBT Psikologi, Tahfidz, dan Wawancara) selesai direkapitulasi dan ditetapkan oleh panitia penerimaan santri baru.
             </p>
           </div>
         ),

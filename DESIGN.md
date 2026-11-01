@@ -117,7 +117,7 @@ Tipografi disusun berjenjang dengan pemisahan peran yang tegas antara branding, 
 
 | Nama Token | Font Primer & Cadangan | Peruntukan Khusus |
 |---|---|---|
-| `font-brand` | `'Playfair Display', Georgia, serif` | Judul hero utama, branding nama yayasan di landing page |
+| `font-brand` | `'Playfair Display', Georgia, serif` | Judul hero utama, branding nama institusi (PTDARRAHMAN) di landing page |
 | `font-heading` | `'Inter', 'DM Sans', sans-serif` | H1–H4 judul bagian halaman, judul kartu, modal header |
 | `font-sans` / `font-body` | `'Inter', system-ui, sans-serif` | Paragraf teks, teks input form, deskripsi tahapan |
 | `font-arabic` | `'Amiri', serif` | Ayat Al-Qur'an, lafadz doa, terjemahan resmi tahfidz |
@@ -287,7 +287,7 @@ Semua dokumen resmi lembaga (`apps/ppdb/src/utils/export*`) dicetak dengan rasio
 
 | Komponen Dokumen | Standar Tampilan |
 |---|---|
-| **Kop Surat (Letterhead)** | Logo resolusi tinggi di sebelah kiri, nama resmi yayasan berhuruf kapital tegas, alamat lengkap, kontak resmi, dan garis pemisah ganda emas-zamrud |
+| **Kop Surat (Letterhead)** | Logo resolusi tinggi di sebelah kiri, nama resmi lembaga (PESANTREN TAHFIDZ QUR'AN DAN DIGITAL AR-RAHMAN) berhuruf kapital tegas, alamat lengkap, kontak resmi, dan garis pemisah ganda emas-zamrud |
 | **Nomor Registrasi Resmi** | Format `REG-{YYYYMMDD}-{XXXX}` dengan font monospace tebal dan kontras tinggi |
 | **Kuitansi Pembayaran** | Memuat segel digital, stempel cap panitia, rincian nominal terbilang, dan **Kode QR bertoken HMAC** |
 | **Letter of Acceptance (LoA)** | Memuat klausul pembatalan non-refundable, tabel rincian biaya, serta **dua kotak tanda tangan berdampingan** (Wali Santri & Panitia PPDB) |

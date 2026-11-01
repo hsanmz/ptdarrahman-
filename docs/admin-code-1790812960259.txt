@@ -52,3 +52,11 @@ dibatalkan otomatis via webhook idempoten.                   ▼                
 - Rincian biaya pendidikan resmi disajikan transparan pada LoA.
 - Pembayaran biaya pendidikan dilakukan DI LUAR APLIKASI (transfer ke Rekening Resmi PTDARRAHMAN
   atau tunai di kantor bendahara pesantren). Tidak ada pembayaran online tahap 2 di portal PPDB.
+                                                               │
+                                                               ▼
+[8. PENCARIAN ARSIP & DOSSIER DETAIL (/admin/arsip & /admin/arsip/:id)]
+- Satu-satunya tempat pencarian data santri lintas seluruh periode dan gelombang (/admin/arsip).
+- Klik baris pendaftar membuka ArsipDossierDetailPage (/admin/arsip/:id) dengan layout 2 panel:
+  * Panel kiri: Pratinjau 4 dokumen resmi kontinu (Formulir A4, Berkas Upload, Transkrip/Nilai CBT, LoA A4).
+  * Panel kanan: Navigator berkas, cetak dokumen PDF, dan Unduh Bundle ZIP Lengkap (/dossier/zip).
+- Akses berkas dibatasi izin khusus panitia dan setiap pembukaan/unduhan diaudit bersama alamat IP admin.

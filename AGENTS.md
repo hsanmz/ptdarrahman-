@@ -107,9 +107,10 @@ Pendaftar melewati tahapan pendaftaran secara berurutan dan terstruktur, yang **
 ### Arsip & Dossier
 
 - Filter pencarian lintas periode dan gelombang **hanya ada** di halaman `/admin/arsip` — tidak ditambahkan ke tabel operasional lain.
-- Dossier lengkap: biodata, dokumen + riwayat verifikasi, nilai seleksi & wawancara, keputusan pendaftaran, LoA bertanda tangan, dan riwayat pembayaran formulir.
-- Mendukung unduhan per berkas dan unduhan paket ZIP satu-klik (`GET /ppdb/archive/applicants/{id}/dossier/zip`).
-- Akses dossier dibatasi izin khusus dan mencatat log audit alamat IP admin.
+- Klik baris santri membuka **Halaman Detail Dossier (`/admin/arsip/:id` - `ArsipDossierDetailPage`)**:
+  - Menyajikan pratinjau kontinu 4 dokumen resmi: (1) Formulir Pendaftaran & Kesehatan A4, (2) Berkas Upload Terverifikasi, (3) Lembar Penilaian & Transkrip Nilai A4 (skor CBT Akademik & Psikologi dari `notes_akademik` & `notes_psikologi`, Tahfidz, Wawancara), dan (4) LoA Resmi A4 ber-QR HMAC & tanda tangan digital.
+  - Pusat unduhan berkas: cetak PDF per lembar dokumen dan paket bundle ZIP satu-klik (`GET /ppdb/archive/applicants/{id}/dossier/zip`).
+- Akses dossier dibatasi izin khusus (`require_ppdb_admin`) dan setiap pembukaan berkas/unduhan mencatat log audit bersama alamat IP admin.
 
 ### Standar Penulisan Nama Institusi & Entitas (Naming Convention)
 
@@ -357,6 +358,7 @@ Sistem menerapkan format cetak dan ekspor resmi A4 baku (`apps/ppdb/src/utils/ex
 | **System Design & Monorepo** | `README.md` | Arsitektur teknis lengkap (System Design), alur request, database, dan Docker |
 | **Sistem Desain UI/UX** | `DESIGN.md` | Panduan desain visual, palet warna, tipografi, token, komponen, dan A4 print |
 | Aturan Bisnis & Requirements | `docs/REQUIREMENTS.md` | Spesifikasi aturan bisnis dan logika utama |
+| Laporan QA & E2E Testing | `docs/QA-TESTING-REPORT.md` | Laporan pengujian alur penuh PPDB 100% Passed (245 Passed, 1 XFAIL, 0 Failed) |
 | Docker Runbook Lokal | `docs/DOCKER_SETUP.md` | Deployment lokal WSL2 & Docker langkah per langkah |
 | Docker Runbook Production | `docs/DOCKER_PRODUCTION.md` | Panduan deployment VPS Ubuntu & Nginx Reverse Proxy |
 | Hero 3D Globe | `docs/HERO_3D_GLOBE.md` | Arsitektur Three.js dan optimasi bundle |

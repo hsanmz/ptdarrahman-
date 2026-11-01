@@ -70,7 +70,7 @@ Project ini menggunakan arsitektur modular **pnpm workspace** yang diorkestrasi 
 | PDF/Print | Print engine kustom A4 (`utils/export*`) |
 | Auth | HTTP-only Cookie JWT (via Core API) |
 
-**Fitur Backoffice:** Manajemen gelombang & master biaya, verifikasi berkas, Bank Soal CBT (Akademik & Psikologi), penjadwalan ujian CBT massal & live monitoring peserta, seleksi Tahfidz & Wawancara terpadu (Santri & Ortu), rekapitulasi penilaian seleksi gabungan, review & penerbitan LoA, cetak dokumen resmi, arsip dossier ZIP.
+**Fitur Backoffice:** Manajemen gelombang & master biaya, verifikasi berkas, Bank Soal CBT (Akademik & Psikologi), penjadwalan ujian CBT massal & live monitoring peserta, seleksi Tahfidz & Wawancara terpadu (Santri & Ortu), rekapitulasi penilaian seleksi gabungan, review & penerbitan LoA, cetak dokumen resmi, arsip dossier detail (`/admin/arsip/:id`) dengan viewer 4 berkas resmi kontinu & unduhan paket ZIP.
 
 ### 🛡️ apps/superadmin — Panel Superadmin
 | Kategori | Teknologi |
@@ -424,9 +424,12 @@ Aturan-aturan berikut adalah pilar integritas sistem yang wajib dipatuhi di back
    - Bersifat sensitif: hanya dapat dibuka oleh admin berizin pada dossier pendaftar dan setiap akses tercatat dalam log audit.
 5. **Kunci Formulir Pasca-LoA (`is_locked = true`):**
    - Begitu LoA resmi ditandatangani oleh pendaftar dan wali santri, seluruh data profil dan kuesioner kesehatan dikunci permanen (`is_locked = true`) dan alur pendaftaran selesai.
-6. **Arsip Terpusat di `/admin/arsip`:**
+6. **Arsip Terpusat di `/admin/arsip` & Halaman Dossier (`/admin/arsip/:id`):**
    - Filter lintas periode dan gelombang **hanya tersedia di halaman Arsip/Cari Pendaftar (`/admin/arsip`)**.
-   - Menyediakan unduhan berkas individual dan paket arsip dossier ZIP lengkap (`GET /ppdb/archive/applicants/{id}/dossier/zip`) yang diaudit dengan alamat IP admin.
+   - Klik baris santri membuka **Halaman Detail Dossier (`/admin/arsip/:id`)** dua kolom:
+     * **Panel Kiri:** Pratinjau kontinu 4 dokumen resmi baku (Formulir Pendaftaran & Kesehatan A4, Berkas Upload, Transkrip Penilaian/Nilai CBT A4, dan LoA Resmi A4).
+     * **Panel Kanan:** Navigator dokumen, cetak dokumen PDF langsung, dan **Unduh Paket Dossier ZIP Lengkap** (`GET /ppdb/archive/applicants/{id}/dossier/zip`).
+   - Setiap pembukaan dan pengunduhan berkas dossier diaudit secara ketat dengan mencatat alamat IP admin ke `audit_logs`.
 7. **Master Komponen Biaya di Periode & Pembayaran di Luar Aplikasi:**
    - Seluruh komponen biaya masuk / biaya pendidikan (uang pangkal, SPP, seragam, dll.) dikonfigurasi di level Periode (`ppdb_period_fee_items`), bukan di gelombang.
    - Gelombang hanya mengonfigurasi diskonasi (`ppdb_wave_fee_discounts`) terhadap master komponen periode.
@@ -493,6 +496,7 @@ Ringkasan Visual Identity Ar-Rahman:
 |---|---|---|
 | **Panduan Desain UI/UX** | [`DESIGN.md`](DESIGN.md) | Sistem Desain, token warna, tipografi, elevasi, dan standar visual |
 | Aturan Bisnis & Requirements | [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md) | Logika utama: periode, kuota atomik, LoA, rubrik, bebas-jenjang, kesehatan |
+| **Laporan QA & E2E Testing** | [`docs/QA-TESTING-REPORT.md`](docs/QA-TESTING-REPORT.md) | Laporan pengujian alur penuh PPDB 100% Passed (245 Passed, 1 XFAIL, 0 Failed) |
 | Docker Runbook (WSL2 Lokal) | [`docs/DOCKER_SETUP.md`](docs/DOCKER_SETUP.md) | Panduan deployment lokal langkah-per-langkah |
 | Docker Runbook (Production VPS) | [`docs/DOCKER_PRODUCTION.md`](docs/DOCKER_PRODUCTION.md) | Setup VPS Linux dengan Nginx + Let's Encrypt |
 | Notifikasi WhatsApp | [`docs/notifikasi-code-1790904241894.md`](docs/notifikasi-code-1790904241894.md) | Template & event notifikasi WhatsApp |

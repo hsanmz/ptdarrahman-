@@ -167,7 +167,7 @@ def _validate_payment_gateway() -> None:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger.info("Pesantren Tahfidz Qur'an dan Digital Arrahman API starting")
+    logger.info("Pesantren Tahfidz Qur'an dan Digital Ar-Rahman API starting")
     _validate_secrets()
     _validate_payment_gateway()
     # Warm up Redis connection (non-fatal if unavailable)
@@ -240,8 +240,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="Pesantren Tahfidz Qur'an dan Digital Arrahman API",
-    description=("Backend API (FastAPI) for the PTDARRAHMAN"),
+    title="Pesantren Tahfidz Qur'an dan Digital Ar-Rahman API",
+    description="Backend API (FastAPI) for PTDARRAHMAN",
     version="0.1.0",
     docs_url=None,
     redoc_url=None,
@@ -302,7 +302,7 @@ def favicon():
 @app.get("/")
 def read_root():
     return {
-        "message": "Pesantren Tahfidz Qur'an dan Digital Arrahman API",
+        "message": "Pesantren Tahfidz Qur'an dan Digital Ar-Rahman API",
         "version": "0.1.0",
         "docs": "/scalar",
     }

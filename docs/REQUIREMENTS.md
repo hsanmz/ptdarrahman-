@@ -184,8 +184,14 @@ Untuk menjaga integritas arsip dan tampilan dokumen institusi, sistem menerapkan
 ## Arsip dan Pencarian Dossier Pendaftar
 
 - Pencarian lintas periode dan gelombang berada di **halaman khusus Arsip/Cari Pendaftar (`/admin/arsip`)**. Tidak ditambahkan ke tabel operasional lain.
-- Mendukung unduhan berkas perorangan dan paket bundle ZIP satu-klik (`GET /ppdb/archive/applicants/{id}/dossier/zip`).
-- Akses dossier dibatasi dengan izin khusus dan seluruh aktivitas unduhan dicatat dalam `audit_log` bersama alamat IP admin pemohon.
+- **Halaman Detail Dossier Lengkap (`/admin/arsip/:id`):** Klik baris santri membuka tampilan dua panel independen:
+  - **Panel Pratinjau Dokumen Kontinu:** Menyajikan 4 berkas resmi institusi dalam 1 alur scroll vertikal:
+    1. *Formulir Pendaftaran & Kuesioner Kesehatan* (Format baku cetak A4, 2 halaman).
+    2. *Berkas Persyaratan Upload* (Hasil verifikasi berkas: NISN, Kartu Keluarga, Akta Kelahiran, Pas Foto, KTP Ortu/Wali, dan 4 Rapor Terakhir).
+    3. *Lembar Penilaian Evaluator & Transkrip Nilai* (Lembar evaluasi A4 mencakup nilai CBT Akademik & Psikologi yang tersimpan pada `notes_akademik` & `notes_psikologi`, skor rubrik Tahfidz, dan Wawancara).
+    4. *Letter of Acceptance (LoA) Resmi* (Surat keputusan A4, 2 halaman, rincian biaya pendidikan resmi, QR verifikasi HMAC, dan tanda tangan digital santri & orang tua/wali).
+  - **Panel Pusat Unduhan & Navigator Berkas:** Menyediakan unduhan berkas satuan, cetak dokumen PDF langsung, serta **Unduh Paket Arsip Dossier ZIP Lengkap** (`GET /ppdb/archive/applicants/{id}/dossier/zip`).
+- **Keamanan & Jejak Audit:** Akses berkas sensitif dan kuesioner kesehatan dibatasi izin panitia berwenang (`require_ppdb_admin`). Setiap pembukaan berkas dan ekspor berkas ZIP dicatat secara otomatis dalam `audit_logs` bersama alamat IP admin pemohon.
 
 ---
 
@@ -208,7 +214,7 @@ Untuk menjaga integritas arsip dan tampilan dokumen institusi, sistem menerapkan
 - ✅ **Kuesioner Kesehatan:** 10 pertanyaan baku wajib tervalidasi lengkap di server saat pendaftaran.
 - ✅ **Pembaruan Mandiri Profil & Kesehatan Santri:** Santri/wali dapat meninjau dan memperbarui data formulir pendaftaran serta identifikasi kesehatan secara mandiri di `/applicant/profile` (`PUT /ppdb/applicants/me`). Pembaruan dibatasi hanya selama proses seleksi berlangsung, dan otomatis dikunci permanen (`is_locked = true`) sesaat setelah santri dinyatakan lulus dan LoA resmi ditandatangani.
 
-### Keputusan yang Masih Terbuka (Menunggu Kebijakan Yayasan):
+### Keputusan yang Masih Terbuka (Menunggu Kebijakan PTDARRAHMAN):
 - Berapa lama masa retensi berkas dan riwayat data kesehatan pendaftar yang tidak diterima?
 - Apakah pencantuman jenjang pendidikan institusi pada template cetak dokumen perlu dikonfigurasi melalui backoffice tersendiri atau cukup satu konfigurasi statis institusi?
 

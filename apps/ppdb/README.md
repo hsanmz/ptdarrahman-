@@ -31,7 +31,7 @@ Aplikasi frontend berbasis **Vite + React + TypeScript** untuk sistem Penerimaan
 - 🎙️ **Penjadwalan Tahfidz & Wawancara:** Manajemen jadwal penguji Tahfidz dan pewawancara terpadu.
 - ⚖️ **Penilaian & Review LoA:** Form penilaian evaluator dua kolom, rekapitulasi nilai seleksi gabungan, penentuan kelulusan, dan monitoring tanda tangan LoA pendaftar.
 - 💳 **Monitoring Keuangan Formulir:** Pemantauan transaksi pembayaran formulir via webhook Pakasir v2, kuitansi resmi bertanda tangan digital HMAC.
-- 🗄️ **Arsip Dossier:** Pencarian data dossier lengkap lintas periode dan gelombang, serta ekspor bundle ZIP satu-klik dengan log audit alamat IP admin.
+- 🗄️ **Arsip Dossier & Halaman Detail (`/admin/arsip/:id`):** Pencarian data dossier santri lintas seluruh periode dan gelombang, pratinjau 4 berkas resmi kontinu (Formulir A4, Dokumen Upload terverifikasi, Lembar Penilaian/CBT A4, dan LoA Resmi A4), serta ekspor bundle ZIP satu-klik (`GET /ppdb/archive/applicants/:id/dossier/zip`) dengan log audit alamat IP admin.
 
 ### 🌐 Rute Verifikasi Publik (Tanpa Login)
 - 🧾 `/kuitansi/:id` & `/receipt/:id`: Verifikasi keaslian bukti bayar kuitansi resmi via QR code.

@@ -706,7 +706,7 @@ export default function AdminDashboard() {
                     {activeTabDef.label}
                   </h2>
                   <p className="mt-1.5 text-sm text-emerald-50/85 max-w-xl leading-relaxed">
-                    {TAB_DESCRIPTIONS[activeTab] || 'Kelola konten website Pesantren Ar-Rahman.'}
+                    {TAB_DESCRIPTIONS[activeTab] || 'Kelola konten website PTDARRAHMAN.'}
                   </p>
                 </div>
               </div>

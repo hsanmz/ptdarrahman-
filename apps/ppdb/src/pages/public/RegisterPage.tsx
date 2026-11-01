@@ -546,7 +546,7 @@ export default function RegisterPage() {
         <div className="mb-6 text-center">
           <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-bold uppercase tracking-wider mb-2.5 shadow-2xs">
             <ShieldCheck className="h-4 w-4 text-emerald-600" />
-            Pesantren Ar-Rahman
+            PTDARRAHMAN
           </div>
           <h1 className="font-heading text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900">
             Formulir Pendaftaran <span className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-emerald-500 bg-clip-text text-transparent">Online</span>
