@@ -712,3 +712,42 @@ h1, h2, h3, h4, h5, h6 {
 .rte-content p { margin: 0 0 0.85em; }
 .rte-content h2 { margin-top: 1em; }
 .rte-content h3 { margin-top: 1em; }
+
+/* Progress bar hero slide */
+@keyframes heroProgress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+.animate-hero-progress {
+  animation: heroProgress linear forwards;
+}
+
+/* Modern Screen Loader Animations */
+@keyframes loaderOrbitClockwise {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes loaderOrbitCounter {
+  from { transform: rotate(360deg); }
+  to { transform: rotate(0deg); }
+}
+
+@keyframes loaderShimmerSweep {
+  0% { transform: translateX(-100%); }
+  50% { transform: translateX(20%); }
+  100% { transform: translateX(200%); }
+}
+
+.animate-loader-orbit {
+  animation: loaderOrbitClockwise 12s linear infinite;
+}
+
+.animate-loader-orbit-reverse {
+  animation: loaderOrbitCounter 8s linear infinite;
+}
+
+.animate-loader-shimmer {
+  animation: loaderShimmerSweep 1.8s ease-in-out infinite;
+}
+
