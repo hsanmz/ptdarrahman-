@@ -174,8 +174,8 @@ export function fallbackPrograms(): Program[] {
   )
 }
 
-/** Batas jumlah program di menu supaya dropdown navbar tidak kepanjangan. */
-export const MAX_PROGRAM_MENU_LINKS = 6
+/** Batas jumlah program di menu supaya dropdown navbar tetap simpel. */
+export const MAX_PROGRAM_MENU_LINKS = 4
 
 export interface ProgramMenuLink {
   href: string
