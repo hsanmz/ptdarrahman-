@@ -264,76 +264,74 @@ export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
       <AnimatePresence>
         {selected && (
           <ModalOverlay key="gallery-lightbox" onClose={() => setSelected(null)}>
-            <div
-              className="w-full max-w-4xl max-h-[90svh] bg-[var(--bg)] rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col md:flex-row shadow-2xl relative mx-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button
-                className="absolute top-3 right-3 sm:top-4 sm:right-4 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center text-white/80 hover:text-white hover:bg-black/60 transition-all z-20"
-                onClick={() => setSelected(null)}
-                aria-label="Tutup"
-              >
-                <X className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300">
+              <div className="relative w-full max-w-6xl max-h-[95vh] rounded-3xl bg-white/95 backdrop-blur-xl shadow-2xl transform overflow-hidden transition-all duration-500 ease-out hover:scale-100 hover:opacity-100">
+                <button
+                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white hover:bg-white/30 transition-all"
+                  onClick={() => setSelected(null)}
+                  aria-label="Tutup Lightbox"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
 
-              <motion.div
-                layoutId={`${selectionOrigin === 'grid' ? 'gallery-grid-image' : 'gallery-image'}-${selected.id}`}
-                className="relative w-full md:w-3/5 aspect-[4/3] md:aspect-auto bg-[var(--bg-secondary)]"
-              >
-                {selected.image ? (
-                  <Image
-                    src={selected.image}
-                    alt={selected.content?.title || ''}
-                    fill
-                    style={{ objectFit: 'cover' }}
-                    className="select-none pointer-events-none"
-                    draggable={false}
-                    sizes="(max-width: 768px) 100vw, 60vw"
-                    priority
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-[var(--text-muted)]">No Image</div>
-                )}
-              </motion.div>
+                <div className="relative group">
+                  {selected.image ? (
+                    <Image
+                      src={selected.image}
+                      alt={selected.content?.title || ''}
+                      width={600}
+                      height={600}
+                      className="w-full h-[600px] object-cover transition-transform duration-500 group-hover:scale-105"
+                      sizes="(max-width: 768px) 100vw, 60vw"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-[600px] text-white/60">
+                      <span className="text-lg">No Image</span>
+                    </div>
+                  )}
 
-              <div className="w-full md:w-2/5 p-6 sm:p-8 flex flex-col overflow-y-auto">
-                <span className="text-xs sm:text-sm font-semibold tracking-wider text-[var(--accent)] uppercase mb-2">
-                  {galleryCategoryLabel(selected.category)}
-                </span>
-                <h3 className="text-xl sm:text-2xl font-[var(--font-display)] font-bold text-[var(--text)] mb-4">
-                  {selected.content?.title || 'Galeri'}
-                </h3>
-                
-                {selected.content?.desc ? (
-                  <div className="prose prose-sm sm:prose-base dark:prose-invert max-w-none text-[var(--text-secondary)] whitespace-pre-line">
-                    {selected.content.desc}
+                  <div className="absolute inset-0 flex items-end p-8 transition-all duration-300 group-hover:bg-white/80">
+                    <div className="w-full max-w-3xl mx-auto">
+                      <span className="text-xs sm:text-sm font-semibold tracking-wider text-[var(--accent)] uppercase mb-1">
+                        {galleryCategoryLabel(selected.category)}
+                      </span>
+                      <h3 className="mt-3 text-2xl sm:text-4xl font-bold text-[var(--text)] leading-tight mb-4">
+                        {selected.content?.title || 'Galeri'}
+                      </h3>
+                      
+                      {selected.content?.desc ? (
+                        <p className="text-sm text-[var(--text-secondary)] whitespace-pre-line">
+                          {selected.content.desc}
+                        </p>
+                      ) : (
+                        <p className="text-[var(--text-muted)] text-sm italic">
+                          Tidak ada deskripsi.
+                        </p>
+                      )}
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-[var(--text-muted)] text-sm italic">
-                    Tidak ada deskripsi.
-                  </p>
-                )}
+                </div>
 
-                <div className="mt-auto pt-8 flex items-center justify-between gap-3 border-t border-[var(--color-border)]">
+                <div className="absolute bottom-8 left-8 right-8 flex justify-between items-center text-[var(--text)]">
                   <div className="flex gap-2">
                     <button
-                      className={`w-10 h-10 rounded-full flex items-center justify-center border border-[var(--color-border)] transition-all ${selectedIndex > 0 ? 'hover:bg-[var(--bg-secondary)] hover:text-[var(--accent)]' : 'opacity-30 cursor-not-allowed'}`}
+                      className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center transition-all hover:bg-white/30"
                       onClick={() => selectedIndex > 0 && setSelected(filtered[selectedIndex - 1])}
                       disabled={selectedIndex === 0}
                       aria-label="Sebelumnya"
                     >
-                      <span className="text-xl leading-none">‹</span>
+                      <span className="text-2xl">‹</span>
                     </button>
                     <button
-                      className={`w-10 h-10 rounded-full flex items-center justify-center border border-[var(--color-border)] transition-all ${selectedIndex < filtered.length - 1 ? 'hover:bg-[var(--bg-secondary)] hover:text-[var(--accent)]' : 'opacity-30 cursor-not-allowed'}`}
+                      className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center transition-all hover:bg-white/30"
                       onClick={() => selectedIndex < filtered.length - 1 && setSelected(filtered[selectedIndex + 1])}
                       disabled={selectedIndex === filtered.length - 1}
                       aria-label="Selanjutnya"
                     >
-                      <span className="text-xl leading-none">›</span>
+                      <span className="text-xl">›</span>
                     </button>
                   </div>
-                  <div className="text-xs sm:text-sm font-medium text-[var(--text-muted)]">
+                  <div className="text-xs sm:text-sm font-medium">
                     {selectedIndex + 1} / {filtered.length}
                   </div>
                 </div>
