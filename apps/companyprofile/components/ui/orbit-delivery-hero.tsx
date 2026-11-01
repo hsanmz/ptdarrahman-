@@ -5049,7 +5049,7 @@ var css = `@font-face{font-family:'Orbit DM Sans';font-style:normal;font-weight:
 .orbit-delivery .hero-copy{padding-top:clamp(44px,7vh,96px);max-width:560px}
 .orbit-delivery .eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:11.5px;font-weight:600;letter-spacing:.16em;color:var(--orbit-nav);margin:0 0 26px}
 .orbit-delivery .eyebrow::before{content:"";flex:none;width:6px;height:6px;border-radius:999px;background:#D4A853;box-shadow:0 0 0 4px rgba(212,168,83,.16)}
-.orbit-delivery .hero-copy h1{max-width:600px;text-wrap:balance;font-size:clamp(52px,4.7vw,78px);line-height:1.05;letter-spacing:-.04em;margin:0 0 24px}
+.orbit-delivery .hero-copy h1{max-width:600px;text-wrap:balance;font-size:clamp(38px,3.5vw,52px);line-height:1.05;letter-spacing:-.04em;margin:0 0 24px}
 .orbit-delivery .hero-copy h1 em{font-family:inherit;font-style:normal;font-weight:inherit;font-size:1em;letter-spacing:inherit;line-height:inherit;color:var(--orbit-accent)}
 .orbit-delivery .hero-description{max-width:450px;font-size:16.5px;line-height:1.65;letter-spacing:-.01em;margin:0 0 34px}
 .orbit-delivery .hero-proof{display:flex;align-items:flex-start;gap:44px;margin:0 0 36px;color:var(--orbit-muted);font-size:11px;font-weight:500;letter-spacing:.14em;text-transform:uppercase}
@@ -5079,7 +5079,7 @@ var css = `@font-face{font-family:'Orbit DM Sans';font-style:normal;font-weight:
 
 @media(max-width:1150px){
   .orbit-delivery .hero-copy{max-width:470px}
-  .orbit-delivery .hero-copy h1{font-size:clamp(46px,5.2vw,58px)}
+  .orbit-delivery .hero-copy h1{font-size:clamp(32px,4vw,46px)}
   .orbit-delivery .hero-description{font-size:15.5px;max-width:400px}
   .orbit-delivery .hero-proof{gap:34px}
   .orbit-delivery .hero-proof strong{font-size:22px}
@@ -5091,7 +5091,7 @@ var css = `@font-face{font-family:'Orbit DM Sans';font-style:normal;font-weight:
 @media(max-width:759px){
   .orbit-delivery .hero-copy{max-width:none;padding-top:34px}
   .orbit-delivery .eyebrow{font-size:10px;letter-spacing:.18em;margin-bottom:18px}
-  .orbit-delivery .hero-copy h1{font-size:clamp(40px,10.5vw,54px);line-height:1.06;margin-bottom:20px}
+  .orbit-delivery .hero-copy h1{font-size:clamp(28px,8vw,40px);line-height:1.06;margin-bottom:20px}
   .orbit-delivery .hero-description{font-size:15px;line-height:1.6;max-width:340px;margin-bottom:26px}
   .orbit-delivery .hero-proof{gap:24px;margin-bottom:26px;font-size:9.5px}
   .orbit-delivery .hero-proof span{gap:4px}
@@ -5109,7 +5109,7 @@ var css = `@font-face{font-family:'Orbit DM Sans';font-style:normal;font-weight:
 
 @media(min-width:760px) and (max-height:880px){
   .orbit-delivery .hero-copy{padding-top:clamp(24px,4.5vh,56px)}
-  .orbit-delivery .hero-copy h1{font-size:clamp(42px,4vw,58px);margin-bottom:20px}
+  .orbit-delivery .hero-copy h1{font-size:clamp(30px,3.5vw,44px);margin-bottom:20px}
   .orbit-delivery .hero-description{margin-bottom:26px}
   .orbit-delivery .hero-proof{margin-bottom:28px}
 }
