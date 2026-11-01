@@ -66,7 +66,7 @@ function humanizeBoard(board: string): string {
 export function groupLeadership(items: LeadershipMember[]): LeadershipBoard[] {
   const buckets = new Map<
     string,
-    { title: string; members: Array<{ name: string; position: string; order: number }> }
+    { title: string; members: Array<{ name: string; position: string; image?: string; order: number }> }
   >()
   items.forEach((item) => {
     const content = item.content ?? {}
@@ -80,6 +80,7 @@ export function groupLeadership(items: LeadershipMember[]): LeadershipBoard[] {
     bucket.members.push({
       name,
       position: String(content.position ?? '').trim(),
+      image: typeof content.image === 'string' ? content.image : undefined,
       order: typeof item.order === 'number' ? item.order : bucket.members.length,
     })
     buckets.set(key, bucket)

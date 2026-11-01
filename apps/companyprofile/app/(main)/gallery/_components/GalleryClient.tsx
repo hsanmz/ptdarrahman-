@@ -9,15 +9,8 @@ import type { GalleryItem } from '@/app/lib/types'
 import { X, Play } from 'lucide-react'
 import { CoverflowCarousel } from '@/app/components/ui/CoverflowCarousel'
 import EmptyState from '@/app/components/ui/EmptyState'
-
-const categories = [
-  { key: 'all', idn: 'Semua' },
-  { key: 'campus', idn: 'Pesantren' },
-  { key: 'academic', idn: 'Akademik' },
-  { key: 'sports', idn: 'Olahraga' },
-  { key: 'arts', idn: 'Seni' },
-  { key: 'events', idn: 'Acara' },
-]
+import GalleryPhotoGrid from './GalleryPhotoGrid'
+import { galleryCategoryLabel, galleryFilterOptions } from '@/app/lib/gallery-categories'
 
 function BodyLock({ onClose }: { onClose: () => void }) {
   useEffect(() => {
@@ -100,8 +93,17 @@ function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClos
 export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
   const [filter, setFilter] = useState('all')
   const [selected, setSelected] = useState<GalleryItem | null>(null)
+  const [selectionOrigin, setSelectionOrigin] = useState<'carousel' | 'grid'>('carousel')
   const [videoModal, setVideoModal] = useState<string | null>(null)
   const sectionRef = useRef<HTMLElement>(null)
+
+  const categoryOptions = useMemo(
+    () => [
+      { value: 'all', label: 'Semua' },
+      ...galleryFilterOptions(gallery.map((item) => item.category)),
+    ],
+    [gallery],
+  )
 
   const filtered = filter === 'all' ? gallery : gallery.filter((g) => g.category === filter)
 
@@ -112,7 +114,7 @@ export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
         src: item.image,
         alt: item.content?.title ?? 'Galeri',
         title: item.content?.title,
-        subtitle: item.category,
+        subtitle: galleryCategoryLabel(item.category),
       })),
     [filtered],
   )
@@ -155,19 +157,19 @@ export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
       <section ref={sectionRef} className="py-16 sm:py-20 bg-[var(--bg)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex flex-wrap justify-center gap-2 mb-12">
-            {categories.map((cat) => (
+            {categoryOptions.map((cat) => (
               <button
-                key={cat.key}
-                onClick={() => setFilter(cat.key)}
+                key={cat.value}
+                onClick={() => setFilter(cat.value)}
                 className={`px-5 py-2 rounded-full text-sm font-medium transition-all ${
-                  filter === cat.key
+                  filter === cat.value
                     ? 'bg-[var(--accent)] text-white shadow-md'
                     : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] border border-[var(--color-border)] hover:text-[var(--accent)]'
                 }`}
-                aria-label={`Filter ${cat.idn}`}
-                aria-pressed={filter === cat.key}
+                aria-label={`Filter ${cat.label}`}
+                aria-pressed={filter === cat.value}
               >
-                {cat.idn}
+                {cat.label}
               </button>
             ))}
           </div>
@@ -179,13 +181,27 @@ export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
               showCaption
               showPagination
               showNavigation
-              onSlideClick={(index) => setSelected(filtered[index])}
+              onSlideClick={(index) => {
+                setSelectionOrigin('carousel')
+                setSelected(filtered[index])
+              }}
               label="Galeri Pesantren"
             />
           ) : (
             <EmptyState
               title="Belum ada foto di kategori ini"
               description="Foto pada kategori tersebut belum tersedia. Silakan pilih kategori lain."
+            />
+          )}
+
+          {filtered.length > 0 && (
+            <GalleryPhotoGrid
+              key={`grid-${filter}`}
+              items={filtered}
+              onSelect={(item) => {
+                setSelectionOrigin('grid')
+                setSelected(item)
+              }}
             />
           )}
 
@@ -257,7 +273,7 @@ export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
               </button>
 
               <motion.div
-                layoutId={`gallery-image-${selected.id}`}
+                layoutId={`${selectionOrigin === 'grid' ? 'gallery-grid-image' : 'gallery-image'}-${selected.id}`}
                 className="relative w-full md:w-3/5 aspect-[4/3] md:aspect-auto bg-[var(--bg-secondary)]"
               >
                 {selected.image ? (
@@ -278,7 +294,7 @@ export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
 
               <div className="w-full md:w-2/5 p-6 sm:p-8 flex flex-col overflow-y-auto">
                 <span className="text-xs sm:text-sm font-semibold tracking-wider text-[var(--accent)] uppercase mb-2">
-                  {selected.category}
+                  {galleryCategoryLabel(selected.category)}
                 </span>
                 <h3 className="text-xl sm:text-2xl font-[var(--font-display)] font-bold text-[var(--text)] mb-4">
                   {selected.content?.title || 'Galeri'}

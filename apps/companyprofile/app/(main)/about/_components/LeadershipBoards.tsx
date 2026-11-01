@@ -16,7 +16,7 @@ function monogram(name: string): string {
 /**
  * Struktur organisasi halaman `/about` — dua kelompok pengurus (Yayasan &
  * Ar Rahman Islamic Center), terpisah dari data Guru & Staff (halaman `/staff`).
- * Kartu list modern bersih: monogram inisial + nama + jabatan emerald.
+ * Kartu list modern: foto profil (jika ada) + inisial fallback + nama + jabatan.
  */
 export default function LeadershipBoards({ boards }: { boards: LeadershipBoard[] }) {
   return (
@@ -50,27 +50,39 @@ export default function LeadershipBoards({ boards }: { boards: LeadershipBoard[]
               <hr className="border-none border-t border-[var(--border-strong)] mb-6" />
 
               <ul className="grid md:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
-                {board.members.map((member) => (
-                  <li
-                    key={`${member.name}-${member.position}`}
-                    className="group flex items-center gap-3.5 rounded-2xl border border-[var(--border-strong)] bg-[var(--bg)] px-4 py-3.5 transition-all duration-300 hover:shadow-md hover:border-[var(--accent)]/30 hover:-translate-y-0.5"
-                  >
-                    <span
-                      aria-hidden="true"
-                      className="w-10 h-10 shrink-0 rounded-full bg-[var(--accent-subtle)] text-[var(--accent)] text-[11px] font-bold flex items-center justify-center group-hover:bg-[var(--accent)] group-hover:text-white transition-colors duration-300"
+                {board.members.map((member) => {
+                  const photo = (member as { image?: string }).image
+                  return (
+                    <li
+                      key={`${member.name}-${member.position}`}
+                      className="group flex items-center gap-3.5 rounded-2xl border border-[var(--border-strong)] bg-[var(--bg)] px-4 py-3.5 transition-all duration-300 hover:shadow-md hover:border-[var(--accent)]/30 hover:-translate-y-0.5"
                     >
-                      {monogram(member.name)}
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block font-[var(--font-heading)] text-[15px] font-semibold leading-snug text-[var(--text)]">
-                        {member.name}
+                      {photo ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={photo}
+                          alt={member.name}
+                          className="w-10 h-10 shrink-0 rounded-full object-cover border-2 border-[var(--border-strong)] group-hover:border-[var(--accent)]/40 transition-colors"
+                        />
+                      ) : (
+                        <span
+                          aria-hidden="true"
+                          className="w-10 h-10 shrink-0 rounded-full bg-[var(--accent-subtle)] text-[var(--accent)] text-[11px] font-bold flex items-center justify-center group-hover:bg-[var(--accent)] group-hover:text-white transition-colors duration-300"
+                        >
+                          {monogram(member.name)}
+                        </span>
+                      )}
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-[var(--font-heading)] text-[15px] font-semibold leading-snug text-[var(--text)]">
+                          {member.name}
+                        </span>
+                        <span className="block mt-0.5 text-[11px] sm:text-xs font-semibold leading-snug text-[var(--accent)]">
+                          {member.position}
+                        </span>
                       </span>
-                      <span className="block mt-0.5 text-[11px] sm:text-xs font-semibold leading-snug text-[var(--accent)]">
-                        {member.position}
-                      </span>
-                    </span>
-                  </li>
-                ))}
+                    </li>
+                  )
+                })}
               </ul>
             </div>
           ))

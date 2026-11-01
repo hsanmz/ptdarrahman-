@@ -76,6 +76,42 @@ export function galleryCategoryLabel(value: string | null | undefined): string {
   return findGalleryCategory(raw)?.label ?? raw
 }
 
+/**
+ * Susun opsi filter dari kategori yang benar-benar dipakai data galeri.
+ *
+ * Opsi standar tampil lebih dulu mengikuti urutan `GALLERY_CATEGORY_OPTIONS`;
+ * kategori lama/kustom menyusul di belakang (urut abjad) supaya chip filter
+ * tidak pernah kosong hanya karena nilainya tidak ada di daftar standar.
+ * Nilai kosong/duplikat dibuang.
+ */
+export function galleryFilterOptions(
+  values: Array<string | null | undefined>,
+): GalleryCategoryOption[] {
+  const present = new Map<string, string>()
+
+  for (const value of values) {
+    const raw = String(value ?? '').trim()
+    if (!raw || present.has(raw)) continue
+    present.set(raw, galleryCategoryLabel(raw))
+  }
+
+  return [...present.entries()]
+    .map(([value, label]) => {
+      const standard = findGalleryCategory(value)
+      const order = standard ? GALLERY_CATEGORY_OPTIONS.indexOf(standard) : -1
+      return { value, label, order }
+    })
+    .sort((a, b) => {
+      if (a.order !== b.order) {
+        if (a.order === -1) return 1
+        if (b.order === -1) return -1
+        return a.order - b.order
+      }
+      return a.label.localeCompare(b.label, 'id')
+    })
+    .map(({ value, label }) => ({ value, label }))
+}
+
 /** Apakah nilai termasuk varian "Lainnya". */
 export function isOtherGalleryCategory(value: string | null | undefined): boolean {
   return findGalleryCategory(value)?.value === GALLERY_CATEGORY_OTHER

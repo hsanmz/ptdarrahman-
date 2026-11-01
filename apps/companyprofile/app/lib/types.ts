@@ -84,6 +84,7 @@ export interface Staff {
 export interface LeadershipContent {
   name?: string
   position?: string
+  image?: string
 }
 
 /** Baris CMS `leadership_members` — struktur organisasi khusus halaman About. */
@@ -99,7 +100,7 @@ export interface LeadershipMember {
 export interface LeadershipBoard {
   board: string
   title: string
-  members: Array<{ name: string; position: string }>
+  members: Array<{ name: string; position: string; image?: string; order?: number }>
 }
 
 export interface Achievement {
