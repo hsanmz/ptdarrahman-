@@ -312,28 +312,28 @@ export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
                   </div>
                 </div>
 
-                <div className="absolute bottom-8 left-8 right-8 flex justify-between items-center text-[var(--text)]">
-                  <div className="flex gap-2">
-                    <button
-                      className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center transition-all hover:bg-white/30"
-                      onClick={() => selectedIndex > 0 && setSelected(filtered[selectedIndex - 1])}
-                      disabled={selectedIndex === 0}
-                      aria-label="Sebelumnya"
-                    >
-                      <span className="text-2xl">‹</span>
-                    </button>
-                    <button
-                      className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center transition-all hover:bg-white/30"
-                      onClick={() => selectedIndex < filtered.length - 1 && setSelected(filtered[selectedIndex + 1])}
-                      disabled={selectedIndex === filtered.length - 1}
-                      aria-label="Selanjutnya"
-                    >
-                      <span className="text-xl">›</span>
-                    </button>
-                  </div>
-                  <div className="text-xs sm:text-sm font-medium">
-                    {selectedIndex + 1} / {filtered.length}
-                  </div>
+                {/* Navigation buttons on sides of image */}
+                <div className="absolute inset-0 flex items-center justify-between pointer-events-none">
+                  {/* Left button - prev */}
+                  <button
+                    className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center transition-all hover:bg-white/30 group-hover:bg-white/40"
+                    onClick={() => selectedIndex > 0 && setSelected(filtered[selectedIndex - 1])}
+                    disabled={selectedIndex === 0}
+                    aria-label="Sebelumnya"
+                    style={{ zIndex: 10 }}
+                  >
+                    <span className="text-2xl cursor-pointer">‹</span>
+                  </button>
+                  {/* Right button - next */}
+                  <button
+                    className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center transition-all hover:bg-white/30 group-hover:bg-white/40"
+                    onClick={() => selectedIndex < filtered.length - 1 && setSelected(filtered[selectedIndex + 1])}
+                    disabled={selectedIndex === filtered.length - 1}
+                    aria-label="Selanjutnya"
+                    style={{ zIndex: 10 }}
+                  >
+                    <span className="text-2xl cursor-pointer">›</span>
+                  </button>
                 </div>
               </div>
             </div>
