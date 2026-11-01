@@ -86,7 +86,8 @@ export default function Footer({ programs = [] }: { programs?: Program[] }) {
           </div>
         </div>
       )}
-      <footer className="relative bg-[var(--bg-secondary)] pt-16 pb-8 overflow-hidden">
+      {/* pb-24 di mobile: beri ruang agar SupportFab (fixed 56px + offset 24px) tidak menutupi teks footer. */}
+      <footer className="relative bg-[var(--bg-secondary)] pt-16 pb-24 sm:pb-8 overflow-hidden">
       {/* Tear-off tipis untuk memisahkan footer dari section sebelumnya. */}
       <ShapeDividerDiagonal fill="var(--bg)" tintStrength={0.2} />
 
@@ -148,7 +149,7 @@ export default function Footer({ programs = [] }: { programs?: Program[] }) {
             <h4 className="font-[var(--font-heading)] text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-6">
               {'Tautan'}
             </h4>
-            <ul className="space-y-3">
+            <ul className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-1 sm:gap-x-0">
               {[
                 { href: '/', label: 'Beranda' },
                 { href: '/about', label: 'Tentang' },
@@ -174,7 +175,7 @@ export default function Footer({ programs = [] }: { programs?: Program[] }) {
             <h4 className="font-[var(--font-heading)] text-xs font-bold uppercase tracking-widest text-[var(--text-muted)] mb-6">
               {'Program'}
             </h4>
-            <ul className="space-y-3">
+            <ul className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-1 sm:gap-x-0">
               {[...programMenuLinks(programs), { href: '/ppdb', label: 'Pendaftaran PPDB' }].map((l) => (
                 <li key={l.href}>
                   <Link href={l.href} className="text-sm text-[var(--text-secondary)] hover:text-[var(--accent)] transition-colors flex items-center gap-1 group">
@@ -194,7 +195,7 @@ export default function Footer({ programs = [] }: { programs?: Program[] }) {
             <ul className="space-y-4">
               <li className="flex items-start gap-3 text-sm text-[var(--text-secondary)]">
                 <MapPin className="w-4 h-4 mt-0.5 text-[var(--accent)] flex-shrink-0" />
-                <span>
+                <span className="min-w-0 break-words leading-relaxed">
                   {contact.address}
                 </span>
               </li>
