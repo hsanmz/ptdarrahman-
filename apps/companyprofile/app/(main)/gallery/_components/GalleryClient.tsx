@@ -220,6 +220,10 @@ export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
                 {[
                   { id: 'D0ylXygFwbc', title: 'Sorotan Kampus' },
                   { id: 'CthN0Nj8eZ4', title: 'Kehidupan Santri' },
+                  { id: 'taEXb6Rzy_8', title: 'Marhaban Ya Ramadhan' },
+                  { id: 'FKuNibcjM48', title: 'Sumpah Pemuda' },
+                  { id: 'y0MtIjq5vUo', title: 'Progress PTD Arrahman' },
+                  { id: 'Uy6D5AyCdWo', title: 'Hafidz Quran' },
                 ].map((video) => (
                   <button
                     key={video.id}
