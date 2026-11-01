@@ -228,7 +228,7 @@ export default function HeroSection({
                 {'"Bacalah dengan nama Tuhanmu yang menciptakan" — Al-Alaq 96:1'}
               </p>
 
-              <h1 className="font-[var(--font-display)] text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold text-[var(--text)] leading-[1.05] sm:leading-[0.92] mb-4 sm:mb-6 tracking-[-0.04em]">
+              <h1 className="font-[var(--font-display)] text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-[var(--text)] leading-[1.1] mb-4 sm:mb-6 tracking-[-0.03em]">
                 {renderTitle(content.title || 'Ar-Rahman')}
               </h1>
 
