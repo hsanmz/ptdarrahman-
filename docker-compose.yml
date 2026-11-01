@@ -61,9 +61,8 @@ services:
       WA_SERVICE_URL: http://whatsapp:3100
       # Redis (shared dengan WA service, DB index 0 untuk API)
       REDIS_URL: redis://redis:6379/0
-      # Tegakkan konfigurasi wajib (JWT/CRON + Pakasir) saat start.
-      # Isi PAKASIR_* di apps/api/.env, jika tidak API gagal start.
-      APP_ENV: production
+      # Gunakan development jika PAKASIR_* belum diset di .env
+      APP_ENV: ${APP_ENV:-development}
     extra_hosts:
       - "host.docker.internal:host-gateway"
     dns:

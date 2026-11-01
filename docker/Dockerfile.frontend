@@ -35,12 +35,12 @@ RUN corepack enable && corepack prepare pnpm@9.10.0 --activate
 WORKDIR /workspace
 
 # Download package tarballs from the lockfile into BuildKit's persistent store.
-COPY pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     pnpm fetch --fetch-retries=8 --network-concurrency=4
 
 # Root manifests are needed by Turbo but do not affect the lockfile fetch layer.
-COPY package.json turbo.json ./
+COPY turbo.json ./
 
 # Copy all workspace source before pnpm creates package-level node_modules links.
 COPY packages/ ./packages/
@@ -72,7 +72,7 @@ COPY --from=builder /workspace/packages ./packages
 COPY --from=builder /workspace/apps ./apps
 
 COPY docker/frontend-entrypoint.sh /usr/local/bin/frontend-entrypoint.sh
-RUN chmod +x /usr/local/bin/frontend-entrypoint.sh
+RUN sed -i 's/\r$//' /usr/local/bin/frontend-entrypoint.sh && chmod +x /usr/local/bin/frontend-entrypoint.sh
 
 EXPOSE 3000 5173 5174
 

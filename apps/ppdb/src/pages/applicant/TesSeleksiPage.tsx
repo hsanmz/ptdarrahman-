@@ -40,8 +40,10 @@ export default function TesSeleksiPage() {
   const selectionQuery = useQuery({
     queryKey: ['my-selection'],
     queryFn: async () => {
-      const resultRes = await apiFetch<any>('/selection/applicants/me/results')
-      const sessionRes = await apiFetch<any>('/selection/applicants/me/sessions')
+      const [resultRes, sessionRes] = await Promise.all([
+        apiFetch<any>('/selection/applicants/me/results'),
+        apiFetch<any>('/selection/applicants/me/sessions'),
+      ])
       return {
         result: resultRes || null,
         sessionData: sessionRes || null,
@@ -52,31 +54,46 @@ export default function TesSeleksiPage() {
   const applicant = transactionQuery.data?.applicant
   const waveId = applicant?.wave_id
 
-  // 3. CBT Schedule for tahfidz session only
-  const tahfidzQuery = useQuery({
-    queryKey: ['cbt-schedules-tahfidz', waveId],
-    queryFn: () => cbtService.getSchedules('tahfidz', waveId),
+  // 3. CBT Schedules for wave
+  const cbtAkademikQuery = useQuery({
+    queryKey: ['cbt-schedules-akademik', waveId],
+    queryFn: () => cbtService.getSchedules('akademik', waveId),
+    enabled: Boolean(waveId),
+  })
+
+  const cbtPsikologiQuery = useQuery({
+    queryKey: ['cbt-schedules-psikologi', waveId],
+    queryFn: () => cbtService.getSchedules('psikologi', waveId),
     enabled: Boolean(waveId),
   })
 
   const isLoading =
     transactionQuery.isLoading ||
     selectionQuery.isLoading ||
-    tahfidzQuery.isLoading
+    cbtAkademikQuery.isLoading ||
+    cbtPsikologiQuery.isLoading
 
   const sessionData = selectionQuery.data?.sessionData
   const selectionResult = selectionQuery.data?.result
 
   const tahfidzSession = sessionData?.tahfidz_session || null
-  const tahfidzSchedule = tahfidzQuery.data?.[0] || null
+  const akademikSchedule = cbtAkademikQuery.data?.[0] || null
+  const psikologiSchedule = cbtPsikologiQuery.data?.[0] || null
 
   // Scores
   const cbtResults = selectionResult?.cbt_results || {}
-  const tahfidzAttempt = cbtResults['tahfidz']
+  const akademikAttempt = cbtResults['akademik']
+  const psikologiAttempt = cbtResults['psikologi']
 
   const tahfidzScores = (selectionResult?.scores || []).filter((s: any) => {
     const cat = (s.category_name || '').toLowerCase()
-    return cat.includes('tahfidz')
+    const crit = (s.criteria_name || '').toLowerCase()
+    return (
+      cat.includes('tahfidz') ||
+      crit.includes('tahfidz') ||
+      cat.includes('quran') ||
+      cat.includes("qur'an")
+    )
   })
 
   const tahfidzAvg =

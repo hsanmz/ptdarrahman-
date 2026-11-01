@@ -8,12 +8,13 @@
 // Level 2: Kepala operasional
 // Level 3: Guru/Staff teknis dan pendukung
 
-export type StaffPosition = 
+export type StaffPosition =
   | "Mudir"
-  | "Administrator" 
+  | "Administrator"
   | "Kepala Kepegawaian"
   | "Guru IT"
   | "Musrif & Pegajar BA"
+  | "Musrif & Pegajar Bahasa Arab"
 
 export interface StaffRecord {
   id: number
