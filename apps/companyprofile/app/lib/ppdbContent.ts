@@ -66,10 +66,9 @@ export function pickAccent(value: unknown): AccentKey {
 // ── Konten statis ────────────────────────────────────────────────────────
 
 export const STATIC_PPDB_COPY: PpdbCopyContent = {
-  hero_title: `Tempat Tumbuhnya Para Hafidz 30 Juz
-yang Menguasai Rekayasa Teknologi`,
+  hero_title: `Hafidz 30 Juz\nAhli Teknologi`,
   hero_desc:
-    "Pendidikan pesantren putra terpadu 6 tahun dengan rekam jejak nyata kelulusan Tasmi' 30 Juz Bil Ghoib, prestasi Olimpiade Tafsir Nasional, dan pembelajaran teknologi langsung dari praktisi industri. Pendaftaran dibuka sesuai periode dan kuota gelombang aktif.",
+    "Pendidikan pesantren putra terpadu 6 tahun: hafalan mutqin dan rekayasa perangkat lunak modern.",
   hero_proof: '30 Juz | 6 Tahun | 4 Pilar',
   hero_cta_label: 'Daftar Online Sekarang',
   hero_cta_href: '/register',
