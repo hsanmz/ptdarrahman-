@@ -35,7 +35,7 @@ export const FlowSection: React.FC<FlowSectionProps> = ({
   >
     <div
       data-flow-inner
-      className="flow-art-container mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 sm:px-6 py-[clamp(3.5rem,9vw,6.5rem)]"
+      className="flow-art-container mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 sm:px-6 py-[clamp(2rem,5vw,3.5rem)]"
     >
       {children}
     </div>

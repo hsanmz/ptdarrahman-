@@ -232,7 +232,7 @@ export default function AboutClient({ leadership }: { leadership: LeadershipBoar
       <LeadershipBoards boards={leadership} />
 
       {/* CTA */}
-      <section className="py-16 sm:py-20 bg-[var(--accent)]">
+      <section className="py-10 sm:py-12 bg-[var(--accent)]">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center">
           <h2 className="font-[var(--font-display)] text-3xl md:text-4xl font-bold text-white mb-4">
             {'Siap Bergabung dengan Arrahman?'}

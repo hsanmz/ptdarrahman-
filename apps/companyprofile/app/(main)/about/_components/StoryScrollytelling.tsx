@@ -58,7 +58,7 @@ export default function StoryScrollytelling() {
   }, [])
 
   return (
-    <section className="bg-[var(--bg)] py-16 sm:py-20 md:py-28">
+    <section className="bg-[var(--bg)] py-10 sm:py-12 md:py-16">
       <div className="max-w-7xl mx-auto px-4 sm:px-6">
         <SectionTitle badge="SEJAK 2021" title="Warisan Keunggulan Quran & Digital" />
 
