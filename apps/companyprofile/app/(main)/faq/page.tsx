@@ -1,7 +1,12 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import FaqClient from './_components/FaqClient'
+import { getFaqs } from '@/app/lib/api'
 import { faqs } from '@/app/data/faq'
+import type { FaqItem } from '@/app/lib/types'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export const metadata: Metadata = {
   title: 'Pertanyaan Umum',
@@ -29,10 +34,12 @@ export const metadata: Metadata = {
   },
 }
 
-export default function FaqPage() {
+export default async function FaqPage() {
+  let items: FaqItem[] = []
+  try { items = await getFaqs() } catch { items = faqs.map((item, index) => ({ ...item, id: `fallback-${index}`, order: index })) }
   return (
     <Suspense>
-      <FaqClient items={faqs} />
+      <FaqClient items={items} />
     </Suspense>
   )
 }

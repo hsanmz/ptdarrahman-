@@ -57,10 +57,10 @@ function VideoModal({ videoId, onClose }: { videoId: string; onClose: () => void
             <X className="w-4 h-4" />
           </button>
           <iframe
-            src={`https://www.youtube.com/embed/${videoId}`}
+            src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0`}
             title="YouTube video"
             className="w-full h-full rounded-xl shadow-2xl"
-            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />
         </div>
@@ -93,7 +93,6 @@ function ModalOverlay({ children, onClose }: { children: React.ReactNode; onClos
 export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
   const [filter, setFilter] = useState('all')
   const [selected, setSelected] = useState<GalleryItem | null>(null)
-  const [selectionOrigin, setSelectionOrigin] = useState<'carousel' | 'grid'>('carousel')
   const [videoModal, setVideoModal] = useState<string | null>(null)
   const sectionRef = useRef<HTMLElement>(null)
 
@@ -182,7 +181,6 @@ export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
               showPagination
               showNavigation
               onSlideClick={(index) => {
-                setSelectionOrigin('carousel')
                 setSelected(filtered[index])
               }}
               label="Galeri Pesantren"
@@ -199,7 +197,6 @@ export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
               key={`grid-${filter}`}
               items={filtered}
               onSelect={(item) => {
-                setSelectionOrigin('grid')
                 setSelected(item)
               }}
             />
@@ -264,8 +261,16 @@ export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
       <AnimatePresence>
         {selected && (
           <ModalOverlay key="gallery-lightbox" onClose={() => setSelected(null)}>
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300">
-              <div className="relative w-full max-w-6xl max-h-[95vh] rounded-3xl bg-white/95 backdrop-blur-xl shadow-2xl transform overflow-hidden transition-all duration-500 ease-out hover:scale-100 hover:opacity-100">
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300"
+            >
+              <div
+                className="relative w-full max-w-6xl max-h-[95vh] rounded-3xl bg-white/95 backdrop-blur-xl shadow-2xl transform overflow-hidden transition-all duration-500 ease-out hover:scale-100 hover:opacity-100"
+                role="dialog"
+                aria-modal="true"
+                aria-label={selected.content?.title || 'Pratinjau galeri'}
+                onClick={(event) => event.stopPropagation()}
+              >
                 <button
                   className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white hover:bg-white/30 transition-all"
                   onClick={() => setSelected(null)}
@@ -298,16 +303,10 @@ export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
                       <h3 className="mt-3 text-2xl sm:text-4xl font-bold text-[var(--text)] leading-tight mb-4">
                         {selected.content?.title || 'Galeri'}
                       </h3>
-                      
-                      {selected.content?.desc ? (
-                        <p className="text-sm text-[var(--text-secondary)] whitespace-pre-line">
-                          {selected.content.desc}
-                        </p>
-                      ) : (
-                        <p className="text-[var(--text-muted)] text-sm italic">
-                          Tidak ada deskripsi.
-                        </p>
-                      )}
+                      <p className="text-sm text-[var(--text-secondary)] whitespace-pre-line">
+                        {selected.content?.desc?.trim() ||
+                          `Dokumentasi ${(selected.content?.title || 'kegiatan pesantren').toLowerCase()}.`}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -316,7 +315,7 @@ export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
                 <div className="absolute inset-0 flex items-center justify-between pointer-events-none">
                   {/* Left button - prev */}
                   <button
-                    className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center transition-all hover:bg-white/30 group-hover:bg-white/40"
+                    className="pointer-events-auto w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center transition-all hover:bg-white/30 group-hover:bg-white/40"
                     onClick={() => selectedIndex > 0 && setSelected(filtered[selectedIndex - 1])}
                     disabled={selectedIndex === 0}
                     aria-label="Sebelumnya"
@@ -326,7 +325,7 @@ export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
                   </button>
                   {/* Right button - next */}
                   <button
-                    className="w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center transition-all hover:bg-white/30 group-hover:bg-white/40"
+                    className="pointer-events-auto w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center transition-all hover:bg-white/30 group-hover:bg-white/40"
                     onClick={() => selectedIndex < filtered.length - 1 && setSelected(filtered[selectedIndex + 1])}
                     disabled={selectedIndex === filtered.length - 1}
                     aria-label="Selanjutnya"

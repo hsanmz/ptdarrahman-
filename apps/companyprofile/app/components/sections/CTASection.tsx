@@ -1,130 +1,57 @@
 'use client'
 
-import { useRef, useEffect } from 'react'
 import Link from 'next/link'
-
-import { ArrowRight, Phone } from 'lucide-react'
-import { useScrollReveal } from '../../hooks/useScrollAnimations'
-import dynamic from 'next/dynamic'
-import MagneticButton from '../ui/MagneticButton'
-import WiggleMagneticButton from '../ui/WiggleMagneticButton'
+import { ArrowRight, Sparkles } from 'lucide-react'
+import type { HomeCtaContent } from '@/app/lib/types'
+import type { ActivePpdbWave } from '@/app/lib/ppdb'
 import PpdbCountdown from '../ui/PpdbCountdown'
-import { ContainerScroll } from '@/components/ui/container-scroll-animation'
-import { buildSchedule, type ActivePpdbWave } from '@/app/lib/ppdb'
-import { gsap, ScrollTrigger } from '@/app/lib/gsap'
-import { onLayoutReady, prefersReducedMotion } from '@/app/lib/motion'
-import CTAShapeDivider from '../ui/CTAShapeDivider'
-import { resolvePortalUrl } from '@repo/ui'
 
-
-const Particles = dynamic(() => import('../ui/Particles'), { ssr: false })
-
-export default function CTASection({ wave = null }: { wave?: ActivePpdbWave | null }) {
-  const sectionRef = useRef<HTMLElement>(null)
-  const bgRef = useRef<HTMLDivElement>(null)
-  const contentRef = useRef<HTMLDivElement>(null)
-  const ppdb = buildSchedule(wave)
-
-  // Reveal diarahkan ke konten, BUKAN ke sectionRef — sectionRef dipakai sebagai
-  // trigger ScrollTrigger bg di bawah, dan transform reveal akan menggeser
-  // posisi yang diukur trigger.
-  useScrollReveal(contentRef, { targets: 'children', start: 'top 80%' })
-
-  useEffect(() => {
-    if (prefersReducedMotion()) return
-
-    const ctx = gsap.context(() => {
-      if (bgRef.current) {
-        gsap.to(bgRef.current, {
-          backgroundPosition: '50% 100%',
-          ease: 'none',
-          scrollTrigger: { trigger: sectionRef.current, start: 'top bottom', end: 'bottom top', scrub: 1, invalidateOnRefresh: true },
-        })
-      }
-    }, sectionRef)
-
-    const cleanupLayout = onLayoutReady(() => ScrollTrigger.refresh())
-
-    return () => {
-      cleanupLayout()
-      ctx.revert()
-    }
-  }, [])
+export default function CTASection({ content, wave = null }: { content: HomeCtaContent; wave?: ActivePpdbWave | null }) {
+  const alignRight = content.layout === 'right'
 
   return (
-    <section
-      ref={sectionRef}
-      className="relative overflow-hidden pt-20"
-      style={{
-        background:
-          'linear-gradient(135deg, var(--color-emerald-ramp-1) 0%, var(--color-emerald-ramp-2) 45%, var(--color-emerald-ramp-3) 100%)',
-      }}
-    >
-      <CTAShapeDivider fill="var(--bg-secondary)" />
-      <Particles count={25} />
-      <div ref={bgRef} className="absolute inset-0 opacity-[0.05]"
-        style={{ backgroundImage: 'radial-gradient(2px 2px at 20px 30px, white, transparent)', backgroundSize: '60px 60px' }}
-      />
+    <section className="relative z-10 px-4 py-8 sm:px-6 sm:py-12 bg-[var(--bg-secondary)]">
+      <div className="mx-auto max-w-7xl">
+        <div className="relative overflow-hidden rounded-3xl border border-[var(--accent-gold)]/30 bg-gradient-to-br from-[var(--accent)] via-[#155738] to-[#0D3823] p-7 text-white shadow-2xl sm:p-10 md:p-12">
+          {/* Background ambient decorative shapes */}
+          <div className="pointer-events-none absolute -right-16 -top-16 h-72 w-72 rounded-full bg-[var(--accent-gold)]/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-16 -left-16 h-72 w-72 rounded-full bg-white/5 blur-3xl" />
 
-      <div ref={contentRef} className="relative z-10">
-        <ContainerScroll
-          titleComponent={
-            <>
-              <span className="arabic-quote text-xl sm:text-2xl md:text-3xl text-[var(--color-gold-light)] opacity-30 mb-6 sm:mb-8 block text-center">
-                «وَعَلَّمَ آدَمَ الأَسْمَاءَ كُلَّهَا»
-              </span>
-              <h2 className="font-[var(--font-display)] text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-[1.1] mb-4 sm:mb-6 max-w-4xl mx-auto px-4 text-center">
-                {'Mulai Perjalanan Luar Biasa Anakmu'}
+          <div className={`relative z-10 flex flex-col gap-8 md:flex-row md:items-center md:justify-between ${alignRight ? 'md:flex-row-reverse' : ''}`}>
+            {/* Left / Main text content */}
+            <div className={`max-w-2xl ${alignRight ? 'md:text-right' : ''}`}>
+              <div className={`inline-flex items-center gap-2 rounded-full border border-[var(--accent-gold)]/35 bg-[var(--accent-gold)]/15 px-3.5 py-1 text-xs font-semibold uppercase tracking-wider text-[var(--accent-gold)] ${alignRight ? 'md:ml-auto' : ''}`}>
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>Penerimaan Santri Baru</span>
+              </div>
+              <h2 className="mt-4 font-[var(--font-display)] text-2xl font-bold leading-tight sm:text-3xl md:text-4xl text-white">
+                {content.title}
               </h2>
-            </>
-          }
-        >
-          <div className="flex flex-col items-center justify-center h-full w-full bg-[var(--color-emerald-ramp-card)] text-white p-6 sm:p-8 md:p-12 text-center rounded-xl border border-[var(--color-gold)]/25">
-            <p className="text-sm sm:text-base md:text-lg text-white/80 mb-8 sm:mb-12 max-w-2xl mx-auto">
-              {ppdb.academicYear ? (
-                <>
-                  {'Pendaftaran '}
-                  {ppdb.waveName ? (
-                    <>
-                      <strong className="text-white">Gelombang {ppdb.waveName}</strong>
-                      {' untuk '}
-                    </>
-                  ) : (
-                    <strong className="text-white">Tahun Ajaran {ppdb.academicYear}</strong>
-                  )}
-                  {' sedang dibuka.'}
-                  {ppdb.quota ? ` Kuota ${ppdb.quota} peserta.` : ' Kuota terbatas.'}
-                  {' Bergabunglah bersama PTDARRAHMAN.'}
-                </>
-              ) : (
-                'Pendaftaran Peserta Didik Baru akan segera dibuka. Kuota terbatas. Berikan anak Anda hadiah keunggulan Al-Quran dan penguasaan digital.'
-              )}
-            </p>
+              <p className="mt-3 text-sm leading-relaxed text-white/85 sm:text-base">
+                {content.description}
+              </p>
 
-            <PpdbCountdown wave={wave} />
+              {/* Countdown timer */}
+              <div className={`mt-6 ${alignRight ? 'md:[&>div]:justify-end' : ''}`}>
+                <PpdbCountdown wave={wave} />
+              </div>
+            </div>
 
-            <div className="flex flex-wrap justify-center gap-3 sm:gap-4 mt-4 sm:mt-8">
-              <WiggleMagneticButton strength={0.6}>
-                <Link
-                  href={resolvePortalUrl(process.env.NEXT_PUBLIC_PORTAL_URL)}
-                  className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 bg-[var(--color-gold)] text-[var(--text)] text-xs sm:text-sm font-bold rounded-full shadow-xl hover:shadow-2xl hover:bg-[var(--color-gold-light)] transition-all"
-                >
-                  {'Daftar Sekarang'}
-                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                </Link>
-              </WiggleMagneticButton>
-              <MagneticButton strength={0.3}>
-                <Link
-                  href="/contact"
-                  className="inline-flex items-center gap-2 px-6 sm:px-8 py-3 sm:py-4 border border-white/20 text-white text-xs sm:text-sm font-bold rounded-full hover:bg-white/10 hover:border-white/40 transition-all"
-                >
-                  <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                  {'Hubungi Kami'}
-                </Link>
-              </MagneticButton>
+            {/* Right / CTA Action Button */}
+            <div className={`flex flex-col sm:flex-row md:flex-col items-start justify-center gap-3 shrink-0 ${alignRight ? 'md:items-start' : 'md:items-end'}`}>
+              <Link
+                href={content.button_url}
+                className="inline-flex min-h-12 items-center justify-center gap-2.5 rounded-xl bg-gradient-to-r from-[var(--accent-gold)] to-[#E5BE64] px-7 py-3.5 text-sm font-bold text-[#143021] shadow-lg transition-all hover:scale-[1.02] hover:shadow-xl hover:from-[#E5BE64] hover:to-[var(--accent-gold)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              >
+                <span>{content.button_text}</span>
+                <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+              <span className="text-xs text-white/70">
+                Kuota terbatas untuk gelombang aktif
+              </span>
             </div>
           </div>
-        </ContainerScroll>
+        </div>
       </div>
     </section>
   )

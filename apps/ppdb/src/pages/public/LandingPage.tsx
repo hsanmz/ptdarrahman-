@@ -3,15 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { Button, ShapeDivider } from '@/components/ui'
 import { apiFetch, API_BASE } from '@/api/client'
 import { useBrand } from '@repo/ui'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import Lenis from 'lenis'
+import { cn } from '@/lib/utils'
 import {
   ArrowRight, LogIn, Menu, X, Wallet, FileUp, ClipboardCheck, Trophy,
-  LayoutDashboard, Zap, Headphones, Waves,
+  LayoutDashboard, Zap, Headphones, Waves, UserCheck, BookOpen, Globe2,
+  TrendingUp, Users,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { prefersReducedMotion } from '@/lib/motion'
 import Footer from '@/components/layout/Footer'
 
 interface ActiveWave {
@@ -27,84 +24,31 @@ export default function LandingPage() {
   const [wave, setWave] = useState<ActiveWave | null>(null)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const lenisRef = useRef<Lenis | null>(null)
   const progressRef = useRef<HTMLDivElement>(null)
   const { logoUrl } = useBrand(API_BASE)
 
   useEffect(() => {
-    gsap.registerPlugin(ScrollTrigger)
-
-    // prefers-reduced-motion: Lenis & parallax GSAP dimatikan, posisi navbar dan
-    // garis progress tetap jalan lewat listener scroll native (dibaca langsung,
-    // bukan dari `lenis.scroll` yang tidak akan pernah update).
-    if (prefersReducedMotion()) {
-      const onScroll = () => {
-        setScrolled(window.scrollY > 80)
-        const bar = progressRef.current
-        if (bar) {
-          const max = document.documentElement.scrollHeight - window.innerHeight
-          const ratio = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0
-          bar.style.transform = `scaleX(${ratio})`
-        }
-      }
-      window.addEventListener('scroll', onScroll, { passive: true })
-      window.addEventListener('resize', onScroll)
-      onScroll()
-      return () => {
-        window.removeEventListener('scroll', onScroll)
-        window.removeEventListener('resize', onScroll)
-      }
-    }
-
-    // Parallax vertikal dihapus; yang tersisa cuma Lenis untuk smooth scroll
-    // dan sinkronisasinya ke ScrollTrigger, yang tetap dipakai oleh komponen anak.
-    const lenis = new Lenis()
-    lenisRef.current = lenis
-    lenis.on('scroll', ScrollTrigger.update)
-
-    // Ambang 80px, sama dengan Navbar companyprofile.
-    //
-    // PENTING: nilainya dibaca di rAF yang sama dengan `lenis.raf()`, bukan dari
-    // event `scroll` native. Event scroll API dipanggil asynchronously terhadap
-    // rAF Lenis, jadi kelas baru datang terlambat — lalu transition CSS
-    // `ease-brand-pill` dijalankan untuk kedua kalinya, dan navbar terlihat
-    // "nge-lag" di belakang scroll. Dengan membacanya se-frame, hanya ada satu
-    // sumber smoothening.
-    let navScrolled = false
-    const applyNavScrolled = () => {
-      const next = lenis.scroll > 80
-      if (next === navScrolled) return
-      navScrolled = next
-      setScrolled(next)
-    }
-
-    // Garis progress di navbar (efek yang sama dengan Navbar companyprofile).
-    // Ditulis langsung ke DOM lewat `style` — bukan state — supaya tidak memicu
-    // re-render 60x/detik. `ScrollTrigger.maxScroll` dipakai supaya tidak perlu
-    // baca `scrollHeight` tiap frame (yang memaksa layout).
-    const updateScrollProgress = () => {
+    // prefers-reduced-motion: Skrip parallax dihapus, diganti listener scroll native biasa.
+    // Tidak ada lagi Lenis atau GSAP — hanya listen scroll standar untuk:
+    // - Navbar state saat scroll
+    // - Garis progress di navbar
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 80)
       const bar = progressRef.current
-      if (!bar) return
-      const max = ScrollTrigger.maxScroll(window)
-      const ratio = max > 0 ? Math.min(1, Math.max(0, lenis.scroll / max)) : 0
-      bar.style.transform = `scaleX(${ratio})`
+      if (bar) {
+        const max = document.documentElement.scrollHeight - window.innerHeight
+        const ratio = max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0
+        bar.style.transform = `scaleX(${ratio})`
+      }
     }
 
-    const tick = (time: number) => {
-      lenis.raf(time * 1000)
-      updateScrollProgress()
-      applyNavScrolled()
-    }
-
-    gsap.ticker.add(tick)
-    gsap.ticker.lagSmoothing(0)
-    updateScrollProgress()
-    applyNavScrolled()
-
+    handleScroll()
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    window.addEventListener('resize', handleScroll)
+    
     return () => {
-      gsap.ticker.remove(tick)
-      lenis.destroy()
-      if (lenisRef.current === lenis) lenisRef.current = null
+      window.removeEventListener('scroll', handleScroll)
+      window.removeEventListener('resize', handleScroll)
     }
   }, [])
 
@@ -118,10 +62,6 @@ export default function LandingPage() {
   const year = new Date().getFullYear()
 
   const scrollToAlur = () => {
-    if (lenisRef.current) {
-      lenisRef.current.scrollTo('#alur', { offset: -64, duration: 1.2 })
-      return
-    }
     document.getElementById('alur')?.scrollIntoView({ behavior: 'smooth' })
   }
 
@@ -148,8 +88,73 @@ export default function LandingPage() {
     { icon: Headphones, title: 'Dukungan Panitia', desc: 'Tim panitia siap sedia mendampingi proses pendaftaran Anda jika mengalami kendala.', tint: 'bg-emerald-light text-emerald-primary' },
   ]
 
+  // Navigation sections for easy scrolling
+  const sections = [
+    { id: 'hero', label: 'Beranda' },
+    { id: 'program-unggulan', label: 'Program Unggulan' },
+    { id: 'alur', label: 'Alur Pendaftaran' },
+    { id: 'mengapa', label: 'Mengapa PTDARRAHMAN?' },
+    { id: 'cta', label: 'Daftar Sekarang' },
+  ]
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId)
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+  }
+
+  const scrollToNextSection = () => {
+    const currentScroll = window.scrollY
+    const windowHeight = window.innerHeight
+    
+    // Find the next section that's not fully visible
+    let nextSection = null
+    let minDistance = Infinity
+    
+    sections.forEach(section => {
+      const element = document.getElementById(section.id)
+      if (element) {
+        const rect = element.getBoundingClientRect()
+        const distance = Math.abs(rect.top - windowHeight / 2)
+        if (distance < minDistance && rect.top > 0) {
+          minDistance = distance
+          nextSection = section
+        }
+      }
+    })
+    
+    if (nextSection) {
+      scrollToSection(nextSection.id)
+    }
+  }
+
+  const scrollToPreviousSection = () => {
+    const currentScroll = window.scrollY
+    
+    // Find the previous section
+    let previousSection = null
+    let maxDistance = -Infinity
+    
+    sections.forEach(section => {
+      const element = document.getElementById(section.id)
+      if (element) {
+        const rect = element.getBoundingClientRect()
+        const distance = rect.top
+        if (distance > 0 && distance < maxDistance) {
+          maxDistance = distance
+          previousSection = section
+        }
+      }
+    })
+    
+    if (previousSection) {
+      scrollToSection(previousSection.id)
+    }
+  }
+
   return (
-    <div className="flex min-h-screen flex-col bg-background font-sans">
+    <div className="relative flex min-h-screen flex-col bg-background font-sans">
       {/* ── Navbar ──
           Efek disamakan dengan `apps/companyprofile/app/components/layout/Navbar.tsx`:
           saat di-scroll, navbar lepas dari tepi layar dan berubah jadi pil
@@ -305,6 +310,85 @@ export default function LandingPage() {
 </Button>
                 </div>
         </div>
+      {/* ── Program Unggulan ── */}
+      {/* Program 4 pilar yang menggabungkan spiritual depth dan penguasaan digital */}
+      <section id="program-unggulan" className="relative scroll-mt-16 overflow-hidden bg-gradient-to-br from-emerald-primary/5 to-emerald-light/20 py-20 md:py-28">
+        <div className="container relative z-10 mx-auto max-w-6xl px-4">
+          <div className="mx-auto mb-14 max-w-3xl text-center">
+            <p className="text-xs font-bold uppercase tracking-[0.25em] text-emerald-primary">PROGRAM UNGGULAN</p>
+            <h2 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-4xl md:text-5xl">
+              Empat Pilar Keunggulan Ar-Rahman
+            </h2>
+            <p className="mt-5 text-base leading-relaxed text-slate-600 sm:text-lg">
+              <span className="font-semibold text-emerald-primary">Kedalaman spiritual</span> sekaligus <span className="font-semibold text-emerald-primary">penguasaan digital</span> dalam satu program terintegrasi.
+              Empat pilar ini berjalan beriringan untuk mencetak generasi Qur'ani yang siap menghadapi tantangan era digital.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-primary to-emerald-bright shadow-lg shadow-emerald-primary/25">
+                <BookOpen className="h-7 w-7 text-white" />
+              </div>
+              <div className="absolute -right-3 -top-3 text-[5rem] font-bold leading-none text-emerald-primary/10 transition-colors group-hover:text-emerald-primary/20">
+                01
+              </div>
+              <h3 className="mb-3 text-xl font-bold text-slate-900">Kedalaman Spiritualitas</h3>
+              <p className="text-sm leading-relaxed text-slate-600">
+                Hafalan Al-Qur'an dengan tajwid sempurna, tadabur ayat, dan pembinaan akhlak Islami yang mendalam.
+              </p>
+            </div>
+
+            <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-primary to-emerald-bright shadow-lg shadow-emerald-primary/25">
+                <Globe2 className="h-7 w-7 text-white" />
+              </div>
+              <div className="absolute -right-3 -top-3 text-[5rem] font-bold leading-none text-emerald-primary/10 transition-colors group-hover:text-emerald-primary/20">
+                02
+              </div>
+              <h3 className="mb-3 text-xl font-bold text-slate-900">Penguasaan Digital</h3>
+              <p className="text-sm leading-relaxed text-slate-600">
+                Keterampilan teknologi modern, coding, dan literasi digital untuk berkontribusi di era 4.0.
+              </p>
+            </div>
+
+            <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-primary to-emerald-bright shadow-lg shadow-emerald-primary/25">
+                <TrendingUp className="h-7 w-7 text-white" />
+              </div>
+              <div className="absolute -right-3 -top-3 text-[5rem] font-bold leading-none text-emerald-primary/10 transition-colors group-hover:text-emerald-primary/20">
+                03
+              </div>
+              <h3 className="mb-3 text-xl font-bold text-slate-900">Kepemimpinan Berkarakter</h3>
+              <p className="text-sm leading-relaxed text-slate-600">
+                Kepemimpinan yang berbasis iman, integritas, dan kemampuan beradaptasi di berbagai lingkungan.
+              </p>
+            </div>
+
+            <div className="group relative overflow-hidden rounded-2xl bg-white p-6 shadow-lg transition-all duration-300 hover:-translate-y-2 hover:shadow-xl">
+              <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-primary to-emerald-bright shadow-lg shadow-emerald-primary/25">
+                <Users className="h-7 w-7 text-white" />
+              </div>
+              <div className="absolute -right-3 -top-3 text-[5rem] font-bold leading-none text-emerald-primary/10 transition-colors group-hover:text-emerald-primary/20">
+                04
+              </div>
+              <h3 className="mb-3 text-xl font-bold text-slate-900">Dukungan Komunitas</h3>
+              <p className="text-sm leading-relaxed text-slate-600">
+                Jaringan sosial yang solid, mentoring intensif, dan dukungan penuh dari seluruh warga pesantren.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-14 text-center">
+            <p className="inline-flex items-center gap-2 text-sm text-slate-600">
+              <span className="h-px w-12 bg-gradient-to-r from-transparent to-emerald-primary/30" />
+              <span className="text-emerald-primary">Terintegrasi secara holistik</span>
+              <span className="h-px w-12 bg-gradient-to-l from-transparent to-emerald-primary/30" />
+            </p>
+          </div>
+        </div>
+      </section>
+
       {/* ── Alur Pendaftaran ── */}
       {/* pt-40 menutupi wave 137px di atas section ini. `border-t` lama
           dihapus karena garis 1px itu akan memotong tepi gelombang. */}
@@ -376,7 +460,7 @@ export default function LandingPage() {
       </section>
 
       {/* ── CTA Band ── */}
-      <section className="bg-background pb-16 md:pb-20">
+      <section id="cta" className="bg-background pb-16 md:pb-20">
         <div className="container mx-auto max-w-6xl px-4">
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-obsidian via-emerald-dark to-emerald-primary px-6 py-14 text-center shadow-2xl shadow-emerald-dark/30 md:py-16">
             <div className="pointer-events-none absolute -left-10 -top-16 h-56 w-56 rounded-full bg-emerald-bright/10 blur-2xl" />
@@ -407,5 +491,68 @@ export default function LandingPage() {
       {/* ── Footer ── */}
       <Footer />
     </div>
+
+    {/* Navigation Dots - Bottom Center */}
+    <div className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 transform">
+      <div className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 shadow-lg backdrop-blur-sm">
+        {sections.map((section, index) => {
+          const isActive = () => {
+            const element = document.getElementById(section.id)
+            if (!element) return false
+            const rect = element.getBoundingClientRect()
+            return rect.top <= 100 && rect.bottom >= 100
+          }
+          
+          return (
+            <button
+              key={section.id}
+              onClick={() => scrollToSection(section.id)}
+              className={cn(
+                'w-10 h-10 rounded-full text-sm font-medium transition-all duration-300',
+                isActive()
+                  ? 'bg-emerald-primary text-white shadow-md'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:scale-105'
+              )}
+              aria-label={`Ke ${section.label}`}
+            >
+              {index + 1}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+
+    {/* Scroll Navigation Arrows - Right Side */}
+    <div className="fixed right-4 top-1/2 z-40 -translate-y-1/2 hidden transform flex-col gap-4 md:flex">
+      <button
+        onClick={scrollToPreviousSection}
+        className="flex h-12 w-12 items-center justify-center rounded-full bg-white/80 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-110 hover:bg-emerald-primary/10"
+        aria-label="Bagian sebelumnya"
+      >
+        <svg className="h-6 w-6 rotate-90 text-emerald-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+        </svg>
+      </button>
+      <button
+        onClick={scrollToNextSection}
+        className="flex h-12 w-12 items-center justify-center rounded-full bg-white/80 shadow-lg backdrop-blur-sm transition-all duration-300 hover:scale-110 hover:bg-emerald-primary/10"
+        aria-label="Bagian berikutnya"
+      >
+        <svg className="h-6 w-6 -rotate-90 text-emerald-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 14l7-7m0 0l7 7m-7-7v18" />
+        </svg>
+      </button>
+    </div>
+
+    {/* Scroll to Top Button - Bottom Right */}
+    <button
+      onClick={() => scrollToSection('hero')}
+      className="fixed bottom-8 right-8 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-primary to-emerald-bright shadow-lg transition-all duration-300 hover:scale-110 hover:shadow-xl"
+      aria-label="Kembali ke atas"
+    >
+      <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+      </svg>
+    </button>
   )
 }

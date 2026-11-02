@@ -8,6 +8,7 @@ from fastapi import (
     APIRouter,
     Depends,
     File,
+    Form,
     HTTPException,
     Request,
     Response,
@@ -54,6 +55,8 @@ TABLES = {
     "testimonials": "testimonials",
     "hero-slides": "hero_slides",
     "leadership": "leadership_members",
+    "about": "about_content",
+    "faq": "faq_items",
 }
 
 PUBLIC_SETTINGS_KEYS = {
@@ -74,6 +77,13 @@ PUBLIC_SETTINGS_KEYS = {
     "stat_staff",
     "stat_juz",
     "stat_extracurricular",
+    "stat_students_label",
+    "stat_staff_label",
+    "stat_juz_label",
+    "stat_extracurricular_label",
+    "hero_badge_text",
+    "hero_badge_year",
+    "home_cta",
 }
 
 ADMIN_SETTINGS_KEYS = PUBLIC_SETTINGS_KEYS | {
@@ -555,9 +565,15 @@ async def cp_upload(
     request: Request,
     user: dict[str, Any] = Depends(require_cp_crud()),
     file: UploadFile = File(...),
+    purpose: str = Form("general"),
 ):
     record_id = str(uuid.uuid4())
-    result = await upload_file(file, record_id)
+    result = await upload_file(
+        file,
+        record_id,
+        max_size_bytes=5 * 1024 * 1024 if purpose == "hero" else 10 * 1024 * 1024,
+        allowed_types={"image/jpeg", "image/png", "image/webp"} if purpose == "hero" else None,
+    )
     if result.public_url.startswith("/uploads/"):
         stored_name = result.public_url.rsplit("/", 1)[-1]
     else:
@@ -602,7 +618,7 @@ def cp_delete_upload(filename: str, user: dict[str, Any] = Depends(require_cp_cr
 # Public settings (logo/favicon/site_description) dibaca pada SETIAP page load
 # oleh semua frontend via GET /settings/{key}. MySQL remote (Hostinger) lambat
 # dan bervariasi (SELECT 1 bisa 0.4–5s, pernah 18s), jadi responsnya di-cache
-# in-process dengan TTL pendek. Cache di-invalidate saat PUT /settings/{key},
+# In-memory settings cache with short TTL (cleared on reload/update)
 # dan karena API berjalan sebagai worker tunggal, update branding dari proses
 # yang sama terlihat instan lewat SSE (klien lain maksimal selambat TTL).
 _SETTINGS_CACHE_TTL = 300  # detik
@@ -750,7 +766,7 @@ def cp_entity_list(entity: str, skip: int = 0, limit: int = 100):
         else "year.desc"
         if entity == "achievements"
         else "order.asc"
-        if entity in ("hero-slides", "programs", "testimonials", "leadership")
+        if entity in ("hero-slides", "programs", "testimonials", "leadership", "about", "faq")
         else None
     )
     items = list_all(table, order=order, skip=skip, limit=limit)

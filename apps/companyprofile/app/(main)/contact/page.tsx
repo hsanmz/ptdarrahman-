@@ -1,9 +1,12 @@
 import type { Metadata } from 'next'
 import { Suspense } from 'react'
 import ContactClient from './_components/ContactClient'
-import { getContactInfo, getSocialLinks } from '@/app/lib/api'
+import { getContactInfo, getFaqs, getSocialLinks } from '@/app/lib/api'
 import { fetchActivePpdbWave } from '@/app/lib/ppdb'
-import type { ContactInfo, SocialLink } from '@/app/lib/types'
+import type { ContactInfo, FaqItem, SocialLink } from '@/app/lib/types'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 
 export const metadata: Metadata = {
   title: 'Hubungi Kami',
@@ -34,12 +37,14 @@ export const metadata: Metadata = {
 export default async function ContactPage() {
   let contactInfo: ContactInfo | null = null
   let socialLinks: SocialLink[] | null = null
+  let faqs: FaqItem[] = []
   try { contactInfo = await getContactInfo() } catch { contactInfo = null }
   try { socialLinks = await getSocialLinks() } catch { socialLinks = null }
+  try { faqs = await getFaqs() } catch { faqs = [] }
   const wave = await fetchActivePpdbWave()
   return (
     <Suspense>
-      <ContactClient contactInfo={contactInfo} socialLinks={socialLinks ?? []} wave={wave} />
+      <ContactClient contactInfo={contactInfo} socialLinks={socialLinks ?? []} faqs={faqs} wave={wave} />
     </Suspense>
   )
 }

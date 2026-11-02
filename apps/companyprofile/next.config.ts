@@ -49,6 +49,9 @@ const remotePatterns: {
   { protocol: "https", hostname: "ui-avatars.com" },
   { protocol: "https", hostname: "images.unsplash.com" },
   { protocol: "https", hostname: "arrahmanic.org" },
+  { protocol: "https", hostname: "*.arrahmanic.org" },
+  { protocol: "https", hostname: "webbackend.arrahmanic.org" },
+  { protocol: "http", hostname: "webbackend.arrahmanic.org" },
 ];
 
 let apiImageHostname = "";
@@ -87,6 +90,20 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns,
     dangerouslyAllowLocalIP: allowLocalIp,
+  },
+  async redirects() {
+    return [
+      {
+        source: '/program',
+        destination: '/programs',
+        permanent: true,
+      },
+      {
+        source: '/program/:slug',
+        destination: '/programs/:slug',
+        permanent: true,
+      },
+    ];
   },
   async headers() {
     return [

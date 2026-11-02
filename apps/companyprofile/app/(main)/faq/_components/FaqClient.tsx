@@ -1,13 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { ArrowUpRight, ChevronDown, MessageCircleQuestion } from 'lucide-react'
 import PageHeader from '@/app/components/layout/PageHeader'
 import ShapeDivider from '@/app/components/ui/ShapeDivider'
-import type { Faq } from '@/app/data/faq'
+import type { FaqItem } from '@/app/lib/types'
+import { getFaqs } from '@/app/lib/api'
+import { eventBus } from '@/app/lib/event-bus'
+import { useSSE } from '@/app/hooks/useSSE'
 
-function FaqItem({ item, index, defaultOpen }: { item: Faq; index: number; defaultOpen?: boolean }) {
+function FaqItem({ item, index, defaultOpen }: { item: FaqItem; index: number; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen || false)
   const panelId = `faq-panel-${index}`
   const buttonId = `faq-button-${index}`
@@ -45,7 +48,34 @@ function FaqItem({ item, index, defaultOpen }: { item: Faq; index: number; defau
   )
 }
 
-export default function FaqClient({ items }: { items: Faq[] }) {
+export default function FaqClient({ items }: { items: FaqItem[] }) {
+  const [faqList, setFaqList] = useState<FaqItem[]>(items)
+
+  // Langganan SSE real-time untuk modul companyprofile
+  useSSE('companyprofile')
+
+  useEffect(() => {
+    setFaqList(items)
+  }, [items])
+
+  useEffect(() => {
+    const handleRefresh = async () => {
+      try {
+        const fresh = await getFaqs()
+        if (fresh && Array.isArray(fresh)) {
+          setFaqList(fresh)
+        }
+      } catch {
+        // Abaikan error saat refresh di background
+      }
+    }
+
+    eventBus.on('companyprofile:refresh', handleRefresh)
+    return () => {
+      eventBus.off('companyprofile:refresh', handleRefresh)
+    }
+  }, [])
+
   return (
     <>
       <PageHeader
@@ -60,9 +90,9 @@ export default function FaqClient({ items }: { items: Faq[] }) {
         <div className="absolute inset-0 bg-pattern-dots opacity-[0.04]" />
 
         <div className="max-w-3xl mx-auto px-4 sm:px-6 relative z-10">
-          {items.length > 0 ? (
+          {faqList.length > 0 ? (
             <div className="space-y-3">
-              {items.map((item, i) => (
+              {faqList.map((item, i) => (
                 <FaqItem key={`${item.question}-${i}`} item={item} index={i} defaultOpen={i === 0} />
               ))}
             </div>

@@ -24,9 +24,9 @@ export interface StoryChapter {
 }
 
 export const storyVisual: StoryVisual = {
-  // TODO: ganti dengan foto resmi Ketua Yayasan saat aset diserahkan.
+  // Foto Ketua Yayasan Generasi Cerdas Akhlak Mulia
   image:
-    'https://images.unsplash.com/photo-1509062522246-3755977927d7?q=80&w=2070&auto=format&fit=crop',
+    '/images/pak-eko.jpg',
   alt: 'Eko Santoso — Ketua Yayasan Generasi Cerdas Akhlak Mulia',
   name: 'Eko Santoso',
   role: 'Ketua Yayasan Generasi Cerdas Akhlak Mulia',

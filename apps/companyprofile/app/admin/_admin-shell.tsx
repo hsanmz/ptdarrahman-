@@ -12,8 +12,9 @@ import type { DashboardLinkComponent, DashboardNavGroup, DashboardNavItem } from
  * `dashboard` supaya urutan & pengelompokan modul tidak berbeda antar halaman.
  */
 export const ADMIN_SIDEBAR_GROUPS: { label: string; keys: string[] }[] = [
+  { label: 'Beranda', keys: ['hero'] },
   { label: 'Konten', keys: ['news', 'programs', 'facilities', 'gallery', 'testimonials'] },
-  { label: 'Informasi', keys: ['staff', 'achievements', 'social', 'contact'] },
+  { label: 'Informasi', keys: ['staff', 'about', 'leadership', 'achievements', 'faq', 'social', 'contact'] },
   { label: 'Sistem', keys: ['settings'] },
 ]
 

@@ -40,6 +40,8 @@ ENTITY_COLUMNS: dict[str, set[str]] = {
     "testimonials": {"name", "child", "image", "order", "content"},
     "hero-slides": {"image", "order", "content"},
     "leadership": {"board", "order", "content"},
+    "about": {"section", "order", "content"},
+    "faq": {"question", "answer", "category", "order"},
 }
 
 # Columns that must be present (and non-empty) when creating a row. Mirrors the
@@ -58,6 +60,8 @@ REQUIRED_FIELDS: dict[str, set[str]] = {
     "testimonials": {"name", "child"},
     "hero-slides": {"content"},
     "leadership": {"board"},
+    "about": {"section"},
+    "faq": {"question", "answer"},
 }
 
 # Simple per-column type coercion for columns that map to typed DB columns.
@@ -67,6 +71,8 @@ INT_COLUMNS: dict[str, set[str]] = {
     "testimonials": {"order"},
     "hero-slides": {"order"},
     "leadership": {"order"},
+    "about": {"order"},
+    "faq": {"order"},
 }
 
 # Real column widths from `src/models/content.py`. Oversized input is a client
@@ -84,6 +90,7 @@ MAX_LENGTHS: dict[str, int] = {
     "child": 255,
     "role": 100,
     "board": 50,
+    "section": 50,
 }
 
 # Unbounded Text columns. A generous cap still stops a runaway payload (an
@@ -95,6 +102,22 @@ TEXT_LIMIT = 500_000
 # normalized and checked for uniqueness.
 SLUG_ENTITIES: frozenset[str] = frozenset({"news", "programs"})
 
+ABOUT_SECTIONS: frozenset[str] = frozenset(
+    {
+        "hero",
+        "story-heading",
+        "story",
+        "vision",
+        "mission",
+        "values-heading",
+        "value",
+        "student-profile",
+        "leadership-heading",
+        "cta",
+        "home-preview",
+    }
+)
+
 # Column defaults for create. `testimonials.order` is `nullable=False,
 # default=0` in the model, but that default lives in SQLAlchemy's Python-side
 # insert path -- and the generic CRUD router writes with a raw INSERT, so the
@@ -105,6 +128,8 @@ COLUMN_DEFAULTS: dict[str, dict[str, Any]] = {
     "testimonials": {"order": 0},
     "hero-slides": {"order": 0},
     "leadership": {"order": 0},
+    "about": {"order": 0},
+    "faq": {"order": 0},
 }
 
 _DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -222,6 +247,11 @@ def sanitize_entity_payload(
             sanitized[key] = _normalize_news_date(value)
         else:
             _check_length(key, value)
+            if entity == "about" and key == "section" and value not in ABOUT_SECTIONS:
+                raise ValueError(
+                    "Field 'section' must be one of: "
+                    + ", ".join(sorted(ABOUT_SECTIONS))
+                )
             sanitized[key] = value
 
     if not partial:

@@ -75,7 +75,10 @@ def _sniff_type(content: bytes) -> str | None:
 
 
 def _validate(
-    content: bytes, filename: str | None, content_type: str | None
+    content: bytes,
+    filename: str | None,
+    content_type: str | None,
+    allowed_types: set[str] | None = None,
 ) -> tuple[str, str]:
     """Validate declared type + magic bytes + extension.
 
@@ -86,10 +89,12 @@ def _validate(
     declared = (content_type or "").lower()
     if not filename:
         raise HTTPException(status_code=400, detail="No file uploaded")
-    if declared not in ALLOWED_IMAGE_TYPES:
+    accepted_types = allowed_types or ALLOWED_IMAGE_TYPES
+    if declared not in accepted_types:
         raise HTTPException(
             status_code=400,
-            detail="File type not allowed. Accepted: JPEG, PNG, WebP, GIF, PDF",
+            detail="File type not allowed. Accepted: "
+            + ", ".join(sorted(accepted_types)),
         )
     detected = _sniff_type(content)
     if detected is None or detected != declared:
@@ -109,10 +114,11 @@ def _validate(
     return detected, _TYPE_EXT[detected]
 
 
-async def _read_with_limit(file: UploadFile) -> bytes:
-    content = await file.read(MAX_SIZE_BYTES + 1)
-    if len(content) > MAX_SIZE_BYTES:
-        raise HTTPException(status_code=400, detail="File too large (max 10 MB)")
+async def _read_with_limit(file: UploadFile, max_size_bytes: int = MAX_SIZE_BYTES) -> bytes:
+    content = await file.read(max_size_bytes + 1)
+    if len(content) > max_size_bytes:
+        max_size_mb = max_size_bytes / (1024 * 1024)
+        raise HTTPException(status_code=400, detail=f"File too large (max {max_size_mb:g} MB)")
     return bytes(content)
 
 
@@ -185,10 +191,16 @@ def _upload_db(
     )
 
 
-async def upload_file(file: UploadFile, record_id: str | None = None) -> UploadResult:
-    content = await _read_with_limit(file)
+async def upload_file(
+    file: UploadFile,
+    record_id: str | None = None,
+    *,
+    max_size_bytes: int = MAX_SIZE_BYTES,
+    allowed_types: set[str] | None = None,
+) -> UploadResult:
+    content = await _read_with_limit(file, max_size_bytes)
     original_name = file.filename or "file"
-    detected_type, safe_ext = _validate(content, file.filename, file.content_type)
+    detected_type, safe_ext = _validate(content, file.filename, file.content_type, allowed_types)
 
     provider = settings.upload_provider
     if provider == "cloudinary" and not settings.cloudinary_configured:

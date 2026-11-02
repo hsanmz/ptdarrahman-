@@ -3,14 +3,21 @@
 import { useEffect, useRef } from 'react'
 import { gsap } from '@/app/lib/gsap'
 import { prefersReducedMotion } from '@/app/lib/motion'
+import type { AboutContentData } from '@/app/lib/types'
 
-export default function StatsSection({ settings = {} }: { settings?: Record<string, string> }) {
-  const displayStats = [
-    { value: Number(settings.stat_students) || 350, suffix: '+', label: 'Santri Aktif' },
-    { value: Number(settings.stat_teachers || settings.stat_staff) || 40, suffix: '+', label: 'Guru & Staff' },
-    { value: Number(settings.stat_juz) || 30, suffix: ' Juz', label: 'Hafalan Al-Quran' },
-    { value: Number(settings.stat_extracurricular) || 15, suffix: '+', label: 'Ekstrakurikuler' },
-  ]
+export default function StatsSection({ content = null }: { settings?: Record<string, string>; content?: AboutContentData | null }) {
+  const displayStats = Array.from({ length: 4 }, (_, index) => {
+    const position = index + 1
+    const rawValue = content?.[`stat_${position}_value`]
+    const rawLabel = content?.[`stat_${position}_label`]
+    const value = rawValue === undefined || rawValue === '' ? Number.NaN : Number(rawValue)
+    if (!Number.isFinite(value) || typeof rawLabel !== 'string' || !rawLabel.trim()) return null
+    return {
+      value,
+      suffix: String(content?.[`stat_${position}_suffix`] ?? ''),
+      label: rawLabel,
+    }
+  }).filter((stat): stat is { value: number; suffix: string; label: string } => stat !== null)
   const rootRef = useRef<HTMLElement>(null)
 
   useEffect(() => {
@@ -37,6 +44,8 @@ export default function StatsSection({ settings = {} }: { settings?: Record<stri
     }, root)
     return () => ctx.revert()
   }, [])
+
+  if (displayStats.length === 0) return null
 
   return (
     <section ref={rootRef} className="py-16 sm:py-20 bg-[var(--bg)]">

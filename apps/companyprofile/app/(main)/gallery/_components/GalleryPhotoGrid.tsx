@@ -44,6 +44,7 @@ export default function GalleryPhotoGrid({ items, onSelect }: GalleryPhotoGridPr
       <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
         {visible.map((item) => {
           const title = item.content?.title?.trim() || 'Galeri'
+          const description = item.content?.desc?.trim() || `Dokumentasi ${title.toLowerCase()}.`
           const category = galleryCategoryLabel(item.category)
           return (
             <li key={item.id}>
@@ -82,6 +83,11 @@ export default function GalleryPhotoGrid({ items, onSelect }: GalleryPhotoGridPr
                   {category && (
                     <span className="mt-0.5 block truncate text-[10px] sm:text-xs uppercase tracking-wide text-white/75">
                       {category}
+                    </span>
+                  )}
+                  {description && (
+                    <span className="mt-1 block line-clamp-2 text-[10px] leading-snug text-white/80">
+                      {description}
                     </span>
                   )}
                 </span>

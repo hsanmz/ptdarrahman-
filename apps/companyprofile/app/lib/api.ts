@@ -2,8 +2,10 @@ import { cache } from 'react'
 
 import type {
   Achievement,
+  AboutContent,
   ContactInfo,
   Facility,
+  FaqItem,
   GalleryItem,
   HeroSlide,
   LeadershipBoard,
@@ -56,7 +58,7 @@ function buildMockUser(username = 'admin'): AuthMe {
     is_superadmin: true,
     permissions: { companyprofile: 'crud', ppdb: 'crud' },
     page_permissions: [],
-    crud_permissions: ['news', 'programs', 'facilities', 'staff', 'achievements', 'gallery', 'testimonials', 'social', 'contact', 'settings'],
+    crud_permissions: ['news', 'programs', 'facilities', 'staff', 'about', 'leadership', 'achievements', 'gallery', 'testimonials', 'faq', 'social', 'contact', 'settings'],
   }
 }
 
@@ -181,6 +183,25 @@ function mapContent(data: JsonValue | null): JsonValue | null {
   if (typeof gallery === 'string') {
     try { gallery = JSON.parse(gallery) } catch { gallery = null }
   }
+  if (content && typeof content === 'object') {
+    const obj = content as Record<string, unknown>
+    const bodyVal = typeof obj.content === 'string' && obj.content
+      ? obj.content
+      : typeof obj.body === 'string'
+      ? obj.body
+      : ''
+    if (bodyVal) {
+      if (!obj.content) obj.content = bodyVal
+      if (!obj.body) obj.body = bodyVal
+    }
+    if (!obj.excerpt && bodyVal) {
+      obj.excerpt = bodyVal
+        .replace(/<[^>]*>/g, '')
+        .replace(/\r?\n+/g, ' ')
+        .trim()
+        .slice(0, 160) + '...'
+    }
+  }
   return { ...data, content: content ?? null, gallery: gallery ?? null }
 }
 
@@ -222,6 +243,16 @@ export async function getStaff(): Promise<Staff[]> {
 export async function getLeadershipRows(): Promise<LeadershipMember[]> {
   const items = await fetchApi<JsonValue[]>('/leadership')
   return items.map((item) => mapContent(item) as unknown as LeadershipMember)
+}
+
+export async function getAboutContentRows(): Promise<AboutContent[]> {
+  const items = await fetchApi<JsonValue[]>('/about')
+  return items.map((item) => mapContent(item) as unknown as AboutContent)
+}
+
+export async function getFaqs(): Promise<FaqItem[]> {
+  const items = await fetchApi<JsonValue[]>('/faq', { cache: 'no-store' })
+  return items.map((item) => mapContent(item) as unknown as FaqItem)
 }
 
 // Baris CMS dikelompokkan per lembaga (Yayasan dulu, lalu Islamic Center)
@@ -389,7 +420,8 @@ export async function getEntityPage(
   const skip = (page - 1) * perPage
   const clean = endpoint.replace(/^\/+/, '')
   const items = await fetchApi<JsonValue[]>(
-    `/${clean}?skip=${skip}&limit=${perPage}`
+    `/${clean}?skip=${skip}&limit=${perPage}`,
+    { cache: 'no-store' }
   )
   return items.map((item) => mapContent(item) as JsonValue)
 }
@@ -468,9 +500,10 @@ export async function updateProfile(data: {
   return fetchAuthApi<JsonValue>('/companyprofile/auth/profile', { method: 'PUT', body: JSON.stringify(data) })
 }
 
-export async function uploadImage(file: File) {
+export async function uploadImage(file: File, purpose = 'general') {
   const form = new FormData()
   form.append('file', file)
+  form.append('purpose', purpose)
   let res = await fetchWithFallback(`${API_BASE}/companyprofile/upload`, {
     method: 'POST',
     body: form,
@@ -493,8 +526,8 @@ export async function uploadImage(file: File) {
   return data.url as string
 }
 
-export async function getSessions(): Promise<{ sessions: any[] }> {
-  return fetchAuthApi<{ sessions: any[] }>('/companyprofile/auth/sessions')
+export async function getSessions(): Promise<{ sessions: unknown[] }> {
+  return fetchAuthApi<{ sessions: unknown[] }>('/companyprofile/auth/sessions')
 }
 
 export async function revokeSession(id: string): Promise<void> {

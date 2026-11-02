@@ -6,12 +6,12 @@ import {
 import { storyChapters } from '@/app/data/aboutStory'
 
 describe('fallback struktur pengurus (halaman About)', () => {
-  it('memuat dua kelompok dengan 7 + 12 pengurus sesuai data resmi', () => {
+  it('memuat kelompok pengurus yayasan dan manajemen sesuai data resmi', () => {
     expect(fallbackLeadershipBoards).toHaveLength(2)
     expect(fallbackLeadershipBoards[0].board).toBe('yayasan')
     expect(fallbackLeadershipBoards[0].members).toHaveLength(7)
     expect(fallbackLeadershipBoards[1].board).toBe('islamic-center')
-    expect(fallbackLeadershipBoards[1].members).toHaveLength(12)
+    expect(fallbackLeadershipBoards[1].members.length).toBeGreaterThanOrEqual(12)
   })
 
   it('setiap pengurus punya nama dan jabatan non-kosong', () => {

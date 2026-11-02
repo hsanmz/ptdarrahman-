@@ -7,7 +7,6 @@ import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { useScrollReveal } from '../../hooks/useScrollAnimations'
 import TiltCard from '../ui/TiltCard'
-import ShapeDivider from '../ui/ShapeDivider'
 
 import type { Facility } from '@/app/lib/types'
 
@@ -39,13 +38,14 @@ const fallbackFacilities = [
 ]
 
 export default function FacilitiesPreview({ facilities = [] }: { facilities?: Facility[] }) {
-  const displayFacilities = facilities.length > 0 
-    ? facilities.slice(0, 5).map(f => ({
-        image: f.image || fallbackFacilities[0].image,
-        name: f.content?.name || '',
-        desc: f.content?.desc || '',
-      }))
-    : fallbackFacilities;
+  const displayFacilities =
+    facilities.length > 0
+      ? facilities.slice(0, 5).map((f) => ({
+          image: f.image || fallbackFacilities[0].image,
+          name: f.content?.name || '',
+          desc: f.content?.desc || '',
+        }))
+      : fallbackFacilities
 
   const sectionRef = useRef<HTMLElement>(null)
 
@@ -54,17 +54,15 @@ export default function FacilitiesPreview({ facilities = [] }: { facilities?: Fa
   const [first, ...rest] = displayFacilities
 
   return (
-    <section ref={sectionRef} className="relative overflow-hidden pt-40 md:pt-48 pb-16 md:pb-32 bg-[var(--bg)]">
-      {/* Wave setinggi 137px menutupi bagian atas section ivory-dark dari
-          ProgramsPreview, jadi pt harus jauh lebih besar dari py aslinya. */}
-      <ShapeDivider fill="var(--bg-secondary)" />
+    <section
+      ref={sectionRef}
+      className="relative overflow-hidden py-16 sm:py-20 md:py-24 bg-[var(--bg)] border-t border-[var(--color-border)]"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10">
         <div className="text-center mb-10 sm:mb-16">
-          <span className="section-badge justify-center">
-            {'FASILITAS KELAS DUNIA'}
-          </span>
+          <span className="section-badge justify-center">FASILITAS KELAS DUNIA</span>
           <h2 className="section-title max-w-3xl mx-auto">
-            {'Pesantren Premium untuk Generasi Premium'}
+            Pesantren Premium untuk Generasi Premium
           </h2>
         </div>
 
@@ -73,14 +71,18 @@ export default function FacilitiesPreview({ facilities = [] }: { facilities?: Fa
           {/* Large left card */}
           <TiltCard glare={false} maxTilt={5} className="md:col-span-2 lg:col-span-7">
             <div className="img-overlay rounded-xl sm:rounded-2xl shadow-md aspect-[4/3] relative">
-              <Image src={first.image} alt={first.name} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 60vw" />
+              <Image
+                src={first.image}
+                alt={first.name}
+                fill
+                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 60vw"
+              />
               <div className="overlay p-3 sm:p-6">
                 <h3 className="text-base sm:text-xl md:text-2xl font-bold font-[var(--font-display)] text-white mb-0.5 sm:mb-1">
                   {first.name}
                 </h3>
-                <p className="text-xs sm:text-sm text-white/70">
-                  {first.desc}
-                </p>
+                <p className="text-xs sm:text-sm text-white/70">{first.desc}</p>
               </div>
             </div>
           </TiltCard>
@@ -88,16 +90,29 @@ export default function FacilitiesPreview({ facilities = [] }: { facilities?: Fa
           {/* Right column */}
           <div className="md:col-span-2 lg:col-span-5 grid grid-cols-2 gap-3 sm:gap-4">
             {rest.map((f, i) => (
-              <TiltCard key={i} glare={false} maxTilt={5} className={`${i >= 2 ? 'col-span-2' : ''}`}>
-                <div className={`img-overlay rounded-xl sm:rounded-2xl shadow-md relative ${i >= 2 ? 'aspect-[3/1] sm:aspect-[3/1]' : 'aspect-square'}`}>
-                  <Image src={f.image} alt={f.name} fill className="object-cover" sizes="(max-width: 768px) 50vw, 33vw" />
+              <TiltCard
+                key={i}
+                glare={false}
+                maxTilt={5}
+                className={`${i >= 2 ? 'col-span-2' : ''}`}
+              >
+                <div
+                  className={`img-overlay rounded-xl sm:rounded-2xl shadow-md relative ${
+                    i >= 2 ? 'aspect-[3/1] sm:aspect-[3/1]' : 'aspect-square'
+                  }`}
+                >
+                  <Image
+                    src={f.image}
+                    alt={f.name}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 768px) 50vw, 33vw"
+                  />
                   <div className="overlay p-3 sm:p-5">
                     <h3 className="text-xs sm:text-base md:text-lg font-bold font-[var(--font-display)] text-white mb-0.5">
                       {f.name}
                     </h3>
-                    <p className="text-[10px] sm:text-xs text-white/70">
-                      {f.desc}
-                    </p>
+                    <p className="text-[10px] sm:text-xs text-white/70">{f.desc}</p>
                   </div>
                 </div>
               </TiltCard>
@@ -107,8 +122,8 @@ export default function FacilitiesPreview({ facilities = [] }: { facilities?: Fa
 
         <div className="text-center mt-8 sm:mt-10">
           <Link href="/facilities" className="btn-ghost text-xs sm:text-sm">
-            {'Jelajahi Semua Fasilitas'}
-            <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            Jelajahi Semua Fasilitas
+            <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 ml-1.5" />
           </Link>
         </div>
       </div>

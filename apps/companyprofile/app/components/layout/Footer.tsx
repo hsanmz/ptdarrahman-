@@ -214,7 +214,7 @@ export default function Footer({ programs = [] }: { programs?: Program[] }) {
         {/* Bottom Bar */}
         <div className="border-t border-[var(--color-border)] pt-6 sm:pt-8 flex flex-col md:flex-row items-center justify-between gap-3 sm:gap-4">
           <p className="text-xs text-[var(--text-muted)]">
-            &copy; 2021 &ndash; {new Date().getFullYear()} {"Pesantren Tahfidz Qur'an dan Digital Arrahman."} {'Hak cipta dilindungi.'}
+            &copy; {new Date().getFullYear()} {"Pesantren Tahfidz Qur'an dan Digital Ar-Rahman."} {'Hak cipta dilindungi.'}
           </p>
           <p className="text-xs text-[var(--text-muted)]">
             {'HugoEdmoundo Companies'}

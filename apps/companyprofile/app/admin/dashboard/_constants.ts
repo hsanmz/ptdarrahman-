@@ -1,7 +1,7 @@
 import {
   Newspaper, GraduationCap, Building2, Users, Trophy,
   Image as ImageIcon, MessageSquare, Link as LinkIcon, Phone, Settings,
-  Home, Network,
+  Home, Network, Info, HelpCircle,
 } from 'lucide-react'
 import * as api from '@/app/lib/api'
 import { facilityCategoryLabel } from '@/app/lib/facility-categories'
@@ -13,6 +13,8 @@ export const TABS: TabDef[] = [
   { key: 'programs', label: 'Program', endpoint: '/programs', fetch: api.getPrograms, icon: GraduationCap },
   { key: 'facilities', label: 'Fasilitas', endpoint: '/facilities', fetch: api.getFacilities, icon: Building2 },
   { key: 'staff', label: 'Staff', endpoint: '/staff', fetch: api.getStaff, icon: Users },
+  { key: 'about', label: 'Tentang Kami', endpoint: '/about', fetch: api.getAboutContentRows, icon: Info },
+  { key: 'faq', label: 'FAQ', endpoint: '/faq', fetch: api.getFaqs, icon: HelpCircle },
   { key: 'leadership', label: 'Struktur Organisasi', endpoint: '/leadership', fetch: api.getLeadershipRows, icon: Network },
   { key: 'achievements', label: 'Prestasi', endpoint: '/achievements', fetch: api.getAchievements, icon: Trophy },
   { key: 'gallery', label: 'Galeri', endpoint: '/gallery', fetch: api.getGallery, icon: ImageIcon },
@@ -23,7 +25,7 @@ export const TABS: TabDef[] = [
 ]
 
 export const HAS_CONTENT: string[] = [
-  'hero', 'news', 'programs', 'facilities', 'staff', 'leadership', 'achievements', 'gallery', 'testimonials',
+  'hero', 'news', 'programs', 'facilities', 'staff', 'about', 'leadership', 'achievements', 'gallery', 'testimonials',
 ]
 
 /**
@@ -81,6 +83,7 @@ export const ORDER_SOURCE: Record<string, 'column' | 'content'> = {
   testimonials: 'column',
   staff: 'content',
   leadership: 'column',
+  about: 'column',
 }
 
 function toOrderNumber(value: unknown): number | null {
@@ -147,8 +150,8 @@ export interface TableColumn {
 
 export const TABLE_COLS: Record<string, TableColumn[]> = {
   hero: [
-    { label: 'Judul Slide', accessor: (i) => i.content?.title || '', variant: 'title' },
-    { label: 'Label Kecil', accessor: (i) => i.content?.label, variant: 'text' },
+    { label: 'Gambar Banner', accessor: (i) => i.image ? 'Banner gambar' : 'Tanpa gambar', variant: 'title' },
+    { label: 'Ukuran Tampilan', accessor: (i) => i.content?.height_mode === 'full' ? 'Opsi A — Full Screen' : 'Opsi B — Peek Effect', variant: 'badge' },
     { label: 'Urutan', accessor: (i) => (i.order != null ? String(i.order) : ''), variant: 'badge' },
   ],
   news: [
@@ -185,6 +188,11 @@ export const TABLE_COLS: Record<string, TableColumn[]> = {
     },
     { label: 'Urutan', accessor: (i) => (i.order != null ? String(i.order) : ''), variant: 'badge' },
   ],
+  about: [
+    { label: 'Judul', accessor: (i) => i.content?.title || '', variant: 'title' },
+    { label: 'Bagian', accessor: (i) => i.section || '', variant: 'badge' },
+    { label: 'Urutan', accessor: (i) => (i.order != null ? String(i.order) : ''), variant: 'badge' },
+  ],
   achievements: [
     { label: 'Tahun', accessor: (i) => (i.year != null ? String(i.year) : ''), variant: 'badge', tone: 'gold' },
     { label: 'Judul', accessor: (i) => i.content?.title || '', variant: 'title' },
@@ -207,6 +215,11 @@ export const TABLE_COLS: Record<string, TableColumn[]> = {
       },
       variant: 'text',
     },
+    { label: 'Urutan', accessor: (i) => (i.order != null ? String(i.order) : ''), variant: 'badge' },
+  ],
+  faq: [
+    { label: 'Pertanyaan', accessor: (i) => i.question, variant: 'title' },
+    { label: 'Kategori', accessor: (i) => i.category, variant: 'badge' },
     { label: 'Urutan', accessor: (i) => (i.order != null ? String(i.order) : ''), variant: 'badge' },
   ],
 }
@@ -341,6 +354,16 @@ export const FORM_FIELDS: Record<string, FormField[]> = {
     { name: 'board', label: 'Kelompok Lembaga', type: 'select', required: true, options: ['yayasan', 'islamic-center'] },
     { name: 'order', label: 'Urutan Tampilan', type: 'number' },
   ],
+  about: [
+    {
+      name: 'section',
+      label: 'Bagian Tentang Kami',
+      type: 'select',
+      required: true,
+      options: ['home-preview', 'hero', 'story-heading', 'story', 'vision', 'mission', 'goals', 'values-heading', 'value', 'student-profile', 'leadership-heading', 'cta'],
+    },
+    { name: 'order', label: 'Urutan Tampilan', type: 'number' },
+  ],
   achievements: [{ name: 'year', label: 'Tahun', type: 'number' }],
   gallery: [{ name: 'category', label: 'Kategori', type: 'text' }],
   testimonials: [
@@ -357,16 +380,16 @@ export const FORM_FIELDS: Record<string, FormField[]> = {
     { name: 'href', label: 'URL', type: 'text' },
     { name: 'path', label: 'SVG Path', type: 'textarea' },
   ],
+  faq: [
+    { name: 'question', label: 'Pertanyaan', type: 'text', required: true },
+    { name: 'answer', label: 'Jawaban', type: 'textarea', required: true },
+    { name: 'category', label: 'Kategori', type: 'text' },
+    { name: 'order', label: 'Urutan Tampilan', type: 'number' },
+  ],
 }
 
 export const CONTENT_FIELDS: Record<string, { name: string; label: string; type: 'text' | 'textarea' | 'list' | 'number' | 'parent' | 'select'; options?: string[] }[]> = {
-  hero: [
-    { name: 'label', label: 'Label Kecil (badge)', type: 'text' },
-    { name: 'title', label: 'Judul Slide', type: 'textarea' },
-    { name: 'subtitle', label: 'Subjudul', type: 'textarea' },
-    { name: 'button_label', label: 'Label Tombol', type: 'text' },
-    { name: 'button_href', label: 'Tautan Tombol', type: 'text' },
-  ],
+  hero: [{ name: 'height_mode', label: 'Ukuran Tampilan Banner', type: 'select', options: ['full', 'peek'] }],
   news: [
     { name: 'title', label: 'Judul Berita', type: 'text' },
     { name: 'excerpt', label: 'Ringkasan', type: 'textarea' },
@@ -400,6 +423,7 @@ export const CONTENT_FIELDS: Record<string, { name: string; label: string; type:
   leadership: [
     { name: 'name', label: 'Nama Pengurus', type: 'text' },
     { name: 'position', label: 'Jabatan', type: 'text' },
+    { name: 'image', label: 'URL Foto Pengurus', type: 'text' },
   ],
   achievements: [
     { name: 'title', label: 'Judul Prestasi', type: 'text' },
@@ -411,6 +435,86 @@ export const CONTENT_FIELDS: Record<string, { name: string; label: string; type:
     { name: 'desc', label: 'Deskripsi Gambar', type: 'textarea' }
   ],
   testimonials: [{ name: 'quote', label: 'Kutipan Testimoni', type: 'textarea' }],
+  about: [
+    { name: 'page_title', label: 'Judul Halaman', type: 'text' },
+    { name: 'badge', label: 'Badge Halaman', type: 'text' },
+    { name: 'kicker', label: 'Label Kecil / Kicker', type: 'text' },
+    { name: 'eyebrow', label: 'Eyebrow Section', type: 'text' },
+    { name: 'title', label: 'Judul', type: 'textarea' },
+    { name: 'subtitle', label: 'Subjudul', type: 'textarea' },
+    { name: 'body', label: 'Isi / Deskripsi', type: 'textarea' },
+    { name: 'items', label: 'Daftar Poin (1 per baris)', type: 'list' },
+    { name: 'description', label: 'Deskripsi Kartu', type: 'textarea' },
+    { name: 'icon', label: 'Ikon (book-open / cpu / heart / shield-check / users)', type: 'text' },
+    { name: 'image', label: 'URL Gambar', type: 'text' },
+    { name: 'image_alt', label: 'Alt Gambar', type: 'text' },
+    { name: 'image_name', label: 'Nama pada Caption', type: 'text' },
+    { name: 'image_role', label: 'Peran pada Caption', type: 'text' },
+    { name: 'cta_label', label: 'Label Tombol', type: 'text' },
+    { name: 'cta_href', label: 'Tautan Tombol', type: 'text' },
+    { name: 'secondary_cta_label', label: 'Label Tombol Sekunder', type: 'text' },
+    { name: 'button_label', label: 'Label Tombol CTA', type: 'text' },
+    { name: 'button_href', label: 'Tautan Tombol CTA', type: 'text' },
+    { name: 'link_label', label: 'Label Link Struktur', type: 'text' },
+    { name: 'link_href', label: 'Tautan Struktur', type: 'text' },
+    { name: 'image_1', label: 'Gambar 1', type: 'text' },
+    { name: 'image_2', label: 'Gambar 2', type: 'text' },
+    { name: 'image_3', label: 'Gambar 3', type: 'text' },
+    { name: 'image_4', label: 'Gambar 4', type: 'text' },
+    { name: 'value_1_icon', label: 'Nilai 1 — Ikon', type: 'text' },
+    { name: 'value_1_title', label: 'Nilai 1 — Judul', type: 'text' },
+    { name: 'value_1_description', label: 'Nilai 1 — Deskripsi', type: 'textarea' },
+    { name: 'value_2_icon', label: 'Nilai 2 — Ikon', type: 'text' },
+    { name: 'value_2_title', label: 'Nilai 2 — Judul', type: 'text' },
+    { name: 'value_2_description', label: 'Nilai 2 — Deskripsi', type: 'textarea' },
+    { name: 'value_3_icon', label: 'Nilai 3 — Ikon', type: 'text' },
+    { name: 'value_3_title', label: 'Nilai 3 — Judul', type: 'text' },
+    { name: 'value_3_description', label: 'Nilai 3 — Deskripsi', type: 'textarea' },
+    { name: 'stat_1_value', label: 'Statistik 1 — Nilai', type: 'number' },
+    { name: 'stat_1_suffix', label: 'Statistik 1 — Satuan', type: 'text' },
+    { name: 'stat_1_label', label: 'Statistik 1 — Label', type: 'text' },
+    { name: 'stat_2_value', label: 'Statistik 2 — Nilai', type: 'number' },
+    { name: 'stat_2_suffix', label: 'Statistik 2 — Satuan', type: 'text' },
+    { name: 'stat_2_label', label: 'Statistik 2 — Label', type: 'text' },
+    { name: 'stat_3_value', label: 'Statistik 3 — Nilai', type: 'number' },
+    { name: 'stat_3_suffix', label: 'Statistik 3 — Satuan', type: 'text' },
+    { name: 'stat_3_label', label: 'Statistik 3 — Label', type: 'text' },
+    { name: 'stat_4_value', label: 'Statistik 4 — Nilai', type: 'number' },
+    { name: 'stat_4_suffix', label: 'Statistik 4 — Satuan', type: 'text' },
+    { name: 'stat_4_label', label: 'Statistik 4 — Label', type: 'text' },
+  ],
+}
+
+const ABOUT_FIELD_NAMES: Record<string, string[]> = {
+  'home-preview': [
+    'badge', 'title', 'body', 'image_1', 'image_2', 'image_3', 'image_4',
+    'value_1_icon', 'value_1_title', 'value_1_description',
+    'value_2_icon', 'value_2_title', 'value_2_description',
+    'value_3_icon', 'value_3_title', 'value_3_description',
+    'stat_1_value', 'stat_1_suffix', 'stat_1_label',
+    'stat_2_value', 'stat_2_suffix', 'stat_2_label',
+    'stat_3_value', 'stat_3_suffix', 'stat_3_label',
+    'stat_4_value', 'stat_4_suffix', 'stat_4_label',
+  ],
+  hero: ['page_title', 'badge', 'kicker', 'title', 'subtitle', 'image', 'image_alt', 'image_name', 'image_role', 'cta_label', 'cta_href', 'secondary_cta_label'],
+  'story-heading': ['eyebrow', 'title', 'body'],
+  story: ['kicker', 'title', 'body'],
+  vision: ['eyebrow', 'title', 'body'],
+  mission: ['eyebrow', 'title', 'items'],
+  goals: ['eyebrow', 'title', 'items'],
+  'values-heading': ['eyebrow', 'title', 'body'],
+  value: ['icon', 'title', 'description'],
+  'student-profile': ['eyebrow', 'title', 'icon', 'items'],
+  'leadership-heading': ['eyebrow', 'title', 'body', 'link_label', 'link_href'],
+  cta: ['eyebrow', 'title', 'body', 'button_label', 'button_href'],
+}
+
+/** Tampilkan field yang relevan dengan blok About yang sedang diedit. */
+export function getContentFields(tabKey: string, section?: string) {
+  const fields = CONTENT_FIELDS[tabKey] || []
+  if (tabKey !== 'about' || !section) return fields
+  const allowed = ABOUT_FIELD_NAMES[section]
+  return allowed ? fields.filter((field) => allowed.includes(field.name)) : fields
 }
 
 /**

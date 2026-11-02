@@ -3,6 +3,7 @@ export interface NewsContent {
   excerpt?: string
   author?: string
   content?: string
+  body?: string
 }
 
 export interface ProgramContent {
@@ -103,6 +104,59 @@ export interface LeadershipBoard {
   members: Array<{ name: string; position: string; image?: string; order?: number }>
 }
 
+export interface AboutContentData {
+  kicker?: string
+  page_title?: string
+  badge?: string
+  eyebrow?: string
+  title?: string
+  subtitle?: string
+  body?: string | string[]
+  items?: string[]
+  description?: string
+  icon?: string
+  image?: string
+  image_alt?: string
+  image_name?: string
+  image_role?: string
+  cta_label?: string
+  cta_href?: string
+  secondary_cta_label?: string
+  button_label?: string
+  button_href?: string
+  link_label?: string
+  link_href?: string
+  stat_1_value?: string | number
+  stat_1_suffix?: string
+  stat_1_label?: string
+  stat_2_value?: string | number
+  stat_2_suffix?: string
+  stat_2_label?: string
+  stat_3_value?: string | number
+  stat_3_suffix?: string
+  stat_3_label?: string
+  stat_4_value?: string | number
+  stat_4_suffix?: string
+  stat_4_label?: string
+  [key: string]: unknown
+}
+
+/** Satu blok yang dikelola dari tab CRUD Tentang Kami. */
+export interface AboutContent {
+  id: string
+  section: string
+  order?: number
+  content: AboutContentData | null
+}
+
+export interface FaqItem {
+  id: string
+  question: string
+  answer: string
+  category?: string
+  order?: number
+}
+
 export interface Achievement {
   id: string
   year: number
@@ -129,11 +183,16 @@ export interface Testimonial {
 // ── Hero beranda (dikelola dari CMS Company Profile) ────────────────────
 
 export interface HeroSlideContent {
-  label?: string
-  title?: string
-  subtitle?: string
-  button_label?: string
-  button_href?: string
+  height_mode?: 'full' | 'peek' | string
+}
+
+export interface HomeCtaContent {
+  enabled: boolean
+  title: string
+  description: string
+  button_text: string
+  button_url: string
+  layout: 'left' | 'right'
 }
 
 export interface HeroSlide {

@@ -1,14 +1,15 @@
 'use client'
+/* eslint-disable @next/next/no-img-element -- CMS image URLs may come from external hosts. */
 
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, ReactNode } from 'react'
-import Image from 'next/image'
 import {
   AlertTriangle, CalendarDays, FileText, Image as ImageIcon, Images, ListChecks, Link2, Loader2,
   Plus, Save, ShieldCheck, Trash2, Upload, X,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import * as api from '@/app/lib/api'
+import { resolveImageSrc } from '@/app/lib/image-file'
 import { cn } from '@/app/lib/utils'
 import { isFormDirty, UNSAVED_CHANGES_CONFIRM } from '@/app/lib/form-dirty'
 import { looksLikeHtml, sanitizeRichHtml } from '@/app/lib/rich-text'
@@ -23,7 +24,7 @@ import {
   Dialog, DialogContent, DialogTitle,
 } from '@/app/components/ui/Dialog'
 import {
-  TABS, FORM_FIELDS, CONTENT_FIELDS, HAS_CONTENT, HAS_IMAGE_COLUMN, maxLengthFor,
+  TABS, FORM_FIELDS, CONTENT_FIELDS, getContentFields, HAS_CONTENT, HAS_IMAGE_COLUMN, maxLengthFor,
 } from './_constants'
 import type { RowRecord, FormState } from './_types'
 import { errorMessage } from './_types'
@@ -92,7 +93,7 @@ export function CrudFormDialog({
   }, [activeTab, editingItem?.id])
 
   function buildContent(): Record<string, unknown> {
-    const fields = CONTENT_FIELDS[activeTab] || []
+    const fields = getContentFields(activeTab, String(formData.section ?? editingItem?.section ?? ''))
     const base: Record<string, unknown> =
       mode === 'edit' && editingItem && typeof editingItem.content === 'object' && editingItem.content !== null
         ? { ...(editingItem.content as Record<string, unknown>) }
@@ -113,7 +114,9 @@ export function CrudFormDialog({
         // menyelipkan tag/atribut berbahaya. Artikel teks polos lama
         // dibiarkan apa adanya agar tetap dirender oleh RichContent.
         const text = String(raw)
-        content[f.name] = looksLikeHtml(text) ? sanitizeRichHtml(text) : text
+        const cleaned = looksLikeHtml(text) ? sanitizeRichHtml(text) : text
+        content[f.name] = cleaned
+        content.body = cleaned
       } else {
         content[f.name] = raw
       }
@@ -239,7 +242,7 @@ export function CrudFormDialog({
   // Susunan baris grid tanpa lubang: field pendek dipasangkan berdua, field
   // panjang membentang penuh, dan field pendek yang sendirian dibuat penuh
   // supaya tidak ada setengah baris yang kosong (lihat computeSpans).
-  const contentFields = CONTENT_FIELDS[activeTab] || []
+  const contentFields = getContentFields(activeTab, String(formData.section ?? editingItem?.section ?? ''))
   const contentSpans = computeSpans(contentFields, (f) => f.type === 'textarea' || f.type === 'list' || f.type === 'parent')
   // Tidak ada lagi field "\"menembang\"" (wide) di dialog generik — tab social
   // yang dulu butuh itu kini memakai `SocialFormDialog` tersendiri. Perilaku
@@ -251,7 +254,7 @@ export function CrudFormDialog({
       <DialogContent
         className={cn(
           'flex max-h-[92vh] w-[calc(100vw-1.5rem)] flex-col gap-0 overflow-hidden rounded-2xl border-white/70 bg-[var(--bg-elevated)]/95 p-0 shadow-[0_24px_80px_-24px_rgba(15,60,40,0.45)] backdrop-blur-xl sm:rounded-2xl',
-          isNews ? 'max-w-6xl h-[92vh]' : 'max-w-2xl',
+          isNews ? 'max-w-6xl h-[92vh]' : 'h-[88dvh] max-h-[900px] max-w-5xl',
         )}
       >
         {/* ── Header ── */}
@@ -757,8 +760,8 @@ function ImageSection({ value, onChange }: { value: string; onChange: (url: stri
         {value && (
           <div className="flex items-start gap-3.5 rounded-2xl border border-[var(--border)]/70 bg-white/70 p-3">
             <div className="relative h-16 w-24 shrink-0 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]">
-              <Image
-                src={value} alt="Pratinjau gambar" width={96} height={64}
+              <img
+                src={resolveImageSrc(value, api.API_BASE)} alt="Pratinjau gambar"
                 className="h-full w-full object-cover"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
               />
@@ -829,8 +832,8 @@ function GallerySection({ value, onChange }: { value: string[]; onChange: (urls:
           <div className="grid grid-cols-4 gap-2.5 sm:grid-cols-5">
             {images.map((url, idx) => (
               <div key={`${url}-${idx}`} className="group relative aspect-4/3 overflow-hidden rounded-xl border border-[var(--border)]/70 bg-[var(--bg-secondary)]">
-                <Image
-                  src={url} alt={`Galeri ${idx + 1}`} width={160} height={120}
+                <img
+                  src={resolveImageSrc(url, api.API_BASE)} alt={`Galeri ${idx + 1}`}
                   className="h-full w-full object-cover"
                   onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }}
                 />

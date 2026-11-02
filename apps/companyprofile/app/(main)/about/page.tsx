@@ -1,17 +1,18 @@
 import type { Metadata } from 'next'
 import AboutClient from './AboutClient'
-import { getLeadership } from '@/app/lib/api'
+import { getAboutContentRows, getLeadership } from '@/app/lib/api'
+import { fallbackAboutContent } from '@/app/data/aboutContent'
 import { fallbackLeadershipBoards } from '@/app/data/leadership'
-import type { LeadershipBoard } from '@/app/lib/types'
+import type { AboutContent, LeadershipBoard } from '@/app/lib/types'
 
 export const metadata: Metadata = {
   title: 'Tentang Kami',
   description:
-    'Temukan kisah, visi, dan misi Pesantren Tahfidz Qur\'an dan Digital Arrahman. Berdiri sejak 2021, kami membentuk generasi pemimpin yang unggul dalam nilai-nilai Al-Quran dan inovasi digital.',
+    'Temukan kisah, visi, dan misi Pesantren Tahfidz Qur\'an dan Digital Ar-Rahman. Berdiri sejak 2021, kami membentuk generasi pemimpin yang unggul dalam nilai-nilai Al-Quran dan inovasi digital.',
   openGraph: {
     title: 'Tentang Kami | PTDARRAHMAN',
     description:
-      'Temukan kisah, visi, dan misi Pesantren Tahfidz Qur\'an dan Digital Arrahman.',
+      'Temukan kisah, visi, dan misi Pesantren Tahfidz Qur\'an dan Digital Ar-Rahman.',
     images: [
       {
         url: 'https://res.cloudinary.com/dunynusuh/image/upload/v1771353749/82ed87dd-4f99-46ca-b481-775f19b6b7c9.png',
@@ -25,7 +26,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Tentang Kami | PTDARRAHMAN',
     description:
-      'Temukan kisah, visi, dan misi Pesantren Tahfidz Qur\'an dan Digital Arrahman.',
+      'Temukan kisah, visi, dan misi Pesantren Tahfidz Qur\'an dan Digital Ar-Rahman.',
     images: ['https://res.cloudinary.com/dunynusuh/image/upload/v1771353749/82ed87dd-4f99-46ca-b481-775f19b6b7c9.png'],
   },
 }
@@ -35,5 +36,7 @@ export default async function AboutPage() {
   // statis saat CMS kosong/gagal agar halaman tidak pernah tampil tanpa pengurus.
   let leadership: LeadershipBoard[] | null = null
   try { leadership = await getLeadership() } catch { leadership = null }
-  return <AboutClient leadership={leadership ?? fallbackLeadershipBoards} />
+  let aboutContent: AboutContent[] | null = null
+  try { aboutContent = await getAboutContentRows() } catch { aboutContent = null }
+  return <AboutClient leadership={leadership ?? fallbackLeadershipBoards} aboutContent={aboutContent ?? fallbackAboutContent} />
 }

@@ -227,7 +227,7 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="flex flex-col items-center justify-between gap-3 border-t border-[#E3E0D8] pt-6 sm:flex-row sm:gap-4 sm:pt-8">
           <p className="text-xs text-slate-400">
-            &copy; 2021 &ndash; {new Date().getFullYear()} Pesantren Tahfidz Qur'an dan Digital Arrahman. Hak cipta dilindungi.
+            &copy; {new Date().getFullYear()} Pesantren Tahfidz Qur'an dan Digital Ar-Rahman. Hak cipta dilindungi.
           </p>
           <p className="text-xs text-slate-400">
             HugoEdmoundo Companies

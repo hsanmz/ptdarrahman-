@@ -19,6 +19,7 @@ export interface RowRecord {
   key?: string
   slug?: string
   category?: string
+  section?: string
   date?: string
   role?: string
   year?: number

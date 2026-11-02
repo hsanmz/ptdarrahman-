@@ -24,6 +24,8 @@ interface Props {
   /** Diberitahu ke dialog supaya tombol Simpan tidak ditekan saat upload berjalan. */
   onUploadingChange?: (uploading: boolean) => void
   error?: string
+  /** Ukuran frame dapat diperbesar untuk form yang membutuhkan preview lebih dominan. */
+  previewSize?: 'default' | 'large'
 }
 
 const MAX_SIZE_LABEL = formatFileSize(FACILITY_IMAGE_MAX_BYTES)
@@ -36,7 +38,7 @@ const MAX_SIZE_LABEL = formatFileSize(FACILITY_IMAGE_MAX_BYTES)
  * `<img>` biasa (bukan `next/image`) karena URL gambar berasal dari input bebas
  * admin dan `next/image` melempar error untuk host yang belum terdaftar.
  */
-export function FacilityImageField({ id, value, onChange, onUploadingChange, error }: Props) {
+export function FacilityImageField({ id, value, onChange, onUploadingChange, error, previewSize = 'default' }: Props) {
   const [mode, setMode] = useState<'upload' | 'url'>('upload')
   const [uploading, setUploading] = useState(false)
   const [dragging, setDragging] = useState(false)
@@ -168,7 +170,8 @@ export function FacilityImageField({ id, value, onChange, onUploadingChange, err
       {mode === 'upload' ? (
         <div
           className={cn(
-            'relative h-40 overflow-hidden rounded-xl border border-dashed transition-colors',
+            'relative overflow-hidden rounded-xl border border-dashed transition-colors',
+            previewSize === 'large' ? 'h-64 sm:h-72' : 'h-40',
             dragging
               ? 'border-[var(--accent)] bg-[var(--accent-subtle)]'
               : 'border-[var(--border)] bg-white/60',
@@ -273,7 +276,10 @@ export function FacilityImageField({ id, value, onChange, onUploadingChange, err
               )}
             />
           </div>
-          <div className="relative h-28 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]/40">
+          <div className={cn(
+            'relative overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--bg-secondary)]/40',
+            previewSize === 'large' ? 'h-48 sm:h-56' : 'h-28',
+          )}>
             {previewSrc ? (
               /* eslint-disable-next-line @next/next/no-img-element -- URL gambar bebas dari admin. */
               <img

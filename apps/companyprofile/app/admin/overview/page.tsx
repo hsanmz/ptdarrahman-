@@ -10,9 +10,9 @@ import { useSSE } from '@/app/hooks/useSSE'
 import AdminToast from '@/app/components/ui/AdminToast'
 import CrossTabSync from '@/app/components/CrossTabSync'
 import {
-  Newspaper, GraduationCap, Building2, Users, Trophy,
+  Home, Newspaper, GraduationCap, Building2, Users, Trophy,
   Image as ImageIcon, MessageSquare, Link as LinkIcon, Phone, Settings,
-  ArrowRight, Calendar, Sparkles, PenSquare, PictureInPicture2,
+  ArrowRight, Calendar, Sparkles, PenSquare, PictureInPicture2, Network, Info,
 } from 'lucide-react'
 import ProfileModal from '@/app/components/ProfileModal'
 import { DashboardShell } from '@repo/ui'
@@ -50,10 +50,13 @@ interface SectionDef {
 }
 
 const SECTIONS: SectionDef[] = [
+  { key: 'hero', label: 'Hero Beranda', icon: Home, tint: 'from-emerald-600 to-emerald-800', href: '/admin/dashboard?tab=hero', description: 'Banner gambar beranda' },
   { key: 'news', label: 'Berita', icon: Newspaper, tint: 'from-emerald-500 to-emerald-700', href: '/admin/dashboard?tab=news', description: 'Artikel & berita terbaru' },
   { key: 'programs', label: 'Program', icon: GraduationCap, tint: 'from-sky-500 to-sky-700', href: '/admin/dashboard?tab=programs', description: 'Program pendidikan' },
   { key: 'facilities', label: 'Fasilitas', icon: Building2, tint: 'from-amber-500 to-amber-700', href: '/admin/dashboard?tab=facilities', description: 'Sarana & prasarana' },
   { key: 'staff', label: 'Staff', icon: Users, tint: 'from-violet-500 to-violet-700', href: '/admin/dashboard?tab=staff', description: 'Guru & pengurus' },
+  { key: 'about', label: 'Tentang Kami', icon: Info, tint: 'from-emerald-500 to-emerald-700', href: '/admin/dashboard?tab=about', description: 'Konten profil institusi' },
+  { key: 'leadership', label: 'Struktur Organisasi', icon: Network, tint: 'from-emerald-600 to-emerald-800', href: '/admin/dashboard?tab=leadership', description: 'Susunan pengurus' },
   { key: 'achievements', label: 'Prestasi', icon: Trophy, tint: 'from-rose-500 to-rose-700', href: '/admin/dashboard?tab=achievements', description: 'Raihan & penghargaan' },
   { key: 'gallery', label: 'Galeri', icon: ImageIcon, tint: 'from-pink-500 to-pink-700', href: '/admin/dashboard?tab=gallery', description: 'Dokumentasi kegiatan' },
   { key: 'testimonials', label: 'Testimoni', icon: MessageSquare, tint: 'from-cyan-500 to-cyan-700', href: '/admin/dashboard?tab=testimonials', description: 'Kesan wali santri' },

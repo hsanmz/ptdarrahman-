@@ -10,7 +10,7 @@ import AnimatedLogo from '../ui/AnimatedLogo'
 import MagneticButton from '../ui/MagneticButton'
 import { programMenuLinks } from '@/app/lib/programs'
 import type { Program } from '@/app/lib/types'
-import { useBrand } from '@repo/ui'
+import { useBrand, resolvePortalUrl } from '@repo/ui'
 
 interface NavChild {
   href: string
@@ -55,6 +55,14 @@ export default function Navbar({ programs = [] }: { programs?: Program[] }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const { logoUrl } = useBrand(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')
+  const [portalUrl, setPortalUrl] = useState(() =>
+    resolvePortalUrl(process.env.NEXT_PUBLIC_PORTAL_URL)
+  )
+
+  useEffect(() => {
+    setPortalUrl(resolvePortalUrl(process.env.NEXT_PUBLIC_PORTAL_URL))
+  }, [])
+
   const pathname = usePathname()
   const dropdownTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -216,7 +224,7 @@ export default function Navbar({ programs = [] }: { programs?: Program[] }) {
           <div className="flex items-center gap-3">
             <MagneticButton strength={0.25}>
             <Link
-              href="/ppdb"
+              href={portalUrl}
               className={`hidden md:inline-flex items-center px-5 py-2.5 text-xs font-bold rounded-full whitespace-nowrap transition-all ${
                 isTransparent
                   ? 'bg-white/20 text-white hover:bg-white/30'
@@ -297,7 +305,7 @@ export default function Navbar({ programs = [] }: { programs?: Program[] }) {
             </div>
           ))}
           <Link
-            href="/ppdb"
+            href={portalUrl}
             onClick={() => setMobileOpen(false)}
             className="mt-8 px-10 py-3.5 bg-[var(--accent)] text-white text-sm font-bold rounded-full whitespace-nowrap hover:bg-[#15803D] transition-all"
           >

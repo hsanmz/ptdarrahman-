@@ -11,8 +11,10 @@ import {
   type ActivePpdbWave,
   type PpdbSchedule,
 } from '@/app/lib/ppdb'
-import type { ContactInfo, SocialLink } from '@/app/lib/types'
+import type { ContactInfo, FaqItem, SocialLink } from '@/app/lib/types'
 import { mapsFallbackUrl, mapsSearchUrl, resolveMapsEmbed } from '@/app/lib/maps-embed'
+import { getFaqs } from '@/app/lib/api'
+import { eventBus } from '@/app/lib/event-bus'
 
 /**
  * Susun kalimat jadwal PPDB hanya dari field yang benar-benar ada di backend.
@@ -71,17 +73,43 @@ const faqs = [
 export default function ContactClient({
   contactInfo,
   socialLinks = [],
+  faqs: dynamicFaqs = [],
   wave = null,
 }: {
   contactInfo: ContactInfo | null
   socialLinks?: SocialLink[]
+  faqs?: FaqItem[]
   wave?: ActivePpdbWave | null
 }) {
+  const [faqList, setFaqList] = useState<FaqItem[]>(dynamicFaqs)
   const sectionRef = useRef<HTMLElement>(null)
   const ppdb = buildSchedule(wave)
-  const faqItems = faqs.map((f, i) =>
-    i === 0 ? { ...f, answer: buildScheduleAnswer(ppdb) } : f,
-  )
+  const scheduleFaq = { question: 'Bagaimana jadwal pendaftaran?', answer: buildScheduleAnswer(ppdb) }
+
+  useEffect(() => {
+    setFaqList(dynamicFaqs)
+  }, [dynamicFaqs])
+
+  useEffect(() => {
+    const handleRefresh = async () => {
+      try {
+        const fresh = await getFaqs()
+        if (fresh && Array.isArray(fresh)) {
+          setFaqList(fresh)
+        }
+      } catch {
+        // Abaikan
+      }
+    }
+    eventBus.on('companyprofile:refresh', handleRefresh)
+    return () => {
+      eventBus.off('companyprofile:refresh', handleRefresh)
+    }
+  }, [])
+
+  const faqItems = faqList.length > 0
+    ? [scheduleFaq, ...faqList]
+    : faqs.map((f, i) => i === 0 ? { ...f, answer: buildScheduleAnswer(ppdb) } : f)
   const address = contactInfo?.address ?? ''
   /**
    * Nilai `maps_embed` diselesaikan via util bersama `lib/maps-embed`:

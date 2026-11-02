@@ -1,6 +1,6 @@
 'use client'
 
-import Image from 'next/image'
+// Image component removed; using standard <img> element
 import type { Staff } from '@/app/lib/types'
 import { buildStaffTree, type StaffTreeNode } from '@/app/lib/staff-tree'
 
@@ -50,7 +50,7 @@ function TreeNode({
       >
         <span className="block w-16 h-16 rounded-full overflow-hidden border-2 border-[var(--accent)]/20 relative mb-3">
           {s.image ? (
-            <Image src={s.image} alt={p.name || ''} fill className="object-cover" sizes="64px" />
+            <img src={s.image} alt={p.name || ''} className="object-cover w-full h-full" />
           ) : (
             <span className="flex w-full h-full items-center justify-center bg-[var(--bg)] text-[var(--accent)] font-bold">
               {(p.name || '?').charAt(0).toUpperCase()}

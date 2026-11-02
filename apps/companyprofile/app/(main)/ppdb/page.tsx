@@ -61,34 +61,34 @@ const ACCENT_STYLES: Record<
     link: 'text-emerald-800 hover:text-emerald-900',
   },
   amber: {
-    chip: 'bg-amber-500/10 text-amber-600',
-    kicker: 'text-amber-600',
-    check: 'text-amber-500',
-    link: 'text-amber-700 hover:text-amber-800',
+    chip: 'bg-[#D4A853]/15 text-[#A8791F]',
+    kicker: 'text-[#A8791F]',
+    check: 'text-[#C5963B]',
+    link: 'text-[#8C681D] hover:text-[#6E5015]',
   },
   sky: {
-    chip: 'bg-sky-500/10 text-sky-600',
-    kicker: 'text-sky-600',
-    check: 'text-sky-500',
-    link: 'text-sky-700 hover:text-sky-800',
+    chip: 'bg-emerald-600/10 text-emerald-700',
+    kicker: 'text-emerald-700',
+    check: 'text-emerald-600',
+    link: 'text-emerald-800 hover:text-emerald-900',
   },
   violet: {
-    chip: 'bg-violet-500/10 text-violet-600',
-    kicker: 'text-violet-600',
-    check: 'text-violet-500',
-    link: 'text-violet-700 hover:text-violet-800',
+    chip: 'bg-amber-500/10 text-[#A8791F]',
+    kicker: 'text-[#A8791F]',
+    check: 'text-[#C5963B]',
+    link: 'text-[#8C681D] hover:text-[#6E5015]',
   },
   rose: {
-    chip: 'bg-rose-500/10 text-rose-600',
-    kicker: 'text-rose-600',
-    check: 'text-rose-500',
-    link: 'text-rose-700 hover:text-rose-800',
+    chip: 'bg-emerald-600/10 text-emerald-700',
+    kicker: 'text-emerald-700',
+    check: 'text-emerald-600',
+    link: 'text-emerald-800 hover:text-emerald-900',
   },
   teal: {
-    chip: 'bg-teal-500/10 text-teal-600',
-    kicker: 'text-teal-600',
-    check: 'text-teal-500',
-    link: 'text-teal-700 hover:text-teal-800',
+    chip: 'bg-amber-500/10 text-[#A8791F]',
+    kicker: 'text-[#A8791F]',
+    check: 'text-[#C5963B]',
+    link: 'text-[#8C681D] hover:text-[#6E5015]',
   },
 }
 
@@ -98,8 +98,8 @@ const PPDBHero = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="min-h-[85vh] flex flex-col items-center justify-center bg-radial-gradient from-white to-[#f0f6ff] text-emerald-900">
-        <div className="w-12 h-12 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin mb-4" />
+      <div className="min-h-[85vh] flex flex-col items-center justify-center bg-[var(--bg)] text-emerald-900">
+        <div className="w-12 h-12 border-3 border-emerald-600 border-t-[#D4A853] rounded-full animate-spin mb-4" />
         <p className="font-medium text-sm tracking-widest uppercase text-emerald-800/80 animate-pulse">
           Menyiapkan Dunia 3D Ar-Rahman…
         </p>

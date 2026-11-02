@@ -152,6 +152,19 @@ ENTITY_CASES: list[dict[str, Any]] = [
         "update": {"order": "7", "child": "Anak Baru"},
         "check": {"order": 7, "child": "Anak Baru"},
     },
+    {
+        "entity": "about",
+        "create": {
+            "section": "story",
+            "order": "2",
+            "content": '{"kicker": "BAGIAN TEST", "title": "Tentang Test", "body": ["Isi awal"]}',
+        },
+        "update": {
+            "section": "vision",
+            "content": '{"title": "Visi Baru", "body": "Isi baru"}',
+        },
+        "check": {"section": "vision", "content": '{"title": "Visi Baru", "body": "Isi baru"}'},
+    },
 ]
 
 CASE_IDS = [str(case["entity"]) for case in ENTITY_CASES]

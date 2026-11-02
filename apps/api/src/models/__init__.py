@@ -10,6 +10,8 @@ from src.models.auth import (
 from src.models.base import Base
 from src.models.content import (
     Achievement,
+    AboutContent,
+    FaqItem,
     ContactInfo,
     Facility,
     GalleryItem,
@@ -59,6 +61,8 @@ __all__ = [
     "User",
     "UserPagePermission",
     "Achievement",
+    "AboutContent",
+    "FaqItem",
     "ContactInfo",
     "Facility",
     "GalleryItem",

@@ -90,11 +90,11 @@ export default function NewsDetailClient({ article, allNews, wave = null }: { ar
           ref={contentRef}
           className="max-w-7xl mx-auto px-4 sm:px-6"
         >
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-10 items-start">
             {/* ── 70%: Konten utama ── */}
             <div className="lg:col-span-7">
               <div className="prose prose-gray max-w-none">
-                <RichContent content={info?.content ?? ''} />
+                <RichContent content={info?.content || info?.body || ''} />
               </div>
 
               {article.gallery && article.gallery.length > 0 && (
@@ -148,7 +148,7 @@ export default function NewsDetailClient({ article, allNews, wave = null }: { ar
             </div>
 
             {/* ── 30%: Sidebar promosi ── */}
-            <div className="lg:col-span-5">
+            <div className="lg:col-span-4 lg:col-start-9 xl:col-span-3 xl:col-start-10">
               <NewsSidebar article={article} allNews={allNews} wave={wave} />
             </div>
           </div>

@@ -1,51 +1,56 @@
 import type { LeadershipBoard, LeadershipMember } from '@/app/lib/types'
 
 /**
- * Struktur organisasi khusus halaman `/about` — TERPISAH dari CRUD Guru & Staff.
- * Sumber utama: CMS tab "Struktur Organisasi" (tabel `leadership_members`).
- * Daftar di bawah hanyalah cadangan saat CMS kosong/gagal agar halaman tidak pernah
- * tampil kosong; isi harus selalu sinkron dengan data resmi panitia.
+ * Struktur organisasi khusus halaman `/about` — menampilkan seluruh pengurus Yayasan
+ * Generasi Cerdas Akhlak Mulia serta jajaran pimpinan & manajemen lembaga PTDARRAHMAN.
  */
 
 export const BOARD_TITLES: Record<string, string> = {
   yayasan: 'Susunan Pengurus Yayasan Generasi Cerdas Akhlak Mulia',
-  'islamic-center': 'Susunan Pengurus Ar Rahman Islamic Center',
+  'islamic-center': 'Pimpinan & Manajemen Lembaga PTDARRAHMAN',
+  manajemen: 'Pimpinan & Manajemen Lembaga PTDARRAHMAN',
 }
 
-/** Urutan grup pada halaman: Yayasan dulu, lalu Ar Rahman Islamic Center. */
-const BOARD_ORDER = ['yayasan', 'islamic-center']
+/** Urutan grup pada halaman: Yayasan dulu, lalu Pimpinan & Manajemen Lembaga. */
+const BOARD_ORDER = ['yayasan', 'islamic-center', 'manajemen']
 
 export const fallbackLeadershipBoards: LeadershipBoard[] = [
   {
     board: 'yayasan',
     title: BOARD_TITLES.yayasan,
     members: [
-      { name: 'Indra Setiawan', position: 'Pembina', image: 'https://arrahmanic.org/assets/images/pengurus/Pa Indra Setiawan.png' },
+      { name: 'Indra Setiawan', position: 'Pembina' },
       { name: 'Tri Indra Basoeki', position: 'Pembina' },
-      { name: 'Rini Widiastuti Rahayu', position: 'Pengawas', image: 'https://arrahmanic.org/assets/images/pengurus/Bu Rini Widiastuti.png' },
-      { name: 'Eko Santoso', position: 'Ketua', image: 'https://arrahmanic.org/assets/images/pengurus/Pa Eko.png' },
-      { name: 'Chandra Sari Nugraheni', position: 'Bendahara', image: 'https://arrahmanic.org/assets/images/pengurus/bu chandra.png' },
-      { name: 'Noor Kartika Muliawati', position: 'Sekretaris', image: 'https://arrahmanic.org/assets/images/pengurus/Bu Noor.png' },
-      { name: 'Rachmania Kurniawati', position: 'Sekretaris', image: 'https://arrahmanic.org/assets/images/pengurus/Bu Rachmania.png' },
+      { name: 'Rini Widiastuti Rahayu', position: 'Pengawas' },
+      { name: 'Eko Santoso', position: 'Ketua', image: '/images/pak-eko.jpg' },
+      { name: 'Chandra Sari Nugraheni', position: 'Bendahara' },
+      { name: 'Noor Kartika Muliawati', position: 'Sekretaris' },
+      { name: 'Rachmania Kurniawati', position: 'Sekretaris' },
     ],
   },
   {
     board: 'islamic-center',
     title: BOARD_TITLES['islamic-center'],
     members: [
-      { name: 'Chandra Sari Nugraheni', position: 'President Director', image: 'https://arrahmanic.org/assets/images/pengurus/bu chandra.png' },
-      { name: 'Fathya Irsalina M', position: 'AVP Performance Management', image: 'https://arrahmanic.org/assets/images/pengurus/ka fathya.png' },
-      { name: 'Mira Susanti', position: 'AVP Internal Auditor', image: 'https://arrahmanic.org/assets/images/pengurus/bu mira.png' },
-      { name: 'Leo Latul Agusta', position: 'Director of Education Center', image: 'https://arrahmanic.org/assets/images/pengurus/pa leo.png' },
-      { name: 'Ahmad Mahfud', position: 'Director of Support & Development', image: 'https://arrahmanic.org/assets/images/pengurus/pa mahfud.png' },
-      { name: 'Dewi Nareswari', position: 'Vice President of Branding & Development', image: 'https://arrahmanic.org/assets/images/pengurus/bu dewi.png' },
-      { name: 'Dahniar', position: 'Vice President of Finance & Support', image: 'https://arrahmanic.org/assets/images/pengurus/bu niar.png' },
-      { name: 'Ruswandri', position: 'Head of Lembaga Pengelolaan Ziswaf', image: 'https://arrahmanic.org/assets/images/pengurus/pa ruswandri.png' },
-      { name: 'Silvi Laeli Kodaria', position: 'Head of Sekolah Alam Qurani Ar Rahman', image: 'https://arrahmanic.org/assets/images/pengurus/bu silvi.png' },
-      // Nama resmi lembaga sesuai standar naming: Pesantren Tahfidz Qur'an dan Digital Ar-Rahman.
-      { name: 'Ziyad Khairy', position: "Head of Pesantren Tahfidz Qur'an dan Digital Ar-Rahman", image: 'https://arrahmanic.org/assets/images/pengurus/ustd ziyad.png' },
-      { name: 'Ahmad Khaeruddin', position: 'Head of Lembaga Pendidikan Al Quran', image: 'https://arrahmanic.org/assets/images/pengurus/ustd ahmad.png' },
-      { name: 'Susilawati', position: 'Head of Lembaga Pembinaan Masyarakat', image: 'https://arrahmanic.org/assets/images/pengurus/bu susi.png' },
+      { name: 'Chandra Sari Nugraheni', position: 'President Director' },
+      { name: 'Fathya Irsalina M', position: 'AVP Performance Management' },
+      { name: 'Mira Susanti', position: 'AVP Internal Auditor' },
+      { name: 'Leo Latul Agusta', position: 'Director of Education Center' },
+      { name: 'Ahmad Mahfud', position: 'Director of Support & Development' },
+      { name: 'Dewi Nareswari', position: 'Vice President of Branding & Development' },
+      { name: 'Dahniar', position: 'Vice President of Finance & Support' },
+      { name: 'Ruswandri', position: 'Head of Lembaga Pengelolaan Ziswaf' },
+      { name: 'Silvi Laeli Kodaria', position: 'Head of Sekolah Alam Qurani Ar Rahman' },
+      {
+        name: 'Ziyad Khairy',
+        position: "Head of Pesantren Tahfidz Qur'an dan Digital Ar-Rahman",
+      },
+      { name: 'Ahmad Khaeruddin', position: 'Head of Lembaga Pendidikan Al Quran' },
+      { name: 'Susilawati', position: 'Head of Lembaga Pembinaan Masyarakat' },
+      { name: 'Ustadz Mahrozal Mizan', position: 'Administrator Pesantren' },
+      { name: 'Ustadz Murtadho Tumari', position: 'Kepala Kepegawaian' },
+      { name: 'Ustadz Ian', position: 'Guru IT & Pemrograman' },
+      { name: 'Ustadz Nur Fatoni', position: 'Musrif & Pengajar Bahasa Arab' },
     ],
   },
 ]

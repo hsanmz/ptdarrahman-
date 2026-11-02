@@ -1,374 +1,174 @@
 'use client'
 
-import { useRef, useEffect, useState, useCallback } from 'react'
-import Image from 'next/image'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+/* eslint-disable @next/next/no-img-element -- gambar banner berasal dari URL CMS yang dapat memakai domain eksternal. */
 
-import { ArrowRight, ChevronDown, ChevronLeft, ChevronRight, Award, Calendar } from 'lucide-react'
-import { useScrollReveal } from '../../hooks/useScrollAnimations'
-import dynamic from 'next/dynamic'
-import MagneticButton from '../ui/MagneticButton'
-import { buildSchedule, type ActivePpdbWave } from '@/app/lib/ppdb'
+import { useEffect, useMemo, useState, useRef, useCallback } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { HeroSlide } from '@/app/lib/types'
-import { gsap, ScrollTrigger } from '@/app/lib/gsap'
-import { onLayoutReady, prefersReducedMotion } from '@/app/lib/motion'
-import HeroWaveSVG from './HeroWaveSVG'
+import { API_BASE } from '@/app/lib/api'
+import { resolveImageSrc } from '@/app/lib/image-file'
+import { prefersReducedMotion } from '@/app/lib/motion'
 
-// Dipakai di HeroSection tapi import-nya belum ada — TypeScript gagal dengan
-// "Cannot find name 'Particles'". Pola dynamic + ssr:false disamakan dengan
-// CTASection yang memakai komponen yang sama, supaya tidak ada dua cara
-// memuatnya di app ini.
-const Particles = dynamic(() => import('../ui/Particles'), { ssr: false })
+const AUTOPLAY_MS = 5000
 
-/** Jeda auto-geser antar slide (ms). */
-const AUTOPLAY_MS = 6000
-
-const FALLBACK_IMAGE =
-  'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=2071&auto=format&fit=crop'
-
-/**
- * Slide bawaan ketika CMS `hero-slides` masih kosong. Isinya sengaja disamakan
- * persis dengan hero sebelum ada CMS, supaya beranda tidak berubah sampai
- * panitia mengisi tab "Hero Beranda" di dashboard. Karena hanya ada satu
- * slide, tombol geser otomatis tidak muncul.
- */
-const FALLBACK_SLIDE: HeroSlide = {
-  id: '__fallback__',
-  image: FALLBACK_IMAGE,
-  content: {
-    label: 'DIDIRIKAN 2021',
-    title: 'Pesantren\nTahfidz\nDigital',
-    subtitle:
-      'Mendidik generasi hafizh yang melek teknologi. Tempat Al-Quran dan Artificial Intelligence berjalan berdampingan.',
-    button_label: 'Lihat Program',
-    button_href: '/programs',
-  },
-}
-
-/**
- * Render judul slide. Baris dipisah oleh `\n` (jadi admin bisa menyusun judul
- * beberapa baris), dan kata terakhir diberi warna aksen. Aturan "kata terakhir"
- * ini yang mempertahankan tampilan hero lama — "Digital" hijau — tanpa perlu
- * markup khusus dari admin.
- */
-function renderTitle(title: string) {
-  const lines = title.split('\n')
-  return lines.map((line, i) => {
-    const isLast = i === lines.length - 1
-    if (!isLast) {
-      return (
-        <span key={i}>
-          {line}
-          <br />
-        </span>
-      )
-    }
-    const match = line.match(/^(.*?)(\S+)(\s*)$/)
-    if (!match) return <span key={i}>{line}</span>
-    const [, head, word, tail] = match
-    return (
-      <span key={i}>
-        {head}
-        <span className="text-[var(--accent)]">{word}</span>
-        {tail}
-      </span>
-    )
-  })
-}
-
-export default function HeroSection({
-  wave = null,
-  slides = [],
-}: {
-  wave?: ActivePpdbWave | null
-  slides?: HeroSlide[]
-}) {
-  const pathname = usePathname()
-  const sectionRef = useRef<HTMLElement>(null)
-  const ppdb = buildSchedule(wave)
-
-  const decorRef1 = useRef<HTMLDivElement>(null)
-  const decorRef2 = useRef<HTMLDivElement>(null)
-  const rightRef = useRef<HTMLDivElement>(null)
-  const leftRef = useRef<HTMLDivElement>(null)
-  const hintRef = useRef<HTMLDivElement>(null)
-
-  // `slides` kosong -> pakai satu slide bawaan (statis, tanpa kontrol geser).
-  const items = slides.length > 0 ? slides : [FALLBACK_SLIDE]
-  const count = items.length
-
-  const [active, setActive] = useState(0)
-  const [paused, setPaused] = useState(false)
-  // Kalau daftar slide menyusut (mis. lewat SSE), indeks lama bisa melewati
-  // batas — clamp saat render.
-  const current = items[Math.min(active, count - 1)]
-  const content = current.content ?? {}
-
-  const goTo = useCallback(
-    (next: number) => setActive((next + count) % count),
-    [count],
+export default function HeroSection({ slides = [] }: { slides?: HeroSlide[] }) {
+  const items = useMemo(
+    () => slides.filter((slide) => typeof slide.image === 'string' && slide.image.trim() !== ''),
+    [slides],
   )
+  const [active, setActive] = useState(0)
+  const [isHoveredControls, setIsHoveredControls] = useState(false)
+  const touchStartX = useRef<number | null>(null)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
 
-  // Reveal diarahkan ke elemen konten, BUKAN ke sectionRef. Section dipakai sebagai
-  // trigger ScrollTrigger parallax di bawah, dan ScrollTrigger mengukur lewat
-  // getBoundingClientRect() yang ikut transform — kalau section ikut bergeser karena
-  // reveal, start/end parallax ikut bergeser sendiri.
-  useScrollReveal(leftRef, { start: 'top 60%' })
-  useScrollReveal(hintRef, { start: 'top 92%' })
+  const goToNext = useCallback(() => {
+    if (items.length <= 1) return
+    setActive((curr) => (curr + 1) % items.length)
+  }, [items.length])
 
+  const goToPrev = useCallback(() => {
+    if (items.length <= 1) return
+    setActive((curr) => (curr - 1 + items.length) % items.length)
+  }, [items.length])
+
+  // Autoplay otomatis berjalan sendiri secara berkala (5 detik)
   useEffect(() => {
-    if (prefersReducedMotion()) return
+    if (items.length <= 1 || isHoveredControls || prefersReducedMotion()) return
 
-    const ctx = gsap.context(() => {
-      if (decorRef1.current) {
-        gsap.to(decorRef1.current, {
-          y: -80,
-          ease: 'none',
-          scrollTrigger: { trigger: sectionRef.current, start: 'top bottom', end: 'bottom top', scrub: 1.5, invalidateOnRefresh: true },
-        })
-      }
-      if (decorRef2.current) {
-        gsap.to(decorRef2.current, {
-          y: 60,
-          ease: 'none',
-          scrollTrigger: { trigger: sectionRef.current, start: 'top bottom', end: 'bottom top', scrub: 1.5, invalidateOnRefresh: true },
-        })
-      }
-    }, sectionRef)
-
-    // Elemen kanan ini `hidden lg:block`; di bawah lg ScrollTrigger tidak punya
-    // ukuran yang bisa diukur, jadi tween-nya hanya dibuat di breakpoint desktop.
-    const mm = gsap.matchMedia()
-    mm.add('(min-width: 1024px)', () => {
-      if (rightRef.current) {
-        gsap.fromTo(rightRef.current,
-          { opacity: 0, x: 100, scale: 0.95 },
-          {
-            opacity: 1,
-            x: 0,
-            scale: 1,
-            duration: 1.2,
-            ease: 'power3.out',
-            scrollTrigger: {
-              trigger: rightRef.current,
-              start: 'top 80%',
-            },
-          }
-        )
-      }
-    })
-
-    const cleanupLayout = onLayoutReady(() => ScrollTrigger.refresh())
+    timerRef.current = setInterval(() => {
+      goToNext()
+    }, AUTOPLAY_MS)
 
     return () => {
-      cleanupLayout()
-      mm.revert()
-      ctx.revert()
+      if (timerRef.current) clearInterval(timerRef.current)
     }
-  }, [])
+  }, [items.length, isHoveredControls, goToNext, active])
 
-  // Auto-geser hanya saat ada lebih dari satu slide. Dijeda ketika kursor berada
-  // di atas hero (supaya sempat dibaca) dan saat pengguna memilih "reduce motion".
-  useEffect(() => {
-    if (count <= 1 || paused || prefersReducedMotion()) return
-
-    const id = window.setInterval(
-      () => setActive((i) => (i + 1) % count),
-      AUTOPLAY_MS,
+  if (items.length === 0) {
+    return (
+      <section
+        aria-label="Area banner beranda"
+        className="mt-16 h-[calc(100vh-4rem)] w-full bg-[var(--bg-secondary)] md:mt-20 md:h-[calc(100vh-5rem)]"
+      />
     )
-    return () => window.clearInterval(id)
-  }, [count, paused])
+  }
 
-  if (pathname !== '/') return null
+  // Handle Touch Swipe untuk mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return
+    const diff = touchStartX.current - e.changedTouches[0].clientX
+    if (Math.abs(diff) > 40) {
+      if (diff > 0) goToNext()
+      else goToPrev()
+    }
+    touchStartX.current = null
+  }
+
+  const current = items[Math.min(active, items.length - 1)]
+  const mode = current?.content?.height_mode
 
   return (
     <section
-      ref={sectionRef}
-      className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-br from-[#F7F5F0] via-white to-[#F0EDE4]"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
+      aria-label="Banner beranda"
+      className={`relative mt-16 w-full bg-[var(--bg-secondary)] overflow-hidden select-none md:mt-20 ${
+        mode === 'peek' ? 'mb-[10vh]' : ''
+      }`}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
     >
-      {/* Subtle pattern overlay */}
-      <div className="absolute inset-0 bg-pattern-dots opacity-[0.15] pointer-events-none" />
-      {/* Corrected decorative wave SVG - colors now match company profile (emerald + gold) */}
-      <HeroWaveSVG />
-      <Particles count={40} />
-      {/* Decorative background with parallax */}
-      <div ref={decorRef1} className="absolute top-0 right-0 w-1/2 h-full opacity-[0.04] pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse at center, var(--color-emerald) 0%, transparent 70%)' }}
-      />
-      <div ref={decorRef2} className="absolute bottom-0 left-0 w-1/3 h-1/2 opacity-[0.03] pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse at center, var(--color-gold) 0%, transparent 70%)' }}
-      />
+      {/* Container Slide dengan Efek Crossfade Halus */}
+      <div className="relative w-full">
+        {items.map((slide, index) => {
+          const isCurrent = index === active
+          const imageUrl = resolveImageSrc(String(slide.image), API_BASE)
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full pt-20 sm:pt-28 pb-16 sm:pb-20">
-        <div className="grid lg:grid-cols-12 gap-8 md:gap-12 items-center">
-          {/* Left Content */}
-          <div ref={leftRef} className="lg:col-span-7">
-            {/* `key` meremount blok ini tiap ganti slide supaya animasi masuk
-                diputar ulang; ref GSAP tetap di elemen luar yang stabil. */}
-            <div key={current.id} className="animate-fade-up-in">
-              <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6 flex-wrap">
-                <span className="w-6 sm:w-8 h-[2px] bg-[var(--accent-gold)]" />
-                <span className="text-[10px] sm:text-xs font-[var(--font-heading)] font-semibold uppercase tracking-[0.12em] sm:tracking-[0.15em] text-[var(--accent-gold)]">
-                  {content.label || 'DIDIRIKAN 2021'}
-                </span>
-                <span className="w-1 h-1 rounded-full bg-[var(--accent-gold)] hidden sm:inline-block" />
-                <span className="text-[10px] sm:text-xs font-[var(--font-heading)] font-medium uppercase tracking-[0.08em] sm:tracking-[0.1em] text-[var(--text-muted)] hidden sm:inline">
-                  {'BEKASI, JAWA BARAT'}
-                </span>
-              </div>
-
-              {/* Arabic Quote — konten tetap, tidak dikelola CMS */}
-              <div className="arabic-quote text-lg sm:text-xl md:text-2xl text-[var(--accent-gold)] mb-2 sm:mb-3 opacity-60">
-                «اقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ»
-              </div>
-              <p className="text-xs sm:text-sm italic text-[var(--text-muted)] mb-4 sm:mb-6">
-                {'"Bacalah dengan nama Tuhanmu yang menciptakan" — Al-Alaq 96:1'}
-              </p>
-
-              <h1 className="font-[var(--font-display)] text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-[var(--text)] leading-[1.1] mb-4 sm:mb-6 tracking-[-0.03em]">
-                {renderTitle(content.title || 'Ar-Rahman')}
-              </h1>
-
-              {content.subtitle && (
-                <p className="text-sm sm:text-base md:text-lg text-[var(--text-secondary)] max-w-xl mb-6 sm:mb-8 leading-relaxed">
-                  {content.subtitle}
-                </p>
-              )}
-
-              <div className="flex flex-wrap gap-3 sm:gap-4 mb-8 sm:mb-10">
-                {content.button_label && (
-                  <MagneticButton strength={0.3}>
-                    <Link
-                      href={content.button_href || '#'}
-                      className="btn-primary gap-2 shadow-md hover:shadow-lg text-xs sm:text-sm px-5 sm:px-8 py-2.5 sm:py-3.5"
-                    >
-                      {content.button_label}
-                      <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                    </Link>
-                  </MagneticButton>
-                )}
-                <MagneticButton strength={0.3}>
-                  <Link
-                    href="/about"
-                    className="btn-ghost text-xs sm:text-sm px-5 sm:px-8 py-2.5 sm:py-3.5"
-                  >
-                    {'Tentang Kami'}
-                  </Link>
-                </MagneticButton>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Visual */}
-          <div ref={rightRef} className="lg:col-span-5 hidden lg:block">
-            <div className="relative pl-8">
-              {/* Floating image stack */}
-              <div key={current.id} className="relative animate-fade-up-in">
-                {/* Main image */}
-                <div className="rounded-2xl overflow-hidden shadow-xl border border-white/60"
-                  style={{ transform: 'perspective(1000px) rotateY(-4deg) rotateX(2deg)' }}
-                >
-                  <Image
-                    src={current.image || FALLBACK_IMAGE}
-                    alt={(content.title || 'Hero Ar-Rahman').replace(/\n/g, ' ')}
-                    width={500}
-                    height={375}
-                    className="w-full aspect-[4/3] object-cover"
-                    priority
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-                </div>
-
-                {/* Badge - Top right */}
-                <div className="absolute -top-4 -right-4 bg-white rounded-xl px-4 py-3 shadow-lg border border-[var(--color-border)] flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-[var(--accent-subtle)] flex items-center justify-center">
-                    <Award className="w-5 h-5 text-[var(--accent)]" />
-                  </div>
-                  <div>
-                    <div className="text-xs font-bold font-[var(--font-heading)] text-[var(--accent)]">
-                      {'Sekolah Islam Terbaik'}
-                    </div>
-                    <div className="text-[10px] sm:text-xs text-[var(--text-muted)]">2024 • {'Penghargaan Nasional'}</div>
-                  </div>
-                </div>
-
-                {/* Card - Bottom right */}
-                <div className="absolute -bottom-5 -right-4 bg-white rounded-xl px-4 py-3 shadow-lg border border-[var(--color-border)] flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-[var(--accent-subtle)] flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-[var(--accent)]" />
-                  </div>
-                  <div>
-                    <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-[var(--text-muted)]">
-                      {'Pendaftaran'}
-                    </div>
-                    <div className="font-[var(--font-heading)] text-sm font-bold text-[var(--accent-gold)]">
-                      {ppdb.academicYear ?? 'Segera'}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Decorative dots pattern */}
-              <div className="absolute -bottom-8 -right-8 grid grid-cols-6 gap-2 opacity-10 pointer-events-none">
-                {Array.from({ length: 36 }).map((_, i) => (
-                  <div key={i} className="w-1.5 h-1.5 rounded-full bg-[var(--accent)]" />
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Kontrol geser — hanya muncul kalau slide lebih dari satu */}
-        {count > 1 && (
-          <div className="mt-8 sm:mt-12 flex items-center justify-center gap-4">
-            <button
-              type="button"
-              onClick={() => goTo(active - 1)}
-              aria-label="Slide sebelumnya"
-              className="w-10 h-10 rounded-full border border-[var(--color-border)] bg-white/70 backdrop-blur flex items-center justify-center text-[var(--text-secondary)] shadow-sm hover:text-[var(--accent)] hover:border-[var(--accent)] transition-colors"
+          return (
+            <div
+              key={slide.id}
+              className={`w-full transition-opacity duration-700 ease-in-out ${
+                isCurrent
+                  ? 'opacity-100 relative z-10'
+                  : 'opacity-0 absolute inset-0 pointer-events-none z-0'
+              }`}
             >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
+              <img
+                src={imageUrl}
+                alt="Banner Pesantren Tahfidz Qur'an dan Digital Ar-Rahman"
+                className="block h-auto w-full object-contain object-center"
+                loading={index === 0 ? 'eager' : 'lazy'}
+              />
+            </div>
+          )
+        })}
+      </div>
 
-            <div className="flex items-center gap-2">
-              {items.map((slide, i) => (
+      {/* Navigasi & Indikator jika terdapat lebih dari 1 slide */}
+      {items.length > 1 ? (
+        <>
+          {/* Tombol Sebelumnya */}
+          <button
+            type="button"
+            onClick={goToPrev}
+            onMouseEnter={() => setIsHoveredControls(true)}
+            onMouseLeave={() => setIsHoveredControls(false)}
+            aria-label="Banner sebelumnya"
+            className="absolute left-3 sm:left-4 top-1/2 z-20 flex h-9 w-9 sm:h-11 sm:w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md transition-all duration-300 hover:bg-black/60 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white shadow-lg"
+          >
+            <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
+          </button>
+
+          {/* Tombol Berikutnya */}
+          <button
+            type="button"
+            onClick={goToNext}
+            onMouseEnter={() => setIsHoveredControls(true)}
+            onMouseLeave={() => setIsHoveredControls(false)}
+            aria-label="Banner berikutnya"
+            className="absolute right-3 sm:right-4 top-1/2 z-20 flex h-9 w-9 sm:h-11 sm:w-11 -translate-y-1/2 items-center justify-center rounded-full bg-black/35 text-white backdrop-blur-md transition-all duration-300 hover:bg-black/60 hover:scale-105 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white shadow-lg"
+          >
+            <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
+          </button>
+
+          {/* Indikator Titik & Progress Otomatis */}
+          <div
+            onMouseEnter={() => setIsHoveredControls(true)}
+            onMouseLeave={() => setIsHoveredControls(false)}
+            className="absolute bottom-3 sm:bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/40 px-3.5 py-2 backdrop-blur-md border border-white/10 shadow-lg"
+          >
+            {items.map((slide, index) => {
+              const isCurrent = index === active
+              return (
                 <button
                   key={slide.id}
                   type="button"
-                  onClick={() => setActive(i)}
-                  aria-label={`Ke slide ${i + 1}`}
-                  aria-current={i === active}
-                  className={`h-2 rounded-full transition-all ${
-                    i === active
-                      ? 'w-6 bg-[var(--accent)]'
-                      : 'w-2 bg-[var(--color-border)] hover:bg-[var(--text-muted)]'
+                  onClick={() => setActive(index)}
+                  aria-label={`Tampilkan banner ${index + 1}`}
+                  aria-current={isCurrent}
+                  className={`relative h-2 rounded-full transition-all duration-500 overflow-hidden focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${
+                    isCurrent
+                      ? 'w-8 bg-white/40'
+                      : 'w-2 bg-white/50 hover:bg-white/80'
                   }`}
-                />
-              ))}
-            </div>
-
-            <button
-              type="button"
-              onClick={() => goTo(active + 1)}
-              aria-label="Slide berikutnya"
-              className="w-10 h-10 rounded-full border border-[var(--color-border)] bg-white/70 backdrop-blur flex items-center justify-center text-[var(--text-secondary)] shadow-sm hover:text-[var(--accent)] hover:border-[var(--accent)] transition-colors"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
+                >
+                  {isCurrent && (
+                    <span
+                      key={`progress-${active}`}
+                      className="absolute inset-0 bg-white rounded-full animate-hero-progress origin-left"
+                      style={{
+                        animationDuration: `${AUTOPLAY_MS}ms`,
+                      }}
+                    />
+                  )}
+                </button>
+              )
+            })}
           </div>
-        )}
-
-        {/* Scroll indicator */}
-        <div ref={hintRef} className="flex flex-col items-center mt-10 sm:mt-16 animate-bounce">
-          <span className="text-[10px] sm:text-xs font-[var(--font-heading)] uppercase tracking-[0.15em] sm:tracking-[0.2em] text-[var(--text-muted)] mb-1 sm:mb-2">
-            {'Scroll untuk Eksplorasi'}
-          </span>
-          <ChevronDown className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-[var(--text-muted)]" />
-        </div>
-      </div>
+        </>
+      ) : null}
     </section>
   )
 }

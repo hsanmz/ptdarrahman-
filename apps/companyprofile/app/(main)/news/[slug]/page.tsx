@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { getNewsCached } from '@/app/lib/api'
+import { mergeNewsArticles, fallbackNews } from '@/app/lib/news'
 import { fetchActivePpdbWave } from '@/app/lib/ppdb'
 import type { NewsArticle } from '@/app/lib/types'
 import NewsDetailClient from './_components/NewsDetailClient'
@@ -9,7 +10,8 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params
   let allNews: NewsArticle[] | null = null
   try { allNews = await getNewsCached() } catch { allNews = null }
-  const article = (allNews ?? []).find((a) => a.slug === slug)
+  const sourceNews = allNews && allNews.length > 0 ? allNews : fallbackNews()
+  const article = mergeNewsArticles(sourceNews).find((a) => a.slug === slug)
   if (!article) {
     return { title: 'Berita Tidak Ditemukan' }
   }
@@ -41,7 +43,8 @@ export default async function NewsDetailPage({ params }: { params: Promise<{ slu
   const { slug } = await params
   let allNews: NewsArticle[] | null = null
   try { allNews = await getNewsCached() } catch { allNews = null }
-  const safeNews = allNews ?? []
+  const sourceNews = allNews && allNews.length > 0 ? allNews : fallbackNews()
+  const safeNews = mergeNewsArticles(sourceNews)
   const article = safeNews.find((a) => a.slug === slug)
   if (!article || !article.content) notFound()
   let wave = null

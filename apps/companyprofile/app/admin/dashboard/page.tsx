@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { BookOpen } from 'lucide-react'
 import * as api from '@/app/lib/api'
 import { eventBus } from '@/app/lib/event-bus'
 import { useSSE } from '@/app/hooks/useSSE'
@@ -43,6 +42,13 @@ import { AchievementTable } from './achievements/AchievementTable'
 import { GalleryFormDialog } from './gallery/GalleryFormDialog'
 import { SocialFormDialog } from './social/SocialFormDialog'
 import { SocialLinkList } from './social/SocialLinkList'
+import { AboutContentBoard } from './about/AboutContentBoard'
+import { AboutFormDialog } from './about/AboutFormDialog'
+import { LeadershipCards } from './leadership/LeadershipCards'
+import { LeadershipFormDialog } from './leadership/LeadershipFormDialog'
+import { ProgramFormDialog } from './programs/ProgramFormDialog'
+import { HeroFormDialog } from './hero/HeroFormDialog'
+import { HomeCtaEditor } from './hero/HomeCtaEditor'
 import {
   nextTestimonialOrder,
   testimonialQuoteFromContent,
@@ -53,22 +59,24 @@ import {
   galleryCategoryLabel,
 } from '@/app/lib/gallery-categories'
 import {
-  TABS, TABLE_COLS, FORM_FIELDS, CONTENT_FIELDS, sortRowsByOrder,
+  TABS, TABLE_COLS, FORM_FIELDS, getContentFields, sortRowsByOrder,
 } from './_constants'
 import type { TableColumn } from './_constants'
 import type { AdminUser, FormState, RowRecord } from './_types'
 
 const TAB_DESCRIPTIONS: Record<string, string> = {
-  hero: 'Kelola slide hero beranda (teks, gambar, dan tombol).',
+  hero: 'Kelola banner gambar beranda dan pilihan tinggi tampilannya.',
   news: 'Kelola artikel, berita, dan pengumuman terbaru pesantren.',
   programs: 'Atur program pendidikan yang ditawarkan pesantren.',
   facilities: 'Kelola sarana dan prasarana yang dimiliki pesantren.',
   staff: 'Kelola daftar guru dan pengurus pesantren.',
+  about: 'Kelola seluruh isi halaman Tentang Kami: hero, perjalanan, visi, misi, nilai, profil santri, dan CTA.',
   leadership: 'Kelola susunan pengurus halaman Tentang Kami — dua kelompok: Yayasan Generasi Cerdas Akhlak Mulia dan Ar Rahman Islamic Center.',
   achievements: 'Catat raihan dan penghargaan santri.',
   gallery: 'Kelola dokumentasi foto kegiatan pesantren.',
   testimonials: 'Kelola kesan dan testimoni wali santri.',
   social: 'Kelola tautan media sosial dan kanal komunikasi resmi yang ditampilkan pada website.',
+  faq: 'Kelola pertanyaan dan jawaban umum yang ditampilkan pada halaman FAQ.',
   contact: 'Kelola informasi kontak, alamat, dan lokasi resmi yang ditampilkan pada website.',
   settings: 'Konfigurasi logo, favicon, dan pengaturan situs.',
 }
@@ -461,10 +469,14 @@ export default function AdminDashboard() {
   }, [formMode])
 
   // ── Form helpers ──────────────────────────────────────────────────────────
-  function openCreate() {
+  function openCreate(section?: string) {
     const fd: FormState = {}
     for (const f of FORM_FIELDS[activeTab] || []) fd[f.name] = ''
-    for (const f of CONTENT_FIELDS[activeTab] || []) fd[`_c_${f.name}`] = ''
+    const initialSection = activeTab === 'about' ? section || 'hero' : ''
+    for (const f of getContentFields(activeTab, initialSection)) fd[`_c_${f.name}`] = ''
+    if (activeTab === 'about') fd.section = initialSection
+    if (activeTab === 'hero') fd._c_height_mode = 'peek'
+    if (activeTab === 'leadership') fd.board = section || 'yayasan'
     // Berita baru langsung terisi tanggal hari ini supaya admin tidak perlu
     // memilih ulang untuk artikel yang terbit sekarang.
     if (activeTab === 'news') {
@@ -477,6 +489,9 @@ export default function AdminDashboard() {
     // supaya entri baru tidak menyalip atau menabrak urutan yang sudah diatur.
     if (activeTab === 'testimonials') {
       fd.order = nextTestimonialOrder(items)
+    }
+    if (activeTab === 'faq') {
+      fd.order = items.reduce((max, item) => Math.max(max, Number(item.order ?? -1)), -1) + 1
     }
     // Tahun prestasi baru langsung terisi tahun berjalan agar admin tidak perlu
     // mengetik ulang untuk prestasi tahun ini, namun tetap mudah diubah.
@@ -495,9 +510,9 @@ export default function AdminDashboard() {
     for (const f of FORM_FIELDS[activeTab] || []) fd[f.name] = item[f.name] ?? ''
     // Extract content fields
     const content = (item.content ?? {}) as Record<string, unknown>
-    for (const f of CONTENT_FIELDS[activeTab] || []) {
+    for (const f of getContentFields(activeTab, String(item.section ?? ''))) {
       const val = content[f.name]
-      fd[`_c_${f.name}`] = f.type === 'list' && Array.isArray(val)
+      fd[`_c_${f.name}`] = Array.isArray(val)
         ? (val as string[]).join('\n')
         : typeof val === 'string' ? val
         : typeof val === 'number' ? String(val)
@@ -511,6 +526,9 @@ export default function AdminDashboard() {
     // memakai `content.quote`, jadi fallback-nya dibaca di sini.
     if (activeTab === 'testimonials') {
       fd._c_quote = testimonialQuoteFromContent(content)
+    }
+    if (activeTab === 'news' && !fd._c_content && content.body) {
+      fd._c_content = String(content.body)
     }
     setFormData(fd)
     setEditingItem(item)
@@ -636,12 +654,7 @@ export default function AdminDashboard() {
   )
 
   // Tambah link "Tentang Kami" ke grup Informasi — mengarah ke halaman publik
-  // `/about`, bukan tab admin.
-  const navGroupsWithAbout = navGroups.map((g) =>
-    g.label === 'Informasi'
-      ? { ...g, items: [...g.items, { key: 'about', label: 'Tentang Kami', icon: BookOpen, href: '/about', target: '_blank' }] }
-      : g,
-  )
+
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
@@ -656,7 +669,7 @@ export default function AdminDashboard() {
           faviconUrl: faviconUrl || undefined,
           logoUrl: faviconUrl || undefined,
         }}
-        navGroups={navGroupsWithAbout}
+        navGroups={navGroups}
         renderLink={AdminDashboardLink}
         onNavigate={(item) => {
           if (item.onClick) {
@@ -719,7 +732,7 @@ export default function AdminDashboard() {
                 )}
                 {canCrud && activeTab !== 'settings' && activeTab !== 'contact' && (
                   <button
-                    onClick={openCreate}
+                    onClick={() => openCreate()}
                     className="inline-flex items-center gap-2 rounded-xl bg-white/95 hover:bg-white text-emerald-900 px-4 py-2.5 text-sm font-semibold shadow-md transition-all duration-200"
                   >
                     <Plus className="w-4 h-4" />
@@ -727,8 +740,16 @@ export default function AdminDashboard() {
                       ? 'Tambah Testimoni'
                       : activeTab === 'gallery'
                         ? 'Tambah Foto'
-                        : activeTab === 'social'
+                      : activeTab === 'social'
                           ? 'Tambah Tautan Sosial'
+                          : activeTab === 'about'
+                            ? 'Tambah Bagian'
+                          : activeTab === 'hero'
+                            ? 'Tambah Banner'
+                          : activeTab === 'leadership'
+                              ? 'Tambah Pengurus'
+                              : activeTab === 'faq'
+                                ? 'Tambah FAQ'
                           : 'Buat Baru'}
                   </button>
                 )}
@@ -784,7 +805,7 @@ export default function AdminDashboard() {
               action={
                 canCrud ? (
                   <button
-                    onClick={openCreate}
+                    onClick={() => openCreate()}
                     className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--accent)] text-white text-sm font-semibold hover:bg-[var(--accent)]/90 shadow-md transition-all"
                   >
                     <Plus className="w-4 h-4" />
@@ -792,8 +813,16 @@ export default function AdminDashboard() {
                       ? 'Tambah Testimoni'
                       : activeTab === 'gallery'
                         ? 'Tambah Foto'
-                        : activeTab === 'social'
+                      : activeTab === 'social'
                           ? 'Tambah Tautan Sosial'
+                          : activeTab === 'about'
+                            ? 'Tambah Bagian'
+                              : activeTab === 'hero'
+                                ? 'Tambah Banner'
+                              : activeTab === 'leadership'
+                              ? 'Tambah Pengurus'
+                              : activeTab === 'faq'
+                                ? 'Tambah FAQ'
                           : 'Buat Baru'}
                   </button>
                 ) : undefined
@@ -957,6 +986,35 @@ export default function AdminDashboard() {
             </Card>
           )}
 
+          {activeTab === 'about' && !loading && items.length > 0 && (
+            <AboutContentBoard
+              items={items}
+              canCrud={canCrud}
+              detailLoading={detailLoading}
+              onCreate={(section) => openCreate(section)}
+              onEdit={(item) => void openEdit(item)}
+              onDelete={(item) => void handleDelete(item)}
+            />
+          )}
+
+          {activeTab === 'hero' && !loading && items.length > 0 && (
+            <div className="mb-5 rounded-2xl border border-[var(--border)]/70 bg-[var(--accent-subtle)]/35 px-4 py-3 text-xs leading-relaxed text-[var(--text-secondary)]">
+              Banner beranda hanya menampilkan gambar. Gunakan JPG, PNG, atau WebP maksimal 5 MB, rasio rekomendasi 16:9, dan pilih tinggi banner saat membuat atau mengedit data.
+            </div>
+          )}
+          {activeTab === 'hero' && !loading && <HomeCtaEditor canCrud={canCrud} />}
+
+          {activeTab === 'leadership' && !loading && items.length > 0 && (
+            <LeadershipCards
+              items={items}
+              canCrud={canCrud}
+              detailLoading={detailLoading}
+              onCreate={(board) => openCreate(board)}
+              onEdit={(item) => void openEdit(item)}
+              onDelete={(item) => void handleDelete(item)}
+            />
+          )}
+
           {/* Achievement Table */}
           {activeTab === 'achievements' && !loading && items.length > 0 && (
             <AchievementTable
@@ -981,7 +1039,7 @@ export default function AdminDashboard() {
           )}
 
           {/* Table Data */}
-          {activeTab !== 'settings' && activeTab !== 'contact' && activeTab !== 'achievements' && activeTab !== 'social' && !loading && visibleItems.length > 0 && (
+          {activeTab !== 'settings' && activeTab !== 'contact' && activeTab !== 'achievements' && activeTab !== 'social' && activeTab !== 'about' && activeTab !== 'leadership' && !loading && visibleItems.length > 0 && (
             <Card className="overflow-hidden rounded-2xl border-border/70 bg-white/70 shadow-[0_18px_50px_-30px_rgba(26,107,71,0.35)] backdrop-blur-sm">
               <div className="overflow-x-auto no-scrollbar">
                 <Table>
@@ -1187,13 +1245,57 @@ export default function AdminDashboard() {
           onSaved={fetchData}
         />
       )}
+      {formMode && activeTab === 'programs' && (
+        <ProgramFormDialog
+          mode={formMode}
+          editingItem={editingItem}
+          formData={formData}
+          setFormData={setFormData}
+          onClose={closeForm}
+          onSaved={fetchData}
+        />
+      )}
+      {formMode && activeTab === 'about' && (
+        <AboutFormDialog
+          mode={formMode}
+          editingItem={editingItem}
+          formData={formData}
+          setFormData={setFormData}
+          onClose={closeForm}
+          onSaved={fetchData}
+        />
+      )}
+      {formMode && activeTab === 'hero' && (
+        <HeroFormDialog
+          mode={formMode}
+          editingItem={editingItem}
+          formData={formData}
+          setFormData={setFormData}
+          onClose={closeForm}
+          onSaved={fetchData}
+        />
+      )}
+      {formMode && activeTab === 'leadership' && (
+        <LeadershipFormDialog
+          mode={formMode}
+          editingItem={editingItem}
+          formData={formData}
+          setFormData={setFormData}
+          onClose={closeForm}
+          onSaved={fetchData}
+        />
+      )}
       {formMode &&
         activeTab !== 'facilities' &&
         activeTab !== 'staff' &&
         activeTab !== 'testimonials' &&
         activeTab !== 'gallery' &&
         activeTab !== 'achievements' &&
-        activeTab !== 'social' && (
+        activeTab !== 'social' &&
+        activeTab !== 'about' &&
+        activeTab !== 'hero' &&
+        activeTab !== 'leadership' &&
+        activeTab !== 'programs' && (
         <CrudFormDialog
           mode={formMode}
           activeTab={activeTab}

@@ -78,6 +78,33 @@ class LeadershipMember(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
 
 
+class AboutContent(Base):
+    """Konten terstruktur untuk seluruh blok halaman Tentang Kami."""
+
+    __tablename__ = "about_content"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    section: Mapped[str] = mapped_column(String(50), nullable=False)
+    order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    content: Mapped[dict | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+
+class FaqItem(Base):
+    """FAQ website yang dikelola admin CMS dan ditampilkan publik."""
+
+    __tablename__ = "faq_items"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    question: Mapped[str] = mapped_column(Text, nullable=False)
+    answer: Mapped[str] = mapped_column(Text, nullable=False)
+    category: Mapped[str | None] = mapped_column(String(100))
+    order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+
+
 class Achievement(Base):
     __tablename__ = "achievements"
 
