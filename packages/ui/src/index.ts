@@ -49,3 +49,7 @@ export * from "./components/ui/page-loader";
 export * from "./components/ui/loader-screen";
 export * from "./components/ui/doc-sheet";
 export * from "./components/profile";
+
+// ── Text Animation Components ────────────────────────────────────────────────
+export * from "./components/text-animations";
+

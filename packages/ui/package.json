@@ -6,7 +6,8 @@
     ".": "./src/index.ts",
     "./button": "./src/components/ui/button.tsx",
     "./utils": "./src/lib/utils.ts",
-    "./profile": "./src/components/profile/index.ts"
+    "./profile": "./src/components/profile/index.ts",
+    "./text-animations": "./src/components/text-animations/index.ts"
   },
   "scripts": {
     "lint": "eslint .",
@@ -24,6 +25,7 @@
     "@radix-ui/react-tabs": "^1.1.21",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "framer-motion": "^12.40.0",
     "gsap": "^3.15.0",
     "lucide-react": "^1.24.0",
     "react-router-dom": "^7.18.1",
