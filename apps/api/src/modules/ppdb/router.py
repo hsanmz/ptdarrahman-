@@ -238,6 +238,11 @@ def get_active_wave_public(service: PPDBService = Depends(get_ppdb_service)):
     return service.get_active_wave_public()
 
 
+@router.get("/waves/active-public/fees")
+def get_active_wave_fees_public(service: PPDBService = Depends(get_ppdb_service)):
+    return service.get_active_wave_fees_public()
+
+
 @router.get("/waves/{id}")
 def get_wave_by_id(
     id: str,

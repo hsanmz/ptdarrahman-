@@ -155,10 +155,17 @@ export const ScrollExpandInset = ({
 }: ScrollExpandInsetProps) => {
   const progress = useScrollExpandProgress();
   const reduced = useReducedMotion();
+  const [mounted, setMounted] = useState(false);
 
   const revealRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [geom, setGeom] = useState<Geometry>({ x: 0, y: 0, r: 0, fit: 1 });
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isReduced = mounted && Boolean(reduced);
 
   useEffect(() => {
     const reveal = revealRef.current;
@@ -239,7 +246,8 @@ export const ScrollExpandInset = ({
     <motion.div
       ref={revealRef}
       data-scroll-expand-reveal=""
-      style={{ clipPath: reduced ? "none" : clipPath }}
+      suppressHydrationWarning
+      style={{ clipPath: isReduced ? "none" : clipPath }}
       className={`absolute inset-0 ${className}`}
     >
       <div className="absolute inset-0 flex items-center justify-center">

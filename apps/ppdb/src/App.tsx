@@ -7,12 +7,18 @@ import { ErrorState } from '@repo/ui'
 import ProtectedRoute from './components/ProtectedRoute'
 import AdminLayout from './layouts/AdminLayout'
 import ApplicantLayout from './layouts/ApplicantLayout'
+import PublicLayout from './layouts/PublicLayout'
 import LoginPage from './pages/auth/LoginPage'
 import NotFoundPage from './pages/errors/NotFoundPage'
 import ForbiddenPage from './pages/errors/ForbiddenPage'
 import AdminDashboardPage from './pages/admin/AdminDashboardPage'
 import PeriodsPage from './pages/admin/ppdb/PeriodsPage'
 import LandingPage from './pages/public/LandingPage'
+import KurikulumFasilitasPage from './pages/public/KurikulumFasilitasPage'
+import BiayaBeasiswaPage from './pages/public/BiayaBeasiswaPage'
+import SyaratKetentuanPage from './pages/public/SyaratKetentuanPage'
+import AlurJadwalPage from './pages/public/AlurJadwalPage'
+import FaqPage from './pages/public/FaqPage'
 import GlobeDemoPage from './pages/public/GlobeDemoPage'
 import RegisterPage from './pages/public/RegisterPage'
 import PublicReceiptPage from './pages/public/PublicReceiptPage'
@@ -79,7 +85,17 @@ export default function App() {
         <AuthProvider>
           <ToastProvider>
             <Routes>
-            <Route path="/" element={<LandingPage />} />
+            {/* Public Portal Information Pages */}
+            <Route element={<PublicLayout />}>
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/kurikulum-fasilitas" element={<KurikulumFasilitasPage />} />
+              <Route path="/biaya-beasiswa" element={<BiayaBeasiswaPage />} />
+              <Route path="/biaya" element={<Navigate to="/biaya-beasiswa" replace />} />
+              <Route path="/syarat-ketentuan" element={<SyaratKetentuanPage />} />
+              <Route path="/alur-jadwal" element={<AlurJadwalPage />} />
+              <Route path="/faq" element={<FaqPage />} />
+            </Route>
+
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/globe" element={<GlobeDemoPage />} />
             <Route path="/auth/login" element={<LoginPage />} />

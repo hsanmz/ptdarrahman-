@@ -49,19 +49,19 @@ export default function Footer() {
 
   const quickLinks = [
     { href: '/', label: 'Beranda', isInternal: true },
-    { href: `${cpUrl}/about`, label: 'Tentang', isInternal: false },
-    { href: `${cpUrl}/programs`, label: 'Program', isInternal: false },
-    { href: `${cpUrl}/facilities`, label: 'Fasilitas', isInternal: false },
-    { href: `${cpUrl}/gallery`, label: 'Galeri', isInternal: false },
-    { href: `${cpUrl}/contact`, label: 'Kontak', isInternal: false },
+    { href: '/kurikulum-fasilitas', label: 'Kurikulum & Fasilitas', isInternal: true },
+    { href: '/biaya-beasiswa', label: 'Biaya & Beasiswa', isInternal: true },
+    { href: '/syarat-ketentuan', label: 'Syarat & Ketentuan', isInternal: true },
+    { href: '/alur-jadwal', label: 'Alur & Jadwal', isInternal: true },
+    { href: '/faq', label: 'FAQ / Tanya Jawab', isInternal: true },
   ]
 
   const programLinks = [
-    { href: `${cpUrl}/programs/tahfidz`, label: 'Tahfidz Al-Quran', isInternal: false },
-    { href: `${cpUrl}/programs/digital`, label: 'Teknologi Digital', isInternal: false },
-    { href: `${cpUrl}/programs/bilingual`, label: 'Program Bilingual', isInternal: false },
-    { href: `${cpUrl}/programs/leadership`, label: 'Akademi Kepemimpinan', isInternal: false },
-    { href: '/register', label: 'Pendaftaran PPDB', isInternal: true },
+    { href: '/kurikulum-fasilitas', label: "Tahfidz Al-Qur'an 30 Juz", isInternal: true },
+    { href: '/kurikulum-fasilitas', label: 'Rekayasa Teknologi Digital & IoT', isInternal: true },
+    { href: '/kurikulum-fasilitas', label: 'Program Bilingual Arab & Inggris', isInternal: true },
+    { href: '/syarat-ketentuan', label: 'Syarat Pendaftaran Santri', isInternal: true },
+    { href: '/register', label: 'Daftar Santri Baru', isInternal: true },
   ]
 
   const handleLinkClick = (href: string, isInternal: boolean) => {

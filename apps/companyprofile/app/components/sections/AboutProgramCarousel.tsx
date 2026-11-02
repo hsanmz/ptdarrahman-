@@ -1,5 +1,6 @@
 'use client'
 
+import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { motion, useReducedMotion } from 'framer-motion'
 import ShapeDivider from '@/app/components/ui/ShapeDivider'
@@ -103,6 +104,13 @@ function ProgramCardView({ p, index }: { p: ProgramCard; index: number }) {
 
 export default function AboutProgramCarousel() {
   const reduced = useReducedMotion()
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  const isReduced = mounted && Boolean(reduced)
   const distance = programs.length * STEP
   const duration = programs.length * 3
 
@@ -122,7 +130,7 @@ export default function AboutProgramCarousel() {
         style={{ background: 'linear-gradient(270deg, var(--bg-secondary) 0%, transparent 100%)' }}
       />
 
-      {reduced ? (
+      {isReduced ? (
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {programs.map((p, i) => (
             <ProgramCardView key={i} p={p} index={i} />

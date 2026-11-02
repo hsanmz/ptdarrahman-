@@ -353,8 +353,36 @@ class PPDBService:
             "academic_year": period.academic_year if period else None,
             "quota": wave.quota,
             "paid_count": paid_count,
+            "form_fee": period.form_fee if period else 0,
+            "minimum_dp": period.minimum_dp if period else 0,
+            "early_discount_quota": wave.early_discount_quota or 0,
             "registration_start_date": wave.registration_start_date,
             "registration_end_date": wave.registration_end_date,
+        }
+
+    def get_active_wave_fees_public(self) -> dict[str, Any]:
+        wave = self.repository.get_active_wave()
+        if not wave:
+            return {
+                "active": False,
+                "items": [],
+                "form_fee": 0,
+                "minimum_dp": 0,
+                "early_discount_quota": 0,
+            }
+        period = self.repository.get_period_by_id(wave.period_id)
+        fee_data = self.get_wave_fee_items(wave.id)
+        return {
+            "active": True,
+            "wave_id": wave.id,
+            "wave_name": wave.name,
+            "period_id": wave.period_id,
+            "period_name": period.name if period else None,
+            "academic_year": period.academic_year if period else None,
+            "form_fee": period.form_fee if period else 0,
+            "minimum_dp": period.minimum_dp if period else 0,
+            "early_discount_quota": wave.early_discount_quota or 0,
+            "items": fee_data.get("items", []),
         }
 
     def get_wave_by_id(self, wave_id: str) -> dict[str, Any]:
