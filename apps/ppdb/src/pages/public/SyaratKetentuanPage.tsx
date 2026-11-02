@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import {
   FileCheck, ShieldAlert, HeartPulse, UserCheck, FileText, CheckCircle2,
-  AlertCircle, Lock, Download, UserPlus, LogIn, Sparkles, Scale, Info
+  Lock, UserPlus, Scale, Info
 } from 'lucide-react'
 
 export default function SyaratKetentuanPage() {

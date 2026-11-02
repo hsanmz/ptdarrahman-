@@ -3,23 +3,21 @@ import { useNavigate } from 'react-router-dom'
 import { fetchPublicFees, type FeesSummary } from '@/services/feeService'
 import { Button } from '@/components/ui'
 import {
-  DollarSign, Sparkles, CheckCircle2, QrCode, CreditCard, ShieldAlert,
-  GraduationCap, Gift, Award, HelpCircle, ArrowRight, UserPlus, LogIn,
-  Coins, Percent, Tag, Info
+  CheckCircle2, QrCode, CreditCard,
+  GraduationCap, UserPlus, LogIn,
+  Coins, Tag, Info
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 export default function BiayaBeasiswaPage() {
   const navigate = useNavigate()
   const [fees, setFees] = useState<FeesSummary | null>(null)
-  const [loading, setLoading] = useState(true)
   const [selectedDiscountView, setSelectedDiscountView] = useState<'regular' | 'early'>('regular')
 
   useEffect(() => {
     fetchPublicFees()
       .then((data) => setFees(data))
       .catch((err) => console.error('Failed to load public fees', err))
-      .finally(() => setLoading(false))
   }, [])
 
   const formatRupiah = (val: number) => {

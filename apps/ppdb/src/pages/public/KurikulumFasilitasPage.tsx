@@ -9,7 +9,7 @@ import {
 import { Button } from '@/components/ui'
 import {
   BookOpen, Building2, CheckCircle2, Award, Sparkles, Clock, Layers,
-  ChevronRight, Laptop, Moon, Home, Trophy, Filter, UserPlus, LogIn
+  Laptop, Moon, Home, Trophy, UserPlus, LogIn
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -20,7 +20,6 @@ export default function KurikulumFasilitasPage() {
 
   const [programs, setPrograms] = useState<ProgramItem[]>([])
   const [facilities, setFacilities] = useState<FacilityItem[]>([])
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function loadData() {
@@ -33,8 +32,6 @@ export default function KurikulumFasilitasPage() {
         setFacilities(facData)
       } catch (err) {
         console.error('Failed to load CP programs/facilities', err)
-      } finally {
-        setLoading(false)
       }
     }
     loadData()

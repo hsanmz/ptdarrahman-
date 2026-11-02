@@ -5,7 +5,7 @@ import { Button } from '@/components/ui'
 import { useBrand } from '@repo/ui'
 import { API_BASE } from '@/api/client'
 import {
-  Menu, X, ChevronDown, UserPlus, LogIn, ArrowRight, BookOpen,
+  Menu, X, ChevronDown, UserPlus, LogIn, BookOpen,
   DollarSign, FileCheck, CalendarCheck, HelpCircle, Sparkles
 } from 'lucide-react'
 import gsap from 'gsap'

@@ -4,8 +4,7 @@ import { apiFetch } from '@/api/client'
 import { Button } from '@/components/ui'
 import {
   CalendarCheck, Clock, UserPlus, QrCode, FileUp, Laptop, Users,
-  Award, MessageSquare, CheckCircle2, ArrowRight, ShieldCheck,
-  AlertCircle, BellRing, Sparkles, LogIn
+  Award, MessageSquare, CheckCircle2, BellRing, LogIn
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -22,13 +21,11 @@ interface ActiveWaveInfo {
 export default function AlurJadwalPage() {
   const navigate = useNavigate()
   const [wave, setWave] = useState<ActiveWaveInfo | null>(null)
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     apiFetch<ActiveWaveInfo>('/ppdb/waves/active-public')
       .then((data) => setWave(data))
       .catch(() => setWave({ active: false }))
-      .finally(() => setLoading(false))
   }, [])
 
   const formatDate = (dateStr?: string | null) => {

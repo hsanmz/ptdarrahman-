@@ -2,8 +2,8 @@ import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui'
 import {
-  HelpCircle, Search, ChevronDown, MessageCircle, Phone, Mail,
-  UserPlus, LogIn, Sparkles, Bus, Clock, Laptop, CreditCard,
+  HelpCircle, Search, ChevronDown, MessageCircle, Mail,
+  UserPlus, LogIn, Bus, Clock, Laptop, CreditCard,
   Home, ShieldCheck
 } from 'lucide-react'
 import { cn } from '@/lib/utils'

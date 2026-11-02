@@ -1,12 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { JSDOM } from 'jsdom'
-
-const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost' })
-globalThis.window = dom.window as any
-globalThis.document = dom.window.document
-globalThis.navigator = dom.window.navigator
-
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import LandingPage from './LandingPage'
 import KurikulumFasilitasPage from './KurikulumFasilitasPage'
@@ -45,10 +38,14 @@ vi.mock('@/api/client', () => ({
 }))
 
 // Mock useBrand
-vi.mock('@repo/ui', () => ({
-  useBrand: () => ({ logoUrl: '' }),
-  resolveCompanyProfileUrl: () => 'http://localhost:3000',
-}))
+vi.mock('@repo/ui', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, any>>()
+  return {
+    ...actual,
+    useBrand: () => ({ logoUrl: '' }),
+    resolveCompanyProfileUrl: () => 'http://localhost:3000',
+  }
+})
 
 describe('PPDB Public Pages', () => {
   it('renders LandingPage (Beranda) with announcement and CTA', () => {
@@ -57,7 +54,7 @@ describe('PPDB Public Pages', () => {
         <LandingPage />
       </BrowserRouter>
     )
-    expect(screen.getByText(/Penerimaan Santri Baru/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/Penerimaan Santri Baru/i)[0]).toBeInTheDocument()
     expect(screen.getByText(/Daftar Santri Baru/i)).toBeInTheDocument()
     expect(screen.getByText(/Kurikulum & Fasilitas/i)).toBeInTheDocument()
     expect(screen.getByText(/Biaya & Beasiswa/i)).toBeInTheDocument()
@@ -93,7 +90,7 @@ describe('PPDB Public Pages', () => {
     )
     expect(screen.getByText(/Syarat & Ketentuan PPDB/i)).toBeInTheDocument()
     expect(screen.getByText(/6 Dokumen Persyaratan Wajib/i)).toBeInTheDocument()
-    expect(screen.getByText(/Kuesioner Kesehatan Mandiri/i)).toBeInTheDocument()
+    expect(screen.getByText(/Kuesioner Kesehatan Mandiri \(10 Pertanyaan Baku\)/i)).toBeInTheDocument()
   })
 
   it('renders AlurJadwalPage with the 7 stages and batch rules', () => {

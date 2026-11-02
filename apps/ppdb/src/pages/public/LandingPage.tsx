@@ -5,7 +5,7 @@ import { apiFetch } from '@/api/client'
 import {
   ArrowRight, Waves, BookOpen, DollarSign, FileCheck, CalendarCheck,
   HelpCircle, ShieldCheck, Cpu, Award, Sparkles, LogIn, UserPlus,
-  Users, CheckCircle2, ChevronRight
+  Users, ChevronRight
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -28,7 +28,6 @@ interface ActiveWaveData {
 export default function LandingPage() {
   const navigate = useNavigate()
   const [wave, setWave] = useState<ActiveWaveData | null>(null)
-  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     apiFetch<ActiveWaveData>('/ppdb/waves/active-public')
@@ -37,9 +36,6 @@ export default function LandingPage() {
       })
       .catch(() => {
         setWave({ active: false })
-      })
-      .finally(() => {
-        setLoading(false)
       })
   }, [])
 
