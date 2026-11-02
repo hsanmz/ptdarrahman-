@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic'
 import Link from 'next/link'
+import { motion } from 'framer-motion'
 import {
   GraduationCap,
   BookOpen,
@@ -146,8 +147,14 @@ export default function PPDBPage() {
         className="pt-28 md:pt-32 pb-20 md:pb-28 px-4 sm:px-6 md:px-12 max-w-7xl mx-auto"
       >
         {/* Heading Program Pembinaan */}
-        <div className="text-center max-w-3xl mx-auto mb-14 md:mb-16">
-          <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-700">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+          className="text-center max-w-3xl mx-auto mb-14 md:mb-16"
+        >
+          <span className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-700 text-fade-breathe">
             <span className="h-1.5 w-1.5 rounded-full bg-[#D4A853]" aria-hidden />
             {ppdb.academicYear ? `PPDB ${ppdb.academicYear}` : 'PPDB'}
           </span>
@@ -157,16 +164,20 @@ export default function PPDBPage() {
           <p className="mt-4 text-[var(--text-secondary)] text-base md:text-lg leading-relaxed">
             {content.copy.jalur_desc}
           </p>
-        </div>
+        </motion.div>
 
         {/* Kartu Program Pembinaan Santri */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
-          {content.jalur.map((card) => {
+          {content.jalur.map((card, idx) => {
             const Icon = ICON_MAP[resolveIconName(card.icon)]
             const accent = ACCENT_STYLES[pickAccent(card.content?.accent)]
             return (
-              <article
+              <motion.article
                 key={card.id}
+                initial={{ opacity: 0, y: 22 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: false, amount: 0.15 }}
+                transition={{ duration: 0.6, delay: (idx % 2) * 0.1, ease: [0.16, 1, 0.3, 1] }}
                 className="group flex flex-col rounded-2xl border border-[var(--color-border)] bg-[var(--bg-elevated)] p-7 md:p-9 transition-colors duration-300 hover:border-emerald-700/30"
               >
                 <div className="mb-6 flex items-center gap-3.5">
@@ -214,28 +225,38 @@ export default function PPDBPage() {
                     <ArrowRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
                   </Link>
                 </div>
-              </article>
+              </motion.article>
             )
           })}
         </div>
 
         {/* Pilar Kurikulum */}
         <div className="mt-20 md:mt-28">
-          <div className="text-center max-w-2xl mx-auto mb-12">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+            className="text-center max-w-2xl mx-auto mb-12"
+          >
             <h3 className="font-heading! text-2xl md:text-3xl font-bold tracking-tight text-[var(--text)]">
               {content.copy.kurikulum_title}
             </h3>
             <p className="mt-3 text-sm md:text-base text-[var(--text-secondary)]">
               {content.copy.kurikulum_desc}
             </p>
-          </div>
+          </motion.div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-            {content.pillars.map((pillar) => {
+            {content.pillars.map((pillar, idx) => {
               const Icon = ICON_MAP[resolveIconName(pillar.icon)]
               return (
-                <div
+                <motion.div
                   key={pillar.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: false, amount: 0.15 }}
+                  transition={{ duration: 0.55, delay: (idx % 4) * 0.08, ease: [0.16, 1, 0.3, 1] }}
                   className="rounded-2xl border border-[var(--color-border)] bg-[var(--bg-secondary)] p-6 transition-colors duration-300 hover:border-emerald-700/30"
                 >
                   <span className="mb-5 flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-600/10 text-emerald-700">
@@ -247,7 +268,7 @@ export default function PPDBPage() {
                   <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">
                     {pillar.content?.desc}
                   </p>
-                </div>
+                </motion.div>
               )
             })}
           </div>
@@ -255,18 +276,30 @@ export default function PPDBPage() {
 
         {/* Alur Pendaftaran */}
         <div className="mt-20 md:mt-28">
-          <div className="text-center max-w-xl mx-auto mb-12">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-700">
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+            className="text-center max-w-xl mx-auto mb-12"
+          >
+            <span className="text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-700 text-fade-breathe">
               {content.copy.alur_kicker}
             </span>
             <h3 className="mt-3 font-heading! text-2xl md:text-3xl font-bold tracking-tight text-[var(--text)]">
               {content.copy.alur_title}
             </h3>
-          </div>
+          </motion.div>
 
           <ol className="grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 lg:grid-cols-4">
             {content.steps.map((step, idx) => (
-              <li key={step.id}>
+              <motion.li
+                key={step.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: false, amount: 0.15 }}
+                transition={{ duration: 0.55, delay: (idx % 4) * 0.08, ease: [0.16, 1, 0.3, 1] }}
+              >
                 <div className="flex items-center gap-3">
                   <span className="font-mono text-xs font-bold tracking-[0.2em] text-emerald-700">
                     {String(idx + 1).padStart(2, '0')}
@@ -279,13 +312,19 @@ export default function PPDBPage() {
                 <p className="mt-1.5 text-sm leading-relaxed text-[var(--text-secondary)]">
                   {step.content?.desc}
                 </p>
-              </li>
+              </motion.li>
             ))}
           </ol>
         </div>
 
         {/* Banner CTA */}
-        <div className="mt-20 md:mt-28 rounded-2xl border border-emerald-400/15 bg-emerald-950 px-7 py-10 text-white md:px-12 md:py-12">
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: false, amount: 0.2 }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          className="mt-20 md:mt-28 rounded-2xl border border-emerald-400/15 bg-emerald-950 px-7 py-10 text-white md:px-12 md:py-12"
+        >
           <div className="flex flex-col items-center gap-8 md:flex-row md:justify-between">
             <div className="max-w-xl text-center md:text-left">
               <h3 className="font-heading! text-2xl md:text-3xl font-bold tracking-tight">
@@ -312,7 +351,7 @@ export default function PPDBPage() {
               </Link>
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
     </div>
   )

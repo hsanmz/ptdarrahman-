@@ -61,6 +61,7 @@ export default function ProgramsClient({ programs }: { programs: Program[] }) {
   return (
     <>
       <PageHeader
+        variant="editorial"
         title="Program Unggulan Kami"
         subtitle="Kurikulum terpadu 6 tahun yang mengintegrasikan kedalaman Al-Qur'an, keahlian rekayasa teknologi digital, kecakapan bahasa global, dan integritas kepemimpinan santri"
         badge="KURIKULUM & AKADEMIK PTDARRAHMAN"
@@ -305,19 +306,21 @@ export default function ProgramsClient({ programs }: { programs: Program[] }) {
 
               {/* Kolom Kanan: Uraian Detail, Keunggulan, Kurikulum & Output */}
               <div className="lg:col-span-7">
-                <motion.div
-                  key={`content-${activeProg.id}`}
-                  initial={{ opacity: 0, y: 14 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-                  className="space-y-8 sm:space-y-10"
-                >
-                  {/* Judul & Tagline Header */}
-                  <div>
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--accent-subtle)] border border-[var(--accent)]/20 text-[var(--accent)] text-xs font-bold mb-3">
-                      <Sparkles className="w-3.5 h-3.5" />
-                      PILAR PENDIDIKAN KE-0{activeIndex + 1}
-                    </div>
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={`content-${activeProg.id}`}
+                    initial={{ opacity: 0, y: 16 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -12 }}
+                    transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                    className="space-y-8 sm:space-y-10"
+                  >
+                    {/* Judul & Tagline Header */}
+                    <div>
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[var(--accent-subtle)] border border-[var(--accent)]/20 text-[var(--accent)] text-xs font-bold mb-3 text-fade-breathe">
+                        <Sparkles className="w-3.5 h-3.5" />
+                        PILAR PENDIDIKAN KE-0{activeIndex + 1}
+                      </div>
                     <h2 className="text-2xl sm:text-3xl md:text-4xl font-[var(--font-display)] font-bold text-[var(--text)] leading-tight">
                       {info.title}
                     </h2>
@@ -413,14 +416,21 @@ export default function ProgramsClient({ programs }: { programs: Program[] }) {
                     </div>
                   )}
                 </motion.div>
+                </AnimatePresence>
               </div>
             </div>
           </div>
 
           {/* 3. Sinergi 4 Pilar & Alur Pendidikan Terpadu */}
           <div className="mt-16 sm:mt-24 pt-12 border-t border-[var(--color-border)]">
-            <div className="text-center max-w-3xl mx-auto mb-12">
-              <span className="text-xs uppercase tracking-widest font-bold text-[var(--accent)]">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.2 }}
+              transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+              className="text-center max-w-3xl mx-auto mb-12"
+            >
+              <span className="text-xs uppercase tracking-widest font-bold text-[var(--accent)] text-fade-breathe">
                 INTEGRASI KURIKULUM
               </span>
               <h2 className="text-2xl sm:text-3xl font-[var(--font-display)] font-bold text-[var(--text)] mt-2">
@@ -429,9 +439,15 @@ export default function ProgramsClient({ programs }: { programs: Program[] }) {
               <p className="mt-3 text-sm sm:text-base text-[var(--text-secondary)] leading-relaxed">
                 Seluruh santri menempuh integrasi kurikulum terpadu tanpa dikotomi ilmu agama dan sains modern
               </p>
-            </div>
+            </motion.div>
 
-            <div className="grid md:grid-cols-3 gap-6">
+            <motion.div
+              initial={{ opacity: 0, y: 22 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.15 }}
+              transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+              className="grid md:grid-cols-3 gap-6"
+            >
               <div className="p-6 rounded-2xl bg-[var(--bg-secondary)] border border-[var(--color-border)] text-left hover:border-[var(--accent)]/30 transition-all">
                 <div className="w-12 h-12 rounded-xl bg-[var(--accent-subtle)] text-[var(--accent)] flex items-center justify-center mb-4">
                   <BookOpen className="w-6 h-6" />
@@ -467,11 +483,17 @@ export default function ProgramsClient({ programs }: { programs: Program[] }) {
                   Percaya diri berpidato dan berkomunikasi dalam Bahasa Arab serta Inggris untuk berdakwah dan berjejaring di tingkat global.
                 </p>
               </div>
-            </div>
+            </motion.div>
 
             {/* Banner Ajakan PPDB */}
-            <div className="mt-12 p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-[var(--bg-secondary)] via-[var(--bg-elevated)] to-[var(--bg-secondary)] border border-[var(--accent)]/30 shadow-lg text-center max-w-4xl mx-auto">
-              <span className="inline-block px-3 py-1 rounded-full bg-[var(--accent-subtle)] text-[var(--accent)] text-xs font-bold tracking-wider mb-4">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.2 }}
+              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-12 p-8 sm:p-10 rounded-3xl bg-gradient-to-r from-[var(--bg-secondary)] via-[var(--bg-elevated)] to-[var(--bg-secondary)] border border-[var(--accent)]/30 shadow-lg text-center max-w-4xl mx-auto"
+            >
+              <span className="inline-block px-3 py-1 rounded-full bg-[var(--accent-subtle)] text-[var(--accent)] text-xs font-bold tracking-wider mb-4 text-fade-breathe">
                 PENERIMAAN SANTRI BARU (PPDB)
               </span>
               <h3 className="text-2xl sm:text-3xl font-[var(--font-display)] font-bold text-[var(--text)] mb-3">
@@ -494,7 +516,7 @@ export default function ProgramsClient({ programs }: { programs: Program[] }) {
                   Informasi Gelombang & Biaya
                 </Link>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>

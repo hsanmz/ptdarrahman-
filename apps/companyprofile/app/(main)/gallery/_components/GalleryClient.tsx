@@ -6,7 +6,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import PageHeader from '@/app/components/layout/PageHeader'
 import { useScrollReveal } from '@/app/hooks/useScrollAnimations'
 import type { GalleryItem } from '@/app/lib/types'
-import { X, Play } from 'lucide-react'
+import { X, Play, ChevronLeft, ChevronRight } from 'lucide-react'
 import { CoverflowCarousel } from '@/app/components/ui/CoverflowCarousel'
 import EmptyState from '@/app/components/ui/EmptyState'
 import GalleryPhotoGrid from './GalleryPhotoGrid'
@@ -147,6 +147,7 @@ export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
   return (
     <>
       <PageHeader
+        variant="clean-blur"
         title="Galeri"
         subtitle="Jelajahi momen dan kenangan dari seluruh pesantren dan komunitas kami"
         badge="MOMEN"
@@ -262,77 +263,88 @@ export default function GalleryClient({ gallery }: { gallery: GalleryItem[] }) {
         {selected && (
           <ModalOverlay key="gallery-lightbox" onClose={() => setSelected(null)}>
             <div
-              className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300"
+              className="relative w-full max-w-5xl h-[82vh] sm:h-[86vh] flex flex-col justify-between rounded-3xl overflow-hidden shadow-2xl border border-white/20 bg-slate-950"
+              role="dialog"
+              aria-modal="true"
+              aria-label={selected.content?.title || 'Pratinjau galeri'}
+              onClick={(event) => event.stopPropagation()}
             >
-              <div
-                className="relative w-full max-w-6xl max-h-[95vh] rounded-3xl bg-white/95 backdrop-blur-xl shadow-2xl transform overflow-hidden transition-all duration-500 ease-out hover:scale-100 hover:opacity-100"
-                role="dialog"
-                aria-modal="true"
-                aria-label={selected.content?.title || 'Pratinjau galeri'}
-                onClick={(event) => event.stopPropagation()}
-              >
-                <button
-                  className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white hover:bg-white/30 transition-all"
-                  onClick={() => setSelected(null)}
-                  aria-label="Tutup Lightbox"
-                >
-                  <X className="w-5 h-5 text-white" />
-                </button>
-
-                <div className="relative group">
-                  {selected.image ? (
-                    <Image
-                      src={selected.image}
-                      alt={selected.content?.title || ''}
-                      width={600}
-                      height={600}
-                      className="w-full h-[600px] object-cover transition-transform duration-500 group-hover:scale-105"
-                      sizes="(max-width: 768px) 100vw, 60vw"
-                    />
-                  ) : (
-                    <div className="flex items-center justify-center h-[600px] text-white/60">
-                      <span className="text-lg">No Image</span>
-                    </div>
-                  )}
-
-                  <div className="absolute inset-0 flex items-end p-8 transition-all duration-300 group-hover:bg-white/80">
-                    <div className="w-full max-w-3xl mx-auto">
-                      <span className="text-xs sm:text-sm font-semibold tracking-wider text-[var(--accent)] uppercase mb-1">
-                        {galleryCategoryLabel(selected.category)}
-                      </span>
-                      <h3 className="mt-3 text-2xl sm:text-4xl font-bold text-[var(--text)] leading-tight mb-4">
-                        {selected.content?.title || 'Galeri'}
-                      </h3>
-                      <p className="text-sm text-[var(--text-secondary)] whitespace-pre-line">
-                        {selected.content?.desc?.trim() ||
-                          `Dokumentasi ${(selected.content?.title || 'kegiatan pesantren').toLowerCase()}.`}
-                      </p>
-                    </div>
-                  </div>
+              {/* Gambar FULL Mengisi Seluruh Modal Lightbox */}
+              {selected.image ? (
+                <div className="absolute inset-0">
+                  <Image
+                    src={selected.image}
+                    alt={selected.content?.title || ''}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 1024px) 100vw, 1200px"
+                    priority
+                  />
+                  {/* Gradasi halus di atas dan bawah agar tombol & teks tetap tajam dan kontras */}
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40" />
                 </div>
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-white/60">
+                  <span className="text-base">Tidak ada gambar</span>
+                </div>
+              )}
 
-                {/* Navigation buttons on sides of image */}
-                <div className="absolute inset-0 flex items-center justify-between pointer-events-none">
-                  {/* Left button - prev */}
-                  <button
-                    className="pointer-events-auto w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center transition-all hover:bg-white/30 group-hover:bg-white/40"
-                    onClick={() => selectedIndex > 0 && setSelected(filtered[selectedIndex - 1])}
-                    disabled={selectedIndex === 0}
-                    aria-label="Sebelumnya"
-                    style={{ zIndex: 10 }}
-                  >
-                    <span className="text-2xl cursor-pointer">‹</span>
-                  </button>
-                  {/* Right button - next */}
-                  <button
-                    className="pointer-events-auto w-14 h-14 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center transition-all hover:bg-white/30 group-hover:bg-white/40"
-                    onClick={() => selectedIndex < filtered.length - 1 && setSelected(filtered[selectedIndex + 1])}
-                    disabled={selectedIndex === filtered.length - 1}
-                    aria-label="Selanjutnya"
-                    style={{ zIndex: 10 }}
-                  >
-                    <span className="text-2xl cursor-pointer">›</span>
-                  </button>
+              {/* Header Atas: Badge Kategori & Tombol Tutup (Close Button) */}
+              <div className="relative z-30 flex items-center justify-between p-4 sm:p-5 pointer-events-none">
+                <span className="pointer-events-auto inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider bg-white/90 text-[var(--accent)] border border-white/60 backdrop-blur-md shadow-md">
+                  {galleryCategoryLabel(selected.category)}
+                </span>
+                <button
+                  type="button"
+                  className="pointer-events-auto inline-flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-white/90 hover:bg-white text-slate-800 hover:text-black shadow-xl border border-white/60 backdrop-blur-md transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  onClick={() => setSelected(null)}
+                  aria-label="Tutup Pratinjau"
+                  title="Tutup (Esc)"
+                >
+                  <X className="w-5 h-5 stroke-[2.5]" />
+                </button>
+              </div>
+
+              {/* Tombol Navigasi Sebelumnya / Selanjutnya */}
+              {selectedIndex > 0 && (
+                <button
+                  type="button"
+                  className="absolute left-3 sm:left-5 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-xl border border-white/60 backdrop-blur-md flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  onClick={() => setSelected(filtered[selectedIndex - 1])}
+                  aria-label="Foto Sebelumnya"
+                  title="Sebelumnya (←)"
+                >
+                  <ChevronLeft className="w-6 h-6 stroke-[2.5]" />
+                </button>
+              )}
+              {selectedIndex < filtered.length - 1 && (
+                <button
+                  type="button"
+                  className="absolute right-3 sm:right-5 top-1/2 -translate-y-1/2 z-30 w-11 h-11 rounded-full bg-white/90 hover:bg-white text-slate-800 shadow-xl border border-white/60 backdrop-blur-md flex items-center justify-center transition-all hover:scale-105 active:scale-95 cursor-pointer"
+                  onClick={() => setSelected(filtered[selectedIndex + 1])}
+                  aria-label="Foto Selanjutnya"
+                  title="Selanjutnya (→)"
+                >
+                  <ChevronRight className="w-6 h-6 stroke-[2.5]" />
+                </button>
+              )}
+
+              {/* Footer Bawah: Panel Keterangan Gambar — Background Transparan Putih Rapi */}
+              <div className="relative z-30 p-3 sm:p-5">
+                <div className="w-full max-w-3xl mx-auto rounded-2xl bg-white/90 sm:bg-white/95 backdrop-blur-md p-4 sm:p-5 shadow-2xl border border-white/60 text-left">
+                  <div className="flex items-center justify-between gap-3 mb-1.5 flex-wrap">
+                    <h3 className="text-base sm:text-xl font-bold text-slate-900 leading-snug font-[var(--font-heading)]">
+                      {selected.content?.title || 'Dokumentasi Galeri'}
+                    </h3>
+                    <span className="text-[11px] font-semibold text-slate-500 tabular-nums ml-auto">
+                      {selectedIndex + 1} / {filtered.length}
+                    </span>
+                  </div>
+                  {Boolean(selected.content?.desc?.trim()) && (
+                    <p className="mt-1 text-xs sm:text-sm text-slate-700 leading-relaxed whitespace-pre-line line-clamp-3">
+                      {selected.content?.desc?.trim()}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>

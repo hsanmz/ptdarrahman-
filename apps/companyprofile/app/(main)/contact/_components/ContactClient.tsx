@@ -1,6 +1,7 @@
 'use client'
 
 import { useRef, useState, useEffect } from 'react'
+import { motion } from 'framer-motion'
 import PageHeader from '@/app/components/layout/PageHeader'
 import ShapeDivider from '@/app/components/ui/ShapeDivider'
 import { useScrollReveal } from '@/app/hooks/useScrollAnimations'
@@ -138,6 +139,7 @@ export default function ContactClient({
   return (
     <>
       <PageHeader
+        variant="editorial"
         title="Hubungi Kami"
         subtitle="Kami senang mendengar dari Anda. Hubungi kami untuk tahu lebih lanjut tentang Ar-Rahman"
         badge="HUBUNGI KAMI"
@@ -151,7 +153,14 @@ export default function ContactClient({
           <div className="grid lg:grid-cols-5 gap-8 md:gap-10 lg:gap-12">
             <div className="lg:col-span-2 space-y-6 sm:space-y-8">
               {contactItems.map((item, i) => (
-                <div key={i} className="glass-card p-4 sm:p-5 flex items-start gap-4 hover:shadow-md transition-all">
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: false, amount: 0.2 }}
+                  transition={{ duration: 0.55, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                  className="glass-card p-4 sm:p-5 flex items-start gap-4 hover:shadow-md transition-all"
+                >
                   <div className="w-12 h-12 rounded-2xl bg-[var(--accent-subtle)] flex items-center justify-center flex-shrink-0">
                     <item.icon className="w-5 h-5 text-[var(--accent)]" />
                   </div>
@@ -159,11 +168,17 @@ export default function ContactClient({
                     <div className="text-[10px] font-[var(--font-heading)] font-bold uppercase tracking-wider text-[var(--text-muted)] mb-1">{item.label}</div>
                     <div className="text-sm font-medium leading-relaxed text-[var(--text)]">{item.value}</div>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
 
-            <div className="lg:col-span-3">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.2 }}
+              transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+              className="lg:col-span-3"
+            >
               <div className="glass-card rounded-2xl p-6 sm:p-8 shadow-md">
                 <h3 className="font-[var(--font-display)] text-xl font-bold mb-2">
                   Lokasi Kami
@@ -191,11 +206,17 @@ export default function ContactClient({
                   Buka di Google Maps
                 </a>
               </div>
-            </div>
+            </motion.div>
           </div>
 
-          <div className="text-center mt-12 sm:mt-16 pt-8 sm:pt-10">
-            <h4 className="text-sm font-bold uppercase tracking-wider mb-5">Ikuti Kami</h4>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+            className="text-center mt-12 sm:mt-16 pt-8 sm:pt-10"
+          >
+            <h4 className="text-sm font-bold uppercase tracking-wider mb-5 text-fade-breathe">Ikuti Kami</h4>
             <div className="flex justify-center gap-3">
               {socialLinks.map((net) => (
                 <a key={net.label} href={net.href} target="_blank" rel="noopener noreferrer" className="p-3 text-[var(--text-muted)] hover:text-[var(--accent)] transition-all hover:scale-110" aria-label={net.label}>
@@ -205,7 +226,7 @@ export default function ContactClient({
                 </a>
               ))}
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
@@ -215,15 +236,29 @@ export default function ContactClient({
         <ShapeDivider fill="var(--bg)" tintStrength={0.2} />
         <div className="absolute inset-0 bg-pattern-grid opacity-[0.03]" />
         <div className="max-w-3xl mx-auto px-4 sm:px-6 relative z-10">
-          <div className="text-center mb-12">
-            <span className="section-badge justify-center">FAQ</span>
+          <motion.div
+            initial={{ opacity: 0, y: 24 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: false, amount: 0.2 }}
+            transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+            className="text-center mb-12"
+          >
+            <span className="section-badge justify-center text-fade-breathe">FAQ</span>
             <h2 className="section-title">
               Pertanyaan Umum
             </h2>
-          </div>
+          </motion.div>
           <div className="space-y-3">
             {faqItems.map((faq, i) => (
-              <FAQItem key={i} question={faq.question} answer={faq.answer} defaultOpen={i === 0} />
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: false, amount: 0.15 }}
+                transition={{ duration: 0.5, delay: (i % 5) * 0.06, ease: [0.16, 1, 0.3, 1] }}
+              >
+                <FAQItem question={faq.question} answer={faq.answer} defaultOpen={i === 0} />
+              </motion.div>
             ))}
           </div>
         </div>

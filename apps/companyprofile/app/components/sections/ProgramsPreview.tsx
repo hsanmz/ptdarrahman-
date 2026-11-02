@@ -1,15 +1,26 @@
 'use client'
 
-import { useRef, useState, useCallback, useEffect, useMemo } from 'react'
+import { useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-
+import {
+  motion,
+  useAnimationFrame,
+  useMotionValue,
+  useReducedMotion,
+  animate,
+} from 'framer-motion'
 import { ArrowRight, BookOpen, Cpu, Globe, Award, Sparkles, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useProgramLinks } from '../../hooks/useProgramLinks'
 import TiltCard from '../ui/TiltCard'
+import MagneticButton from '../ui/MagneticButton'
 
 import type { Program } from '@/app/lib/types'
 import { API_BASE } from '@/app/lib/api'
 import { resolveImageSrc } from '@/app/lib/image-file'
+
+const CARD_GAP = 24
+// Durasi per item dibuat seimbang (7 detik) agar pergerakan berjalan sangat halus (smooth) dan terus berulang tanpa jeda
+const DURATION_PER_ITEM_SECONDS = 7
 
 const iconMap: Record<string, React.ElementType> = {
   BookOpen,
@@ -54,6 +65,14 @@ const programData = [
 ]
 
 export default function ProgramsPreview({ programs = [] }: { programs?: Program[] }) {
+  const sectionRef = useRef<HTMLElement>(null)
+  const trackRef = useRef<HTMLDivElement>(null)
+  const startedRef = useRef(false)
+  const setWidthRef = useRef(0)
+  const visibleRef = useRef(true)
+  const isSlowedRef = useRef(false)
+  const reduced = useReducedMotion()
+
   const displayPrograms =
     programs.length > 0
       ? programs.slice(0, 4).map((p) => ({
@@ -66,8 +85,10 @@ export default function ProgramsPreview({ programs = [] }: { programs?: Program[
         }))
       : programData
 
-  // 3 duplicate sets untuk carousel loop tanpa batas (infinite seamless circular scroll)
-  const infinitePrograms = useMemo(() => {
+  const { hrefFor } = useProgramLinks()
+
+  // 3 duplicate sets untuk continuous endless marquee yang konsisten di semua lebar layar
+  const duplicatedPrograms = useMemo(() => {
     if (displayPrograms.length === 0) return []
     return [
       ...displayPrograms.map((p, i) => ({ ...p, uniqueKey: `set0-${p.id}-${i}` })),
@@ -76,192 +97,193 @@ export default function ProgramsPreview({ programs = [] }: { programs?: Program[
     ]
   }, [displayPrograms])
 
-  const stripRef = useRef<HTMLDivElement>(null)
-  const { hrefFor } = useProgramLinks()
-  const [activeIndex, setActiveIndex] = useState(0)
-  const [isPaused, setIsPaused] = useState(false)
-  const virtualIndexRef = useRef(displayPrograms.length)
-  const isTeleporting = useRef(false)
-  const isScrollingProgrammatically = useRef(false)
+  const translateX = useMotionValue(0)
 
-  // Inisialisasi posisi awal di Set ke-1 (tengah)
+  // Pause rAF loop saat section di luar viewport supaya hemat CPU/baterai
   useEffect(() => {
-    if (!stripRef.current) return
-    const container = stripRef.current
-    const children = Array.from(container.children) as HTMLElement[]
-    const N = displayPrograms.length
-    if (children[N]) {
-      container.scrollLeft = children[N].offsetLeft - container.offsetLeft
-      virtualIndexRef.current = N
-      setActiveIndex(0)
+    const section = sectionRef.current
+    if (!section || typeof IntersectionObserver === 'undefined') return
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        visibleRef.current = entry.isIntersecting
+      },
+      { threshold: 0 },
+    )
+    io.observe(section)
+    return () => io.disconnect()
+  }, [])
+
+  useAnimationFrame((_, delta) => {
+    const track = trackRef.current
+    if (!track || !startedRef.current) return
+    if (reduced || !visibleRef.current) return
+    const distance = setWidthRef.current
+    if (distance <= 0) return
+
+    // Kecepatan melambat halus saat kursor diarahkan ke kartu, namun tetap berputar tanpa berhenti total
+    const effectiveDuration = isSlowedRef.current
+      ? DURATION_PER_ITEM_SECONDS * 2.5
+      : DURATION_PER_ITEM_SECONDS
+
+    const pxPerMs = distance / (displayPrograms.length * effectiveDuration * 1000)
+    let next = translateX.get() - pxPerMs * delta
+
+    // Jaminan looping berulang tanpa henti (infinite repeating marquee)
+    while (next <= -distance) {
+      next += distance
+    }
+    while (next > 0) {
+      next -= distance
+    }
+    translateX.set(next)
+  })
+
+  useEffect(() => {
+    const measure = () => {
+      const track = trackRef.current
+      if (!track || track.children.length === 0) return
+      const first = track.children[0] as HTMLElement | undefined
+      const second = track.children[displayPrograms.length] as HTMLElement | undefined
+      if (first && second) {
+        setWidthRef.current = second.offsetLeft - first.offsetLeft
+        startedRef.current = setWidthRef.current > 0
+      }
+    }
+    measure()
+    const t = window.setTimeout(measure, 300)
+    let debounce: ReturnType<typeof setTimeout> | null = null
+    let raf = 0
+    const onResize = () => {
+      if (debounce) clearTimeout(debounce)
+      debounce = setTimeout(() => {
+        raf = requestAnimationFrame(measure)
+      }, 150)
+    }
+    window.addEventListener('resize', onResize)
+    return () => {
+      window.clearTimeout(t)
+      window.removeEventListener('resize', onResize)
+      if (debounce) clearTimeout(debounce)
+      cancelAnimationFrame(raf)
     }
   }, [displayPrograms.length])
 
-  const handleScroll = useCallback(() => {
-    if (!stripRef.current || isTeleporting.current) return
-    const container = stripRef.current
-    const scrollLeft = container.scrollLeft
-    const children = Array.from(container.children) as HTMLElement[]
-    const N = displayPrograms.length
-    if (children.length === 0 || N === 0) return
-
-    let closestIndex = 0
-    let minDiff = Infinity
-    children.forEach((child, idx) => {
-      const diff = Math.abs(child.offsetLeft - container.offsetLeft - scrollLeft)
-      if (diff < minDiff) {
-        minDiff = diff
-        closestIndex = idx
-      }
+  const nudge = (direction: -1 | 1) => {
+    const distance = setWidthRef.current
+    const step = distance > 0 ? distance / displayPrograms.length : 380 + CARD_GAP
+    const current = translateX.get()
+    const target = current - direction * step
+    animate(translateX, target, {
+      duration: 0.6,
+      ease: [0.25, 1, 0.5, 1],
+      onComplete: () => {
+        if (distance > 0) {
+          let normalized = translateX.get()
+          while (normalized <= -distance) normalized += distance
+          while (normalized > 0) normalized -= distance
+          translateX.set(normalized)
+        }
+      },
     })
-
-    if (!isScrollingProgrammatically.current) {
-      virtualIndexRef.current = closestIndex
-    }
-    setActiveIndex(closestIndex % N)
-
-    // Silent seamless wrap jika di-swipe manual oleh pengguna melampaui batas tengah
-    if (closestIndex >= N * 2 && children[closestIndex - N]) {
-      isTeleporting.current = true
-      container.style.scrollSnapType = 'none'
-      container.scrollLeft = children[closestIndex - N].offsetLeft - container.offsetLeft
-      virtualIndexRef.current = closestIndex - N
-      requestAnimationFrame(() => {
-        if (container) container.style.scrollSnapType = ''
-        isTeleporting.current = false
-      })
-    } else if (closestIndex < N && children[closestIndex + N]) {
-      isTeleporting.current = true
-      container.style.scrollSnapType = 'none'
-      container.scrollLeft = children[closestIndex + N].offsetLeft - container.offsetLeft
-      virtualIndexRef.current = closestIndex + N
-      requestAnimationFrame(() => {
-        if (container) container.style.scrollSnapType = ''
-        isTeleporting.current = false
-      })
-    }
-  }, [displayPrograms.length])
-
-  const scrollToProgram = useCallback(
-    (index: number) => {
-      if (!stripRef.current) return
-      const container = stripRef.current
-      const children = Array.from(container.children) as HTMLElement[]
-      const N = displayPrograms.length
-      if (N === 0) return
-
-      if (children[index]) {
-        isScrollingProgrammatically.current = true
-        virtualIndexRef.current = index
-        setActiveIndex(index % N)
-
-        container.scrollTo({
-          left: children[index].offsetLeft - container.offsetLeft,
-          behavior: 'smooth',
-        })
-
-        // Setelah animasi geser selesai, normalkan posisi virtual ke set tengah secara senyap
-        setTimeout(() => {
-          isScrollingProgrammatically.current = false
-          if (!stripRef.current) return
-          const currentChildren = Array.from(stripRef.current.children) as HTMLElement[]
-          const targetIndex = virtualIndexRef.current
-          if (targetIndex >= N * 2 && currentChildren[targetIndex - N]) {
-            stripRef.current.style.scrollSnapType = 'none'
-            stripRef.current.scrollLeft =
-              currentChildren[targetIndex - N].offsetLeft - stripRef.current.offsetLeft
-            virtualIndexRef.current = targetIndex - N
-            requestAnimationFrame(() => {
-              if (stripRef.current) stripRef.current.style.scrollSnapType = ''
-            })
-          } else if (targetIndex < N && currentChildren[targetIndex + N]) {
-            stripRef.current.style.scrollSnapType = 'none'
-            stripRef.current.scrollLeft =
-              currentChildren[targetIndex + N].offsetLeft - stripRef.current.offsetLeft
-            virtualIndexRef.current = targetIndex + N
-            requestAnimationFrame(() => {
-              if (stripRef.current) stripRef.current.style.scrollSnapType = ''
-            })
-          }
-        }, 450)
-      }
-    },
-    [displayPrograms.length]
-  )
-
-  const scrollPrograms = useCallback(
-    (direction: -1 | 1) => {
-      const nextIndex = virtualIndexRef.current + direction
-      scrollToProgram(nextIndex)
-      // Jeda sejenak auto-scroll jika pengguna menavigasi manual
-      setIsPaused(true)
-      setTimeout(() => setIsPaused(false), 4500)
-    },
-    [scrollToProgram]
-  )
-
-  // Otomatis berjalan (Auto-play carousel bergulir tanpa henti)
-  useEffect(() => {
-    if (isPaused || displayPrograms.length <= 1) return
-
-    if (
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    ) {
-      return
-    }
-
-    const timer = setInterval(() => {
-      if (typeof document !== 'undefined' && document.hidden) return
-      const nextIndex = virtualIndexRef.current + 1
-      scrollToProgram(nextIndex)
-    }, 3500)
-
-    return () => clearInterval(timer)
-  }, [isPaused, displayPrograms.length, scrollToProgram])
+  }
 
   return (
-    <section className="relative z-10 overflow-hidden bg-[var(--bg-secondary)] py-16 sm:py-20 md:py-24">
+    <section ref={sectionRef} className="relative z-10 overflow-hidden bg-[var(--bg-secondary)] py-16 sm:py-20 md:py-24">
       <div className="relative w-full">
         <div className="absolute inset-0 bg-pattern-dots-gold opacity-[0.04]" />
 
         <div className="max-w-7xl mx-auto w-full px-4 sm:px-6 relative z-10 shrink-0">
-          <div className="text-center mb-8 sm:mb-12">
-            <span className="section-badge justify-center">PROGRAM UNGGULAN</span>
-            <h2 className="section-title max-w-3xl mx-auto">
-              Empat Pilar Keunggulan PTDARRAHMAN
-            </h2>
-            <p className="section-subtitle mx-auto mt-3 sm:mt-4 text-sm sm:text-base">
-              Kedalaman spiritual Al-Qur'an sekaligus penguasaan rekayasa teknologi digital dalam satu kesatuan kurikulum
-            </p>
-          </div>
+          <motion.div
+            initial={{ opacity: 0, y: 28 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.2 }}
+            transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+            className="text-center mb-8 sm:mb-12"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 12 }}
+              whileInView={{ opacity: 1, scale: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.6, delay: 0.05, ease: [0.16, 1, 0.3, 1] }}
+              className="inline-flex items-center justify-center mb-3"
+            >
+              <span className="floating-badge-1 section-badge justify-center gap-2 px-4 py-1.5 rounded-full bg-[var(--accent-gold)]/15 border border-[var(--accent-gold)]/40 text-[var(--accent-gold)] text-xs font-semibold tracking-wider uppercase shadow-sm">
+                <Sparkles className="w-3.5 h-3.5 animate-pulse text-[var(--accent-gold)]" />
+                PROGRAM UNGGULAN
+              </span>
+            </motion.div>
+            <motion.h2
+              initial={{ opacity: 0, y: 24, filter: 'blur(4px)' }}
+              whileInView={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.8, delay: 0.12, ease: [0.16, 1, 0.3, 1] }}
+              className="section-title max-w-3xl mx-auto tracking-tight font-extrabold text-[var(--text)]"
+            >
+              Empat Pilar Keunggulan{' '}
+              <span className="bg-gradient-to-r from-emerald-600 via-[var(--accent)] to-[var(--accent-gold)] bg-clip-text text-transparent font-extrabold drop-shadow-xs">
+                PTDARRAHMAN
+              </span>
+            </motion.h2>
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.7, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="section-subtitle mx-auto mt-3 sm:mt-4 text-sm sm:text-base leading-relaxed text-[var(--text-secondary)] font-normal max-w-2xl"
+            >
+              Kedalaman spiritual Al-Qur&apos;an sekaligus penguasaan rekayasa teknologi digital dalam satu kesatuan kurikulum
+            </motion.p>
+          </motion.div>
         </div>
 
-        {/* Layout Kartu:
-            - Horizontal snap scroll looping tanpa batas
-        */}
-        <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6">
+        {/* Carousel Berjalan Otomatis (Infinite Continuous Marquee Ticker) */}
+        <div
+          className="relative z-10 w-full overflow-hidden py-4"
+          onMouseEnter={() => {
+            isSlowedRef.current = true
+          }}
+          onMouseLeave={() => {
+            isSlowedRef.current = false
+          }}
+          onTouchStart={() => {
+            isSlowedRef.current = true
+          }}
+          onTouchEnd={() => {
+            setTimeout(() => {
+              isSlowedRef.current = false
+            }, 2000)
+          }}
+        >
+          {/* Edge fade overlays */}
           <div
-            ref={stripRef}
-            onScroll={handleScroll}
-            onMouseEnter={() => setIsPaused(true)}
-            onMouseLeave={() => setIsPaused(false)}
-            onTouchStart={() => setIsPaused(true)}
-            onTouchEnd={() => {
-              setTimeout(() => setIsPaused(false), 3000)
-            }}
-            className="no-scrollbar flex snap-x snap-mandatory gap-4 sm:gap-6 overflow-x-auto pb-4"
+            className="absolute left-0 top-0 bottom-0 z-20 pointer-events-none w-10 sm:w-28"
+            style={{ background: 'linear-gradient(90deg, var(--bg-secondary) 0%, transparent 100%)' }}
+          />
+          <div
+            className="absolute right-0 top-0 bottom-0 z-20 pointer-events-none w-10 sm:w-28"
+            style={{ background: 'linear-gradient(270deg, var(--bg-secondary) 0%, transparent 100%)' }}
+          />
+
+          <motion.div
+            ref={trackRef}
+            className="flex items-stretch py-2"
+            style={{ gap: CARD_GAP, width: 'max-content', x: translateX }}
           >
-            {infinitePrograms.map((prog) => {
+            {duplicatedPrograms.map((prog) => {
               const Icon = prog.icon as React.ComponentType<{ className?: string }>
               return (
                 <TiltCard
                   key={prog.uniqueKey}
-                  className="group w-[min(84vw,360px)] sm:w-[360px] lg:w-[380px] shrink-0 snap-start"
+                  className="group w-[min(84vw,340px)] sm:w-[350px] lg:w-[370px] shrink-0"
                 >
                   <Link
                     href={hrefFor(prog.id)}
-                    className="glass-card rounded-2xl overflow-hidden !no-underline flex flex-col h-full border border-[var(--color-border)] hover:border-[var(--accent)]/50 transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1"
+                    onMouseMove={(e) => {
+                      const rect = e.currentTarget.getBoundingClientRect()
+                      e.currentTarget.style.setProperty('--spotlight-x', `${e.clientX - rect.left}px`)
+                      e.currentTarget.style.setProperty('--spotlight-y', `${e.clientY - rect.top}px`)
+                    }}
+                    className="glass-card card-spotlight rounded-2xl overflow-hidden !no-underline flex flex-col h-full border border-[var(--color-border)] hover:border-[var(--accent)]/50 transition-all duration-300 shadow-sm hover:shadow-xl hover:-translate-y-1 bg-[var(--bg-elevated)]"
                   >
                     {prog.image ? (
                       <div className="relative h-36 overflow-hidden bg-[var(--bg)] sm:h-40">
@@ -291,11 +313,11 @@ export default function ProgramsPreview({ programs = [] }: { programs?: Program[
                         </div>
                       )}
 
-                      <h3 className="font-[var(--font-display)] text-lg sm:text-xl font-bold text-[var(--text)] mb-2 group-hover:text-[var(--accent)] transition-colors leading-snug">
+                      <h3 className="font-[var(--font-display)] text-lg sm:text-xl font-bold text-[var(--text)] mb-2 group-hover:text-[var(--accent)] group-hover:translate-x-1 transition-all duration-300 leading-snug">
                         {prog.title}
                       </h3>
 
-                      <p className="line-clamp-3 text-xs sm:text-sm leading-relaxed font-medium text-[var(--text-secondary)] mb-4">
+                      <p className="line-clamp-3 text-xs sm:text-sm leading-relaxed font-medium text-[var(--text-secondary)] group-hover:text-[var(--text)] transition-colors duration-300 mb-4">
                         {prog.desc}
                       </p>
 
@@ -303,66 +325,40 @@ export default function ProgramsPreview({ programs = [] }: { programs?: Program[
                         {prog.features.slice(0, 3).map((f, j) => (
                           <div
                             key={j}
-                            className="flex items-center gap-2.5 text-xs sm:text-sm font-medium text-[var(--text-secondary)]"
+                            className="flex items-center gap-2.5 text-xs sm:text-sm font-medium text-[var(--text-secondary)] group-hover:text-[var(--text)] group-hover:translate-x-1 transition-all duration-300"
                           >
-                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] flex-shrink-0 shadow-[0_0_6px_var(--accent)]" />
+                            <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] flex-shrink-0 shadow-[0_0_8px_var(--accent)] group-hover:scale-125 group-hover:shadow-[0_0_12px_var(--accent)] transition-all duration-300" />
                             <span className="truncate">{f}</span>
                           </div>
                         ))}
                       </div>
 
-                      <span className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[var(--accent)] group-hover:gap-3 transition-all mt-auto pt-4 border-t border-[var(--color-border)]">
-                        Pelajari Selengkapnya
-                        <ArrowRight className="w-4 h-4" />
+                      <span className="inline-flex items-center gap-2 text-xs sm:text-sm font-bold text-[var(--accent)] group-hover:text-emerald-700 dark:group-hover:text-emerald-400 group-hover:gap-3 transition-all duration-300 mt-auto pt-4 border-t border-[var(--color-border)]">
+                        <span>Pelajari Selengkapnya</span>
+                        <ArrowRight className="w-4 h-4 transform transition-transform duration-300 ease-out group-hover:translate-x-2" />
                       </span>
                     </div>
                   </Link>
                 </TiltCard>
               )
             })}
-          </div>
+          </motion.div>
         </div>
 
-        {/* Navigasi Carousel (Dot indicators + tombol prev/next) */}
+        {/* Navigasi Carousel Manual (Prev / Next buttons) */}
         {displayPrograms.length > 1 ? (
           <div className="relative z-10 mt-6 flex items-center justify-center gap-4">
             <button
               type="button"
-              onClick={() => scrollPrograms(-1)}
+              onClick={() => nudge(-1)}
               aria-label="Program sebelumnya"
               className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--bg-elevated)] text-[var(--text)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] shadow-sm cursor-pointer"
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
-
-            {/* Simbol bulat di tengah navigasi */}
-            <div className="flex items-center gap-2.5 px-1">
-              {displayPrograms.map((prog, idx) => {
-                const isActive = idx === activeIndex
-                return (
-                  <button
-                    key={prog.id}
-                    type="button"
-                    onClick={() => {
-                      const N = displayPrograms.length
-                      scrollToProgram(N + idx)
-                      setIsPaused(true)
-                      setTimeout(() => setIsPaused(false), 4500)
-                    }}
-                    aria-label={`Lihat program: ${prog.title}`}
-                    className={`h-2.5 w-2.5 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] cursor-pointer ${
-                      isActive
-                        ? 'scale-125 bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]'
-                        : 'bg-[var(--border-strong)] opacity-50 hover:opacity-100 hover:scale-110'
-                    }`}
-                  />
-                )
-              })}
-            </div>
-
             <button
               type="button"
-              onClick={() => scrollPrograms(1)}
+              onClick={() => nudge(1)}
               aria-label="Program berikutnya"
               className="flex h-10 w-10 items-center justify-center rounded-full border border-[var(--color-border)] bg-[var(--bg-elevated)] text-[var(--text)] transition-all hover:border-[var(--accent)] hover:text-[var(--accent)] shadow-sm cursor-pointer"
             >
@@ -372,15 +368,23 @@ export default function ProgramsPreview({ programs = [] }: { programs?: Program[
         ) : null}
 
         {/* CTA ke Halaman Lengkap Programs */}
-        <div className="relative z-10 mt-10 sm:mt-14 text-center">
-          <Link
-            href="/programs"
-            className="btn-primary inline-flex items-center gap-2.5 text-sm px-6 py-3 shadow-md hover:shadow-lg"
-          >
-            Lihat Rincian Kurikulum & Semua Program
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: '-40px' }}
+          transition={{ duration: 0.7, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
+          className="relative z-10 mt-10 sm:mt-14 text-center"
+        >
+          <MagneticButton strength={0.3}>
+            <Link
+              href="/programs"
+              className="btn-primary inline-flex items-center gap-2.5 text-sm px-6 py-3 shadow-md hover:shadow-xl hover:scale-[1.02] transition-all duration-300 group cursor-pointer"
+            >
+              <span>Lihat Rincian Kurikulum & Semua Program</span>
+              <ArrowRight className="w-4 h-4 transform transition-transform duration-300 group-hover:translate-x-1.5" />
+            </Link>
+          </MagneticButton>
+        </motion.div>
       </div>
     </section>
   )

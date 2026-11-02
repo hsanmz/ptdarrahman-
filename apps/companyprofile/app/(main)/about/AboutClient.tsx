@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { useEffect } from 'react'
+import { motion } from 'framer-motion'
 import {
   ArrowRight, Bookmark, BookOpen, CheckCircle2, Cpu, Heart, ShieldCheck, Sparkles, Target, Users,
 } from 'lucide-react'
@@ -140,6 +141,7 @@ export default function AboutClient({
   return (
     <>
       <PageHeader
+        variant="editorial"
         title={text(hero.page_title) || 'Tentang Kami'}
         subtitle={text(hero.subtitle) || 'Mengenal arah pendidikan dan orang-orang yang menghidupkan Pesantren Tahfidz Qur\'an dan Digital Ar-Rahman.'}
         badge={text(hero.badge) || 'PROFIL INSTITUSI'}
@@ -197,11 +199,34 @@ export default function AboutClient({
 
         <section id="perjalanan" className="scroll-mt-24 bg-[var(--bg)] py-16 sm:py-20">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
-            <div className="max-w-2xl"><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">{text(storyHeading.eyebrow)}</p><h2 className="mt-3 font-[var(--font-display)] text-3xl font-bold leading-tight sm:text-4xl">{text(storyHeading.title)}</h2><p className="mt-4 text-base leading-relaxed text-[var(--text-secondary)]">{text(storyHeading.body)}</p></div>
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.2 }}
+              transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+              className="max-w-2xl"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent)] text-fade-breathe">{text(storyHeading.eyebrow)}</p>
+              <h2 className="mt-3 font-[var(--font-display)] text-3xl font-bold leading-tight sm:text-4xl">{text(storyHeading.title)}</h2>
+              <p className="mt-4 text-base leading-relaxed text-[var(--text-secondary)]">{text(storyHeading.body)}</p>
+            </motion.div>
             <ol className="mt-10 grid gap-4 md:grid-cols-2">
               {rowsFor(rows, 'story').map((chapter, index) => {
                 const content = chapter.content ?? {}
-                return <li key={chapter.id} className="rounded-2xl border border-[var(--color-border)] bg-white p-6 transition-transform duration-200 hover:-translate-y-0.5 hover:border-[var(--accent)]/40"><div className="flex items-center gap-3"><span className="font-mono text-xs font-bold tracking-[0.18em] text-[var(--accent-gold)]">{String(index + 1).padStart(2, '0')}</span><span className="h-px flex-1 bg-[var(--color-border)]" aria-hidden /><span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{text(content.kicker)}</span></div><h3 className="mt-5 text-xl font-bold text-[var(--text)]">{text(content.title)}</h3><div className="mt-3 space-y-3 text-sm leading-relaxed text-[var(--text-secondary)]">{paragraphs(content.body).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div></li>
+                return (
+                  <motion.li
+                    key={chapter.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: false, amount: 0.15 }}
+                    transition={{ duration: 0.55, delay: (index % 2) * 0.1, ease: [0.16, 1, 0.3, 1] }}
+                    className="rounded-2xl border border-[var(--color-border)] bg-white p-6 transition-transform duration-200 hover:-translate-y-0.5 hover:border-[var(--accent)]/40"
+                  >
+                    <div className="flex items-center gap-3"><span className="font-mono text-xs font-bold tracking-[0.18em] text-[var(--accent-gold)]">{String(index + 1).padStart(2, '0')}</span><span className="h-px flex-1 bg-[var(--color-border)]" aria-hidden /><span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">{text(content.kicker)}</span></div>
+                    <h3 className="mt-5 text-xl font-bold text-[var(--text)]">{text(content.title)}</h3>
+                    <div className="mt-3 space-y-3 text-sm leading-relaxed text-[var(--text-secondary)]">{paragraphs(content.body).map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>
+                  </motion.li>
+                )
               })}
             </ol>
           </div>
@@ -211,8 +236,14 @@ export default function AboutClient({
         <section id="vision" className="scroll-mt-24 bg-[var(--bg-secondary)] py-16 sm:py-20 md:py-24">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             {/* Header Section */}
-            <div className="max-w-3xl mb-10 sm:mb-14">
-              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[var(--accent)] font-mono">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.2 }}
+              transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+              className="max-w-3xl mb-10 sm:mb-14"
+            >
+              <p className="text-xs font-semibold uppercase tracking-[0.25em] text-[var(--accent)] font-mono text-fade-breathe">
                 KOMITMEN &amp; ARAH LEMBAGA
               </p>
               <h2 className="mt-3 font-[var(--font-display)] text-3xl sm:text-4xl md:text-5xl font-bold text-[var(--text)] tracking-tight">
@@ -221,10 +252,16 @@ export default function AboutClient({
               <p className="mt-4 text-base sm:text-lg text-[var(--text-secondary)] leading-relaxed">
                 Fondasi nilai luhur, arah ikhtiar, dan cita-cita peradaban Pesantren Tahfidz Qur&apos;an dan Digital Ar-Rahman dalam menyiapkan generasi Rahmatan lil &apos;Alamin.
               </p>
-            </div>
+            </motion.div>
 
             {/* Card Visi: Heroic Statement Card dengan Deep Forest Emerald & Gold Accent */}
-            <div className="relative rounded-3xl sm:rounded-[2.5rem] bg-gradient-to-br from-[#0F3523] via-[#164E33] to-[#0D2E1F] text-white p-8 sm:p-10 md:p-14 shadow-2xl border border-white/10 overflow-hidden group">
+            <motion.div
+              initial={{ opacity: 0, y: 28 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.2 }}
+              transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+              className="relative rounded-3xl sm:rounded-[2.5rem] bg-gradient-to-br from-[#0F3523] via-[#164E33] to-[#0D2E1F] text-white p-8 sm:p-10 md:p-14 shadow-2xl border border-white/10 overflow-hidden group"
+            >
               {/* Radial glow dekoratif lembut di sudut */}
               <div
                 aria-hidden="true"
@@ -268,12 +305,18 @@ export default function AboutClient({
                   </span>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
             {/* Dua Card Simetris Sempurna: Misi Kami (Kiri) & Tujuan Kami (Kanan) */}
             <div className="mt-6 sm:mt-8 grid gap-6 sm:gap-8 md:grid-cols-2 items-stretch">
               {/* Card 1: MISI KAMI */}
-              <div className="flex flex-col justify-between h-full rounded-3xl sm:rounded-[2.5rem] border border-[var(--color-border)] bg-white p-7 sm:p-9 md:p-10 shadow-sm hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: false, amount: 0.15 }}
+                transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+                className="flex flex-col justify-between h-full rounded-3xl sm:rounded-[2.5rem] border border-[var(--color-border)] bg-white p-7 sm:p-9 md:p-10 shadow-sm hover:shadow-xl transition-all duration-300 relative overflow-hidden group"
+              >
                 {/* Aksen garis atas saat hover */}
                 <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-[var(--accent)] to-emerald-400 opacity-80 group-hover:opacity-100 transition-opacity" />
 
@@ -314,10 +357,16 @@ export default function AboutClient({
                   <span>Fokus ekosistem pendidikan</span>
                   <span className="text-[var(--accent)] font-semibold font-mono">ARRAHMAN</span>
                 </div>
-              </div>
+              </motion.div>
 
               {/* Card 2: TUJUAN KAMI */}
-              <div className="flex flex-col justify-between h-full rounded-3xl sm:rounded-[2.5rem] border border-[var(--color-border)] bg-white p-7 sm:p-9 md:p-10 shadow-sm hover:shadow-xl transition-all duration-300 relative overflow-hidden group">
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: false, amount: 0.15 }}
+                transition={{ duration: 0.65, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+                className="flex flex-col justify-between h-full rounded-3xl sm:rounded-[2.5rem] border border-[var(--color-border)] bg-white p-7 sm:p-9 md:p-10 shadow-sm hover:shadow-xl transition-all duration-300 relative overflow-hidden group"
+              >
                 {/* Aksen garis atas saat hover */}
                 <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-amber-500 to-[#F4D58C] opacity-80 group-hover:opacity-100 transition-opacity" />
 
@@ -358,17 +407,64 @@ export default function AboutClient({
                   <span>Cita-cita kepemimpinan umat</span>
                   <span className="text-[#A67C1E] font-semibold font-mono">PTDARRAHMAN</span>
                 </div>
-              </div>
+              </motion.div>
             </div>
           </div>
         </section>
 
-        <section className="bg-[var(--bg)] py-16 sm:py-20"><div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="grid gap-14 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20"><div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">{text(valuesHeading.eyebrow)}</p><h2 className="mt-3 font-[var(--font-display)] text-3xl font-bold leading-tight sm:text-4xl">{text(valuesHeading.title)}</h2><p className="mt-4 text-base leading-relaxed text-[var(--text-secondary)]">{text(valuesHeading.body)}</p></div>
-            <div className="grid gap-3 sm:grid-cols-2">{rowsFor(rows, 'value').map((value) => { const content = value.content ?? {}; const Icon = ICONS[text(content.icon)] ?? CheckCircle2; return <article key={value.id} className="rounded-2xl border border-[var(--color-border)] bg-white p-5"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-subtle)] text-[var(--accent)]"><Icon className="h-5 w-5" /></span><h3 className="mt-4 text-base font-bold">{text(content.title)}</h3><p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">{text(content.description)}</p></article> })}</div>
+        <section className="bg-[var(--bg)] py-16 sm:py-20">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.2 }}
+              transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+              className="grid gap-14 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20"
+            >
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent)] text-fade-breathe">{text(valuesHeading.eyebrow)}</p>
+                <h2 className="mt-3 font-[var(--font-display)] text-3xl font-bold leading-tight sm:text-4xl">{text(valuesHeading.title)}</h2>
+                <p className="mt-4 text-base leading-relaxed text-[var(--text-secondary)]">{text(valuesHeading.body)}</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {rowsFor(rows, 'value').map((value) => {
+                  const content = value.content ?? {}
+                  const Icon = ICONS[text(content.icon)] ?? CheckCircle2
+                  return (
+                    <article key={value.id} className="rounded-2xl border border-[var(--color-border)] bg-white p-5">
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-subtle)] text-[var(--accent)]"><Icon className="h-5 w-5" /></span>
+                      <h3 className="mt-4 text-base font-bold">{text(content.title)}</h3>
+                      <p className="mt-2 text-sm leading-relaxed text-[var(--text-secondary)]">{text(content.description)}</p>
+                    </article>
+                  )
+                })}
+              </div>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: false, amount: 0.2 }}
+              transition={{ duration: 0.65, ease: [0.16, 1, 0.3, 1] }}
+              className="mt-16 rounded-3xl border border-[var(--color-border)] bg-[var(--bg-secondary)] p-7 sm:p-9"
+            >
+              <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+                <div className="max-w-xl">
+                  <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent)] text-fade-breathe">{text(studentProfile.eyebrow)}</p>
+                  <h2 className="mt-3 font-[var(--font-display)] text-2xl font-bold sm:text-3xl">{text(studentProfile.title)}</h2>
+                </div>
+                <Users className="h-8 w-8 shrink-0 text-[var(--accent-gold)]" />
+              </div>
+              <div className="mt-7 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+                {items(studentProfile.items).map((item) => (
+                  <p key={item} className="flex items-start gap-2 text-sm text-[var(--text-secondary)]">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]" />
+                    <span>{item}</span>
+                  </p>
+                ))}
+              </div>
+            </motion.div>
           </div>
-          <div className="mt-16 rounded-3xl border border-[var(--color-border)] bg-[var(--bg-secondary)] p-7 sm:p-9"><div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between"><div className="max-w-xl"><p className="text-xs font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">{text(studentProfile.eyebrow)}</p><h2 className="mt-3 font-[var(--font-display)] text-2xl font-bold sm:text-3xl">{text(studentProfile.title)}</h2></div><Users className="h-8 w-8 shrink-0 text-[var(--accent-gold)]" /></div><div className="mt-7 grid gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">{items(studentProfile.items).map((item) => <p key={item} className="flex items-start gap-2 text-sm text-[var(--text-secondary)]"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--accent)]" /><span>{item}</span></p>)}</div></div>
-        </div></section>
+        </section>
 
         <LeadershipBoards boards={leadership} heading={leadershipHeading} />
         <section className="bg-[var(--accent)] py-14 sm:py-16"><div className="mx-auto flex max-w-7xl flex-col gap-6 px-4 text-white sm:px-6 md:flex-row md:items-center md:justify-between"><div className="max-w-2xl"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/65">{text(cta.eyebrow)}</p><h2 className="mt-3 font-[var(--font-display)] text-3xl font-bold leading-tight sm:text-4xl">{text(cta.title)}</h2><p className="mt-3 text-sm leading-relaxed text-white/75 sm:text-base">{text(cta.body)}</p></div><Link href={text(cta.button_href) || portalUrl} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-semibold text-[var(--accent)] transition-colors hover:bg-[#F7F5F0]">{text(cta.button_label) || 'Mulai pendaftaran'}<ArrowRight className="h-4 w-4" /></Link></div></section>
