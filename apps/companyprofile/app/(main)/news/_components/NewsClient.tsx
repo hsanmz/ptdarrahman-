@@ -110,6 +110,7 @@ export default function NewsClient({ news }: { news: NewsArticle[] }) {
   return (
     <>
       <PageHeader
+        variant="editorial"
         title="Berita & Acara"
         subtitle="Ikuti kabar terkini, prestasi santri, agenda kegiatan, dan inovasi pendidikan di PTDARRAHMAN"
         badge="KABAR & ARTIKEL"

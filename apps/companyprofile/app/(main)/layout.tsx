@@ -4,6 +4,7 @@ import LoaderScreen from "@/app/components/ui/LoaderScreen"
 import SupportFabInit from "@/app/components/ui/SupportFabInit"
 import PageTransition from "@/app/components/ui/PageTransition"
 import RealtimeWatcher from "@/app/components/ui/RealtimeWatcher"
+import ScrollProgress from "@/app/components/ui/ScrollProgress"
 import { getProgramsCached, getSettings } from "@/app/lib/api"
 
 export default async function MainLayout({
@@ -19,6 +20,7 @@ export default async function MainLayout({
 
   return (
     <>
+      <ScrollProgress />
       <RealtimeWatcher module="companyprofile" />
       <LoaderScreen logoUrl={logoUrl} />
       <SupportFabInit />

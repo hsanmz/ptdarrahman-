@@ -2,6 +2,8 @@
 'use client'
 
 import Link from 'next/link'
+import { motion } from 'framer-motion'
+import MagneticButton from '../ui/MagneticButton'
 
 import { ArrowRight, BookOpen, Cpu, Heart } from 'lucide-react'
 import {
@@ -68,7 +70,12 @@ export default function AboutPreview({ settings = {}, content = null }: { settin
                 </div>
 
                 {/* Right - Content */}
-                <div>
+                <motion.div
+                  initial={{ opacity: 0, y: 28 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: '-50px' }}
+                  transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                >
                   <span className="section-badge">
                     {badge}
                   </span>
@@ -81,12 +88,12 @@ export default function AboutPreview({ settings = {}, content = null }: { settin
 
                   <div className="flex flex-wrap gap-4 sm:gap-6 mb-6 sm:mb-8">
                     {coreValues.map((v) => (
-                      <div key={v.idn} className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[var(--accent-subtle)] flex items-center justify-center">
-                          <v.icon className="w-5 h-5 text-[var(--accent)]" />
+                      <div key={v.idn} className="flex items-center gap-3 group">
+                        <div className="w-10 h-10 rounded-xl bg-[var(--accent-subtle)] flex items-center justify-center group-hover:scale-110 group-hover:bg-[var(--accent)] group-hover:text-white transition-all duration-300">
+                          <v.icon className="w-5 h-5 text-[var(--accent)] group-hover:text-white transition-colors duration-300" />
                         </div>
                         <div>
-                          <span className="block text-sm font-semibold font-[var(--font-heading)]">
+                          <span className="block text-sm font-semibold font-[var(--font-heading)] group-hover:text-[var(--accent)] transition-colors duration-300">
                             {v.idn}
                           </span>
                           {v.description ? <span className="mt-0.5 block text-xs leading-relaxed text-[var(--text-muted)]">{v.description}</span> : null}
@@ -95,14 +102,18 @@ export default function AboutPreview({ settings = {}, content = null }: { settin
                     ))}
                   </div>
 
-                  <Link
-                    href="/about"
-                    className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--accent)] hover:gap-3 transition-all group"
-                  >
-                    {'Pelajari Lebih Lanjut'}
-                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                  </Link>
-                </div>
+                  <div className="mt-2">
+                    <MagneticButton strength={0.3}>
+                      <Link
+                        href="/about"
+                        className="inline-flex items-center gap-2 text-sm font-semibold text-[var(--accent)] hover:gap-3 transition-all group py-1.5 px-3 rounded-full hover:bg-[var(--accent-subtle)]/50 cursor-pointer"
+                      >
+                        <span>Pelajari Lebih Lanjut</span>
+                        <ArrowRight className="w-4 h-4 group-hover:translate-x-1.5 transition-transform duration-300" />
+                      </Link>
+                    </MagneticButton>
+                  </div>
+                </motion.div>
               </div>
             </div>
           </section>

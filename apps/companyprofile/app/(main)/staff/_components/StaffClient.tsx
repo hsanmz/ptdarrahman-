@@ -32,6 +32,7 @@ export default function StaffClient({ staff }: { staff: Staff[] }) {
   return (
     <>
       <PageHeader
+        variant="editorial"
         title="Guru & Staff"
         subtitle="Kenali tim pendidik dan profesional berdedikasi kami yang berkomitmen membentuk pemimpin masa depan"
       />

@@ -79,6 +79,7 @@ export default function FaqClient({ items }: { items: FaqItem[] }) {
   return (
     <>
       <PageHeader
+        variant="clean-blur"
         title="Pertanyaan Umum"
         subtitle="Kumpulan jawaban atas pertanyaan yang paling sering diajukan tentang PTDARRAHMAN, pendaftaran, program, dan kemitraan."
         badge="FAQ"

@@ -75,6 +75,7 @@ export default function FacilitiesClient({ facilities, wave = null }: { faciliti
   return (
     <>
       <PageHeader
+        variant="clean-blur"
         title="Fasilitas Kami"
         subtitle="Fasilitas kelas dunia yang dirancang untuk menginspirasi pembelajaran, kreativitas, dan pertumbuhan spiritual"
         badge="KAMPUS PREMIUM"

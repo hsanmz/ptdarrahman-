@@ -1002,7 +1002,6 @@ export default function AdminDashboard() {
               Banner beranda hanya menampilkan gambar. Gunakan JPG, PNG, atau WebP maksimal 5 MB, rasio rekomendasi 16:9, dan pilih tinggi banner saat membuat atau mengedit data.
             </div>
           )}
-          {activeTab === 'hero' && !loading && <HomeCtaEditor canCrud={canCrud} />}
 
           {activeTab === 'leadership' && !loading && items.length > 0 && (
             <LeadershipCards
@@ -1160,6 +1159,13 @@ export default function AdminDashboard() {
                 </Table>
               </div>
             </Card>
+          )}
+
+          {/* Pengaturan CTA Beranda — ditempatkan di bawah tabel banner */}
+          {activeTab === 'hero' && !loading && (
+            <div className="mt-8">
+              <HomeCtaEditor canCrud={canCrud} />
+            </div>
           )}
 
           {/* Load more */}

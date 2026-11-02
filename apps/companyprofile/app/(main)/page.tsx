@@ -4,14 +4,13 @@ import HeroSection from '@/app/components/sections/HeroSection'
 import AboutPreview from '@/app/components/sections/AboutPreview'
 import ProgramsPreview from '@/app/components/sections/ProgramsPreview'
 import StatsSection from '@/app/components/sections/StatsSection'
+import CTASection from '@/app/components/sections/CTASection'
 import { getAboutContentRows, getHeroSlides, getTestimonials, getPrograms, getSettings } from '@/app/lib/api'
 import { getTestimonialsDummyFallback } from '@/app/lib/dummyTestimonials'
 import { fetchActivePpdbWave } from '@/app/lib/ppdb'
 import type { AboutContent, HeroSlide, Program, SettingsItem, HomeCtaContent } from '@/app/lib/types'
-import { resolvePortalUrl } from '@repo/ui'
 
 const TestimonialsCarousel = dynamic(() => import('@/app/components/sections/TestimonialsCarousel'))
-const CTASection = dynamic(() => import('@/app/components/sections/CTASection'))
 
 export const metadata: Metadata = {
   description:
@@ -60,7 +59,7 @@ export default async function Home() {
   try {
     const parsed = JSON.parse(settingsMap.home_cta || 'null') as HomeCtaContent | null
     if (parsed?.enabled && parsed.title && parsed.description && parsed.button_text) {
-      homeCta = { ...parsed, button_url: resolvePortalUrl(process.env.NEXT_PUBLIC_PORTAL_URL) }
+      homeCta = parsed
     }
   } catch {
     homeCta = null
@@ -69,13 +68,13 @@ export default async function Home() {
   return (
     <>
       <HeroSection slides={heroSlides} />
-      {homeCta ? <CTASection content={homeCta} wave={wave} /> : null}
 
       <div className="verse-divider" />
       <AboutPreview settings={settingsMap} content={homeAbout} />
       <StatsSection content={homeAbout} />
       <ProgramsPreview programs={programs ?? []} />
       <TestimonialsCarousel testimonials={testimonials ?? []} />
+      {homeCta ? <CTASection content={homeCta} wave={wave} /> : null}
     </>
   )
 }

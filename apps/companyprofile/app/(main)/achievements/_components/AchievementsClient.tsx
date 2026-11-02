@@ -25,8 +25,9 @@ export default function AchievementsClient({ achievements }: { achievements: Ach
   return (
     <>
       <PageHeader
-        title="Prestasi"
-        subtitle="Perjalanan prestasi santri Ar-Rahman di tingkat provinsi, nasional, dan internasional"
+        variant="gold-shimmer"
+        title="Prestasi Gemilang"
+        subtitle="Perjalanan prestasi santri PTDARRAHMAN di tingkat provinsi, nasional, dan internasional"
         badge="TONGGAK PRESTASI"
       />
 
@@ -92,7 +93,7 @@ export default function AchievementsClient({ achievements }: { achievements: Ach
                     </div>
                   </div>
                   <div className="p-5">
-                    <h3 className="font-[var(--font-heading)] text-base font-bold text-[var(--text)] mb-2 leading-snug">{info.title}</h3>
+                    <h3 className="font-[var(--font-heading)] text-base font-bold text-[var(--text)] group-hover:text-[var(--accent)] transition-colors duration-200 mb-2 leading-snug">{info.title}</h3>
                     <p className="text-sm text-[var(--text-secondary)] leading-relaxed">{info.desc}</p>
                   </div>
                 </div>
