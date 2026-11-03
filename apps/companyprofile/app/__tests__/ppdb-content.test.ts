@@ -70,7 +70,7 @@ describe('STATIC_PPDB_CONTENT — konten statis halaman /ppdb', () => {
 
 describe('STATIC_PPDB_COPY — teks seksi & CTA', () => {
   it('memuat copy hero 3D lengkap', () => {
-    expect(STATIC_PPDB_COPY.hero_title).toContain('Rekayasa Teknologi')
+    expect(STATIC_PPDB_COPY.hero_title).toContain('Ahli Teknologi')
     expect(STATIC_PPDB_COPY.hero_desc).toBeTruthy()
     expect(STATIC_PPDB_COPY.hero_cta_href).toBe('/register')
     expect(STATIC_PPDB_COPY.hero_register_href).toBe('/register')

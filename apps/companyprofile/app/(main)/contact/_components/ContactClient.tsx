@@ -82,14 +82,15 @@ export default function ContactClient({
   faqs?: FaqItem[]
   wave?: ActivePpdbWave | null
 }) {
+  const [prevDynamicFaqs, setPrevDynamicFaqs] = useState(dynamicFaqs)
   const [faqList, setFaqList] = useState<FaqItem[]>(dynamicFaqs)
+  if (dynamicFaqs !== prevDynamicFaqs) {
+    setPrevDynamicFaqs(dynamicFaqs)
+    setFaqList(dynamicFaqs)
+  }
   const sectionRef = useRef<HTMLElement>(null)
   const ppdb = buildSchedule(wave)
   const scheduleFaq = { question: 'Bagaimana jadwal pendaftaran?', answer: buildScheduleAnswer(ppdb) }
-
-  useEffect(() => {
-    setFaqList(dynamicFaqs)
-  }, [dynamicFaqs])
 
   useEffect(() => {
     const handleRefresh = async () => {

@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { ArrowRight } from 'lucide-react'
 import { buildSchedule, type ActivePpdbWave } from '@/app/lib/ppdb'
@@ -21,12 +22,13 @@ interface Props {
  * Mengembalikan `null` jika tidak ada gelombang aktif.
  */
 export default function PpdbWaveBanner({ wave = null, variant = 'compact' }: Props) {
+  const [now] = useState(() => Date.now())
   const ppdb = buildSchedule(wave)
   if (!wave) return null
 
   // Wave aktif tapi belum buka pendaftaran → tampilkan countdown ke tanggal buka
-  const isBeforeStart = ppdb.start && ppdb.start.getTime() > Date.now()
-  const isAfterEnd = ppdb.end ? ppdb.end.getTime() < Date.now() : false
+  const isBeforeStart = Boolean(ppdb.start && ppdb.start.getTime() > now)
+  const isAfterEnd = Boolean(ppdb.end && ppdb.end.getTime() < now)
   const isOpen = !isBeforeStart && !isAfterEnd
 
   if (variant === 'compact') {

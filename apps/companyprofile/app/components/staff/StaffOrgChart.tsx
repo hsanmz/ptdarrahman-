@@ -50,6 +50,7 @@ function TreeNode({
       >
         <span className="block w-16 h-16 rounded-full overflow-hidden border-2 border-[var(--accent)]/20 relative mb-3">
           {s.image ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
             <img src={s.image} alt={p.name || ''} className="object-cover w-full h-full" />
           ) : (
             <span className="flex w-full h-full items-center justify-center bg-[var(--bg)] text-[var(--accent)] font-bold">

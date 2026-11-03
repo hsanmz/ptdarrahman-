@@ -1,4 +1,5 @@
 'use client'
+/* eslint-disable @next/next/no-img-element -- Gambar thumbnail CMS admin */
 
 import { Pencil, Plus, Trash2, Users } from 'lucide-react'
 import { Button } from '@/app/components/ui/Button'

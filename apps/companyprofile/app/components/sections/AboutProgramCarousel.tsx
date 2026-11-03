@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useSyncExternalStore } from 'react'
 import Image from 'next/image'
 import { motion, useReducedMotion } from 'framer-motion'
 import ShapeDivider from '@/app/components/ui/ShapeDivider'
@@ -102,13 +102,11 @@ function ProgramCardView({ p, index }: { p: ProgramCard; index: number }) {
   )
 }
 
+const emptySubscribe = () => () => {}
+
 export default function AboutProgramCarousel() {
   const reduced = useReducedMotion()
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false)
 
   const isReduced = mounted && Boolean(reduced)
   const distance = programs.length * STEP

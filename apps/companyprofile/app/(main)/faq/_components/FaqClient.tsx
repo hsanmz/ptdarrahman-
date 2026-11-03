@@ -49,14 +49,15 @@ function FaqItem({ item, index, defaultOpen }: { item: FaqItem; index: number; d
 }
 
 export default function FaqClient({ items }: { items: FaqItem[] }) {
+  const [prevItems, setPrevItems] = useState(items)
   const [faqList, setFaqList] = useState<FaqItem[]>(items)
+  if (items !== prevItems) {
+    setPrevItems(items)
+    setFaqList(items)
+  }
 
   // Langganan SSE real-time untuk modul companyprofile
   useSSE('companyprofile')
-
-  useEffect(() => {
-    setFaqList(items)
-  }, [items])
 
   useEffect(() => {
     const handleRefresh = async () => {

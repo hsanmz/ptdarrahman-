@@ -5,7 +5,7 @@ import type { GalleryItem } from '../lib/types'
 
 // Mock next/image
 vi.mock('next/image', () => ({
-  default: (props: any) => {
+  default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => {
     // eslint-disable-next-line @next/next/no-img-element
     return <img {...props} alt={props.alt || ''} />
   },

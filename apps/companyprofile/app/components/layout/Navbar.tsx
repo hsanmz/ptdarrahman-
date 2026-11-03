@@ -55,13 +55,7 @@ export default function Navbar({ programs = [] }: { programs?: Program[] }) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
   const { logoUrl } = useBrand(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000')
-  const [portalUrl, setPortalUrl] = useState(() =>
-    resolvePortalUrl(process.env.NEXT_PUBLIC_PORTAL_URL)
-  )
-
-  useEffect(() => {
-    setPortalUrl(resolvePortalUrl(process.env.NEXT_PUBLIC_PORTAL_URL))
-  }, [])
+  const portalUrl = resolvePortalUrl(process.env.NEXT_PUBLIC_PORTAL_URL)
 
   const pathname = usePathname()
   const dropdownTimer = useRef<ReturnType<typeof setTimeout> | null>(null)

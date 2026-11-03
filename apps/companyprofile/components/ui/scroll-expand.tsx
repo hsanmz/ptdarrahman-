@@ -6,6 +6,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import {
@@ -147,6 +148,8 @@ interface Geometry {
  * Inset: satu-satunya animasi — lingkaran kecil muncul di titik `origin`
  * lalu membesar halus untuk mengungkap seluruh konten.
  */
+const emptySubscribe = () => () => {};
+
 export const ScrollExpandInset = ({
   children,
   origin,
@@ -155,15 +158,11 @@ export const ScrollExpandInset = ({
 }: ScrollExpandInsetProps) => {
   const progress = useScrollExpandProgress();
   const reduced = useReducedMotion();
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(emptySubscribe, () => true, () => false);
 
   const revealRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const [geom, setGeom] = useState<Geometry>({ x: 0, y: 0, r: 0, fit: 1 });
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const isReduced = mounted && Boolean(reduced);
 

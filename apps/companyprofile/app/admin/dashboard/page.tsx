@@ -12,7 +12,6 @@ import {
   Link as LinkIcon,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import ProfileModal from '@/app/components/ProfileModal'
 import CrossTabSync from '@/app/components/CrossTabSync'
 import EmptyState from '@/app/components/ui/EmptyState'
 import { DashboardShell } from '@repo/ui'
@@ -243,7 +242,6 @@ export default function AdminDashboard() {
 
   // ── UI state ──────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState('news')
-  const [profileOpen, setProfileOpen] = useState(false)
   // Filter pencarian (Testimoni & Galeri) dikunci pada tab asalnya: begitu
   // admin pindah tab, filter otomatis dianggap kosong. Pola derived-state ini
   // menghindari useEffect yang memanggil setState (cascading render).
@@ -1313,7 +1311,6 @@ export default function AdminDashboard() {
         />
       )}
 
-      {false && profileOpen && false}
       <CrossTabSync />
     </>
   )

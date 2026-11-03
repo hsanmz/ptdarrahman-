@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   AlertTriangle, Check, Clock, ExternalLink, Globe, GraduationCap, Loader2,
   Mail, Map as MapIcon, MapPin, MessageCircle, Phone, Save,
@@ -229,15 +229,14 @@ function ContactRowsPreview({ form }: { form: ContactFormState }) {
 }
 
 function MapPreview({ embed }: { embed: MapsEmbedResolved }) {
-  const [previewSrc, setPreviewSrc] = useState<string | null>(embed.status === 'valid' ? embed.src : null)
   const [loadFailed, setLoadFailed] = useState(false)
+  const [prevSrc, setPrevSrc] = useState(embed.src)
+  if (embed.src !== prevSrc) {
+    setPrevSrc(embed.src)
+    setLoadFailed(false)
+  }
 
-  useEffect(() => {
-    if (embed.status === 'valid' && embed.src) {
-      setPreviewSrc(embed.src)
-      setLoadFailed(false)
-    }
-  }, [embed.status, embed.src])
+  const previewSrc = embed.status === 'valid' ? embed.src : null
 
   return (
     <div className="grid gap-2.5">
@@ -306,7 +305,6 @@ export function ContactEditor({ contactInfo, canCrud, onSave }: Props) {
 
   // Refs untuk debounce auto-save
   const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pendingSaveRef = useRef<ContactFormState | null>(null)
 
   // ── Sinkron server → form (SSE / refetch) ────────────────────────────────
   const [prevContact, setPrevContact] = useState(contactInfo)

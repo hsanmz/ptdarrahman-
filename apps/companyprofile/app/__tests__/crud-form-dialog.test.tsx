@@ -184,10 +184,10 @@ function NewsHarness({ initial = EMPTY_NEWS_FORM, onClose = vi.fn() }: { initial
 
 describe('CrudFormDialog — modal berita & scroll independen', () => {
   it('merender modal berita dengan scroll independen kolom kiri dan kolom kanan', () => {
-    const { container } = render(<NewsHarness />)
+    render(<NewsHarness />)
 
     // Kolom kiri: data pendukung + gambar + galeri
-    const leftPane = container.querySelector('.news-scroll-pane')
+    const leftPane = document.body.querySelector('.news-scroll-pane')
     expect(leftPane).toBeTruthy()
     expect(leftPane?.className).toContain('overflow-y-auto')
     expect(leftPane?.className).toContain('overscroll-contain')
@@ -202,12 +202,12 @@ describe('CrudFormDialog — modal berita & scroll independen', () => {
     expect(screen.getByText('Isi Berita')).toBeTruthy()
 
     // Toolbar editor harus tidak ikut scroll (shrink-0)
-    const toolbar = container.querySelector('[aria-label="Format blok"]')?.closest('div')
+    const toolbar = document.body.querySelector('[aria-label="Format blok"]')?.closest('div')
     expect(toolbar).toBeTruthy()
     expect(toolbar?.className).toContain('shrink-0')
 
     // Area tulis editor berita memiliki scroll independen saat konten meluap
-    const editorContent = container.querySelector('.news-editor-content')
+    const editorContent = document.body.querySelector('.news-editor-content')
     expect(editorContent).toBeTruthy()
     expect(editorContent?.className).toContain('overflow-y-auto')
     expect(editorContent?.className).toContain('overscroll-contain')

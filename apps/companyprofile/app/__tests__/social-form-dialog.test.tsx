@@ -259,7 +259,7 @@ describe('SocialFormDialog — proteksi perubahan belum disimpan', () => {
 
 describe('SocialFormDialog — layout dua kolom scroll independen', () => {
   it('header/footer fixed + kedua kolom punya area scroll masing-masing (md+)', () => {
-    const { container } = render(<SocialHarness />)
+    render(<SocialHarness />)
 
     // Radix Portal merender ke document.body — query pakai body, bukan container.
     const panes = document.body.querySelectorAll('.social-form-pane')

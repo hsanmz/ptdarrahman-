@@ -7,8 +7,8 @@ import { toast } from '@/app/components/ui/AdminToast'
 import { Button } from '@/app/components/ui/Button'
 import { Input } from '@/app/components/ui/Input'
 import { Textarea } from '@/app/components/ui/Textarea'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/app/components/ui/Card'
-import { Globe, Link as LinkIcon, Mail, MessageCircle } from 'lucide-react'
+import { Card, CardContent, CardHeader } from '@/app/components/ui/Card'
+import { Globe, Link as LinkIcon, MessageCircle } from 'lucide-react'
 import { cn } from '@/app/lib/utils'
 import { ImageField } from './settings/ImageField'
 
@@ -228,7 +228,7 @@ export function SettingsEditor({ settings, canCrud }: Props) {
                 value={values.logo ?? ''}
                 onChange={(val: string) => markDirty('logo', val)}
                 onUploadingChange={(up: boolean) => setUploading(up ? 'logo' : null)}
-                onDirtyChange={(d: boolean) => setDirty((prev) => { const next = new Set(prev); d ? next.add('logo') : next.delete('logo'); return next })}
+                onDirtyChange={(d: boolean) => setDirty((prev) => { const next = new Set(prev); if (d) next.add('logo'); else next.delete('logo'); return next })}
                 disabled={!canCrud || saving === 'logo'}
                 previewAlt="Logo website"
                 maxBytes={2 * 1024 * 1024}
@@ -265,7 +265,7 @@ export function SettingsEditor({ settings, canCrud }: Props) {
                 value={values.favicon ?? ''}
                 onChange={(val: string) => markDirty('favicon', val)}
                 onUploadingChange={(up: boolean) => setUploading(up ? 'favicon' : null)}
-                onDirtyChange={(d: boolean) => setDirty((prev) => { const next = new Set(prev); d ? next.add('favicon') : next.delete('favicon'); return next })}
+                onDirtyChange={(d: boolean) => setDirty((prev) => { const next = new Set(prev); if (d) next.add('favicon'); else next.delete('favicon'); return next })}
                 disabled={!canCrud || saving === 'favicon'}
                 previewAlt="Favicon website"
                 maxBytes={2 * 1024 * 1024}

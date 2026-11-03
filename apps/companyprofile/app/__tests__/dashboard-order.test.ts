@@ -56,7 +56,9 @@ describe('sortRowsByOrder — urutan baris tabel dashboard', () => {
 
   it('mencakup seluruh entitas yang punya konsep urutan', () => {
     expect(Object.keys(ORDER_SOURCE).sort()).toEqual([
+      'about',
       'hero',
+      'leadership',
       'programs',
       'staff',
       'testimonials',

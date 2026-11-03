@@ -453,10 +453,10 @@ export default function ProgramsClient({ programs }: { programs: Program[] }) {
                   <BookOpen className="w-6 h-6" />
                 </div>
                 <h3 className="text-lg font-bold font-[var(--font-heading)] text-[var(--text)] mb-2">
-                  Al-Qur'an Sebagai Pondasi
+                  Al-Qur&apos;an Sebagai Pondasi
                 </h3>
                 <p className="text-sm text-[var(--text-secondary)] leading-relaxed">
-                  Menanamkan aqidah shahihah, hafalan 30 juz mutqin, dan akhlak qur'ani sebagai landasan moral setiap langkah kehidupan santri.
+                  Menanamkan aqidah shahihah, hafalan 30 juz mutqin, dan akhlak qur&apos;ani sebagai landasan moral setiap langkah kehidupan santri.
                 </p>
               </div>
 

@@ -287,6 +287,7 @@ export default function ProgramsPreview({ programs = [] }: { programs?: Program[
                   >
                     {prog.image ? (
                       <div className="relative h-36 overflow-hidden bg-[var(--bg)] sm:h-40">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={resolveImageSrc(prog.image, API_BASE)}
                           alt=""

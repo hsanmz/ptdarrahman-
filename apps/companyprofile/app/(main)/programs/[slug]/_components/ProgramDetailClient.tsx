@@ -114,6 +114,7 @@ export default function ProgramDetailClient({ program, others = [], wave = null 
               {/* Banner Gambar Program */}
               {program.image && (
                 <div className="relative aspect-[16/9] rounded-2xl overflow-hidden border border-[var(--color-border)] shadow-md bg-[var(--bg-secondary)]">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={resolveImageSrc(program.image, API_BASE)}
                     alt={info.title || ''}

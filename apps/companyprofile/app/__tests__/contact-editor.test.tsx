@@ -1,5 +1,5 @@
-import { describe, it, expect, afterEach, vi, beforeEach } from 'vitest'
-import { render, screen, cleanup, fireEvent, waitFor, act } from '@testing-library/react'
+import { describe, it, expect, afterEach, vi } from 'vitest'
+import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
 
 import { ContactEditor } from '../admin/dashboard/ContactEditor'
 import AdminConfirm from '../components/ui/AdminConfirm'

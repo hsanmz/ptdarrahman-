@@ -1,4 +1,5 @@
 'use client'
+/* eslint-disable @next/next/no-img-element -- Gambar thumbnail CMS admin */
 
 import {
   BookOpen, CheckCircle2, FileText, Image as ImageIcon, Info, Megaphone,

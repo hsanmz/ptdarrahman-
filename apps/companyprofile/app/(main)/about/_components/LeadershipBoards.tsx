@@ -97,6 +97,7 @@ export default function LeadershipBoards({
                           <div className="flex items-center gap-4 sm:gap-5 mb-5">
                             {photo ? (
                               <div className="relative w-16 h-16 sm:w-20 sm:h-20 shrink-0 rounded-2xl overflow-hidden border-2 border-[var(--accent)]/30 group-hover:border-[var(--accent)] shadow-md transition-all duration-300">
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
                                   src={resolveImageSrc(photo, API_BASE)}
                                   alt={member.name}

@@ -1,5 +1,4 @@
 import { useRef, useEffect, useState } from 'react';
-import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js';
@@ -31,9 +30,8 @@ export function WisudaHero({
   scale = 1,
 }: WisudaHeroProps) {
   const [error, setError] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
+  const [scene, setScene] = useState<THREE.Group | null>(null);
   const groupRef = useRef<THREE.Group>(null);
-  const gltfSceneRef = useRef<THREE.Group | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -66,8 +64,7 @@ export function WisudaHero({
         const autoScale = maxDim > 0 ? 2 / maxDim : 1;
         gltf.scene.scale.setScalar(autoScale);
 
-        gltfSceneRef.current = gltf.scene as THREE.Group;
-        setLoaded(true);
+        setScene(gltf.scene as THREE.Group);
         console.log('[WisudaHero] model loaded & centered, size:', size, 'autoScale:', autoScale);
       } catch (e) {
         if (cancelled) return;
@@ -84,21 +81,21 @@ export function WisudaHero({
   }, []);
 
   useEffect(() => {
-    if (!groupRef.current || !gltfSceneRef.current) return;
+    if (!groupRef.current || !scene) return;
     groupRef.current.position.set(...position);
     groupRef.current.rotation.set(...rotation);
     groupRef.current.scale.set(scale, scale, scale);
-  }, [position, rotation, scale]);
+  }, [position, rotation, scale, scene]);
 
   if (error) {
     console.error('[WisudaHero] error state:', error);
     return null;
   }
-  if (!gltfSceneRef.current) return null;
+  if (!scene) return null;
 
   return (
     <group ref={groupRef}>
-      <primitive object={gltfSceneRef.current} dispose={null} />
+      <primitive object={scene} dispose={null} />
     </group>
   );
 }

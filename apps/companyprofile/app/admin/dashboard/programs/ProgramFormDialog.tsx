@@ -32,10 +32,6 @@ function contentOf(item: RowRecord | null): Record<string, unknown> {
   return item?.content && typeof item.content === 'object' ? item.content : {}
 }
 
-function listValue(raw: unknown): string {
-  return Array.isArray(raw) ? raw.filter((value): value is string => typeof value === 'string').join('\n') : typeof raw === 'string' ? raw : ''
-}
-
 export function ProgramFormDialog({ mode, editingItem, formData, setFormData, onClose, onSaved }: Props) {
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)

@@ -143,11 +143,6 @@ export function HomeCtaEditor({ canCrud }: { canCrud: boolean }) {
     )
   }
 
-  const isAlignRight = (editing ? draft.layout : value?.layout) === 'right'
-  const displayTitle = editing ? draft.title : value?.title
-  const displayDesc = editing ? draft.description : value?.description
-  const displayBtn = editing ? draft.button_text : value?.button_text
-
   return (
     <section className="mb-8 overflow-hidden rounded-2xl border border-[var(--border)]/80 bg-white/95 shadow-sm">
       {/* Header Panel */}
