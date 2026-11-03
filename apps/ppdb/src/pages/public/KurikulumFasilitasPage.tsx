@@ -20,6 +20,7 @@ export default function KurikulumFasilitasPage() {
 
   const [programs, setPrograms] = useState<ProgramItem[]>([])
   const [facilities, setFacilities] = useState<FacilityItem[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function loadData() {
@@ -32,6 +33,8 @@ export default function KurikulumFasilitasPage() {
         setFacilities(facData)
       } catch (err) {
         console.error('Failed to load CP programs/facilities', err)
+      } finally {
+        setLoading(false)
       }
     }
     loadData()

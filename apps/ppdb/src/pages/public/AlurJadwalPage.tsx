@@ -21,11 +21,13 @@ interface ActiveWaveInfo {
 export default function AlurJadwalPage() {
   const navigate = useNavigate()
   const [wave, setWave] = useState<ActiveWaveInfo | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     apiFetch<ActiveWaveInfo>('/ppdb/waves/active-public')
       .then((data) => setWave(data))
       .catch(() => setWave({ active: false }))
+      .finally(() => setLoading(false))
   }, [])
 
   const formatDate = (dateStr?: string | null) => {

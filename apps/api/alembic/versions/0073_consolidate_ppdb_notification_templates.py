@@ -1,7 +1,7 @@
 """Consolidate duplicate PPDB payment-expiry notifications.
 
-Revision ID: 0072
-Revises: 0071
+Revision ID: 0073
+Revises: 0072
 """
 
 from __future__ import annotations
@@ -14,8 +14,8 @@ import sqlalchemy as sa
 
 from alembic import op
 
-revision: str = "0072"
-down_revision: str | None = "0071"
+revision: str = "0073"
+down_revision: str | None = "0072"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

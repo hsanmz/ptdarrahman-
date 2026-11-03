@@ -13,11 +13,13 @@ export default function BiayaBeasiswaPage() {
   const navigate = useNavigate()
   const [fees, setFees] = useState<FeesSummary | null>(null)
   const [selectedDiscountView, setSelectedDiscountView] = useState<'regular' | 'early'>('regular')
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetchPublicFees()
       .then((data) => setFees(data))
       .catch((err) => console.error('Failed to load public fees', err))
+      .finally(() => setLoading(false))
   }, [])
 
   const formatRupiah = (val: number) => {

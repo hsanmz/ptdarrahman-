@@ -28,6 +28,7 @@ interface ActiveWaveData {
 export default function LandingPage() {
   const navigate = useNavigate()
   const [wave, setWave] = useState<ActiveWaveData | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     apiFetch<ActiveWaveData>('/ppdb/waves/active-public')
@@ -37,6 +38,7 @@ export default function LandingPage() {
       .catch(() => {
         setWave({ active: false })
       })
+      .finally(() => setLoading(false))
   }, [])
 
   const isOpen = wave?.active === true || wave?.registration_open === true
