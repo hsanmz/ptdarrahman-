@@ -6,7 +6,6 @@ import {
   Search, Info, Copy, Check, Download, Tag,
 } from 'lucide-react'
 import PageHeaderCard, { type HeaderBlock } from '@/components/shared/PageHeaderCard'
-import { ConfirmDialog } from '@/components/ui/confirmdialog'
 import { useToast } from '@/components/Toast'
 import { apiFetch } from '@/api/client'
 import { useCanPage } from '@/hooks/useCan'
@@ -17,7 +16,7 @@ import {
   Button,
   Badge,
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-  Input, Label, Textarea, Checkbox,
+  Input, Label, Textarea,
   Tabs, TabsList, TabsTrigger, TabsContent,
   EmptyState,
 } from '@/components/ui'
@@ -55,7 +54,6 @@ interface Recipient {
   username: string
   email: string
   phone: string
-  type: 'Admin' | 'Pendaftar'
 }
 
 // ── Variabel template dari spec notifikasi ────────────────────────────────────
@@ -124,22 +122,21 @@ const PREVIEW_CONTEXT: Record<string, string> = {
 
 // Event key kanonikal berdasarkan spec notifikasi (urutan per fase)
 const SPEC_EVENT_KEYS: Array<{ key: string; label: string; phase: string }> = [
-  { key: 'user_created',               label: 'Akun Dibuat — Kredensial ke Pengguna',     phase: '1 – Akun' },
   { key: 'account_updated',            label: 'Username/Email/Telepon Diubah',           phase: '1 – Akun' },
   { key: 'password_reset',             label: 'Password Direset Admin',                  phase: '1 – Akun' },
   { key: 'password_changed',           label: 'Password Diubah Pengguna',                phase: '1 – Akun' },
   // Fase 1
   { key: 'registration_account_created', label: 'Pendaftaran Akun Berhasil',              phase: '1 – Pendaftaran' },
   { key: 'payment_success_formulir',     label: 'Pembayaran Formulir Berhasil',           phase: '1 – Pendaftaran' },
-  { key: 'wave_closed_pending_payment',  label: 'Gelombang Ditutup – Tagihan Dibatalkan', phase: '1 – Pendaftaran' },
   { key: 'payment_reminder_monday',      label: 'Pengingat Bayar Formulir (Senin)',       phase: '1 – Pendaftaran' },
-  { key: 'payment_expired',              label: 'Pendaftaran Kedaluwarsa',                phase: '1 – Pendaftaran' },
+  { key: 'payment_expired',              label: 'Tagihan Formulir Kedaluwarsa/Dibatalkan', phase: '1 – Pendaftaran' },
   // Fase 2
   { key: 'document_rejected_revision',   label: 'Dokumen Ditolak – Perlu Revisi',         phase: '2 – Dokumen' },
   { key: 'documents_submitted',          label: 'Dokumen Dikirim untuk Verifikasi',       phase: '2 – Dokumen' },
   { key: 'document_approved',            label: 'Dokumen Disetujui',                      phase: '2 – Dokumen' },
   // Fase 3
   { key: 'session_confirmed',            label: 'Jadwal Seleksi Ditetapkan atau Diubah',   phase: '3 – Penilaian' },
+  { key: 'selection_session_broadcast',  label: 'Informasi Tambahan Sesi Seleksi',        phase: '3 – Penilaian' },
   { key: 'assessment_stage_completed',   label: 'Tahap Penilaian Selesai',                phase: '3 – Penilaian' },
   // Fase 4
   { key: 'registration_result_passed',   label: 'Hasil Pendaftaran: Diterima',            phase: '4 – Hasil Pendaftaran' },
@@ -230,265 +227,125 @@ function VarChip({
 
 // ── Tab: Kirim Pesan ──────────────────────────────────────────────────────────
 
-function SendTab({ templates, canCrud = true }: { templates: Template[]; canCrud?: boolean }) {
-  const { toast } = useToast()
+function SendTab() {
   const [recipients, setRecipients] = useState<Recipient[]>([])
   const [recLoading, setRecLoading] = useState(true)
-  const [selected, setSelected] = useState<Set<string>>(new Set())
   const [filter, setFilter] = useState('')
-  const [body, setBody] = useState('')
-  const [useTemplate, setUseTemplate] = useState(false)
-  const [selectedTpl, setSelectedTpl] = useState('')
-  const [sending, setSending] = useState(false)
-  const [confirmOpen, setConfirmOpen] = useState(false)
 
   useEffect(() => {
-    Promise.all([
-      apiFetch<any>('/users?per_page=500'),
-      apiFetch<any>('/ppdb/applicants?perPage=500'),
-    ])
-      .then(([usersRes, applicantsRes]) => {
-        const ul: any[] = Array.isArray(usersRes) ? usersRes : (usersRes?.data ?? [])
-        const al: any[] = applicantsRes?.data ?? []
-        const list: Recipient[] = [
-          ...ul
-            .filter(u => u.user_type !== 'superadmin' && u.user_type !== 'applicant')
-            .map(u => ({
-              user_id: u.id,
-              name: u.full_name || u.username,
-              username: u.username,
-              email: u.email || '',
-              phone: u.phone || '',
-              type: 'Admin' as const,
+    apiFetch<any>('/ppdb/applicants?perPage=500')
+      .then((applicantsRes) => {
+        const applicants: any[] = applicantsRes?.data ?? []
+        setRecipients(
+          applicants
+            .filter(applicant => applicant.user_id)
+            .map(applicant => ({
+              user_id: applicant.user_id,
+              name: applicant.full_name,
+              username: applicant.username || '',
+              email: applicant.email || '',
+              phone: applicant.phone || '',
             })),
-          ...al
-            .filter(a => a.user_id)
-            .map(a => ({
-              user_id: a.user_id,
-              name: a.full_name,
-              username: a.username || '',
-              email: a.email || '',
-              phone: a.phone || '',
-              type: 'Pendaftar' as const,
-            })),
-        ]
-        setRecipients(list)
+        )
       })
       .catch(() => {})
       .finally(() => setRecLoading(false))
   }, [])
 
-  const filtered = recipients.filter(r => {
+  const filtered = recipients.filter(recipient => {
     if (!filter) return true
-    const q = filter.toLowerCase()
-    return [r.name, r.username, r.email, r.phone].some(v => v.toLowerCase().includes(q))
+    const query = filter.toLowerCase()
+    return [recipient.name, recipient.username, recipient.email, recipient.phone]
+      .some(value => value.toLowerCase().includes(query))
   })
 
-  function toggle(id: string) {
-    setSelected(prev => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
-  }
-
-  function onTplChange(id: string) {
-    setSelectedTpl(id)
-    const tpl = templates.find(t => t.id === id)
-    if (tpl) setBody(tpl.body)
-  }
-
-  async function doSend() {
-    setConfirmOpen(false)
-    setSending(true)
-    try {
-      const res = await apiFetch<any>('/notifications/send', {
-        method: 'POST',
-        body: JSON.stringify({
-          recipient_user_ids: Array.from(selected),
-          channel: 'whatsapp',
-          subject: '',
-          body,
-        }),
-      })
-      toast('success', res?.message || `Notifikasi diantrekan ke ${selected.size} penerima`)
-      setSelected(new Set())
-      setBody('')
-    } catch (e: unknown) {
-      toast('error', (e as Error).message || 'Gagal mengirim')
-    } finally {
-      setSending(false)
-    }
-  }
-
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
-      {/* Daftar penerima */}
+    <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-5">
       <Card className="lg:col-span-3">
-        <CardContent className="p-5 space-y-4">
+        <CardContent className="space-y-4 p-5">
           <div className="flex items-center justify-between">
-            <Label className="text-sm font-semibold">
-              Pilih Penerima ({selected.size} dipilih)
-            </Label>
-            <div className="flex gap-2">
-              <Button
-                type="button" variant="outline" size="sm"
-                onClick={() => setSelected(new Set(filtered.map(r => r.user_id)))}
-              >
-                Semua
-              </Button>
-              <Button
-                type="button" variant="outline" size="sm"
-                onClick={() => setSelected(new Set())}
-              >
-                Bersihkan
-              </Button>
-            </div>
+            <Label className="text-sm font-semibold">Akun Pendaftar</Label>
+            <span className="text-xs text-muted-foreground">{recipients.length} akun</span>
           </div>
 
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               className="pl-9"
-              placeholder="Cari nama / username / email / WA..."
+              placeholder="Cari nama / username / email / nomor WhatsApp..."
               value={filter}
-              onChange={e => setFilter(e.target.value)}
+              onChange={event => setFilter(event.target.value)}
             />
           </div>
 
-          <div className="max-h-72 overflow-y-auto rounded-xl border border-border p-1.5 space-y-0.5">
+          <div className="max-h-72 min-h-0 space-y-0.5 overflow-y-auto overscroll-contain rounded-xl border border-border p-1.5">
             {recLoading ? (
-              <p className="py-8 text-center text-sm text-muted-foreground">Memuat penerima...</p>
+              <p className="py-8 text-center text-sm text-muted-foreground">Memuat akun pendaftar...</p>
             ) : filtered.length === 0 ? (
               <EmptyState
                 icon={Users}
-                title="Tidak Ada Penerima"
-                description="Tidak ada user yang cocok."
-                className="bg-transparent border-transparent py-6"
+                title="Tidak Ada Pendaftar"
+                description="Tidak ada akun pendaftar yang cocok."
+                className="border-transparent bg-transparent py-6"
               />
             ) : (
-              filtered.map(r => (
-                <label
-                  key={r.user_id}
-                  className="flex cursor-pointer items-start gap-3 rounded-lg px-3 py-2 hover:bg-accent transition-colors"
+              filtered.map(recipient => (
+                <div
+                  key={recipient.user_id}
+                  className="flex items-start gap-3 rounded-lg px-3 py-2 transition-colors hover:bg-accent"
                 >
-                  <Checkbox
-                    checked={selected.has(r.user_id)}
-                    onCheckedChange={() => toggle(r.user_id)}
-                    className="mt-0.5"
-                  />
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 text-sm font-medium">
-                      <span className="truncate">{r.name}</span>
-                      <Badge variant="secondary" className="text-[10px] shrink-0">
-                        {r.type}
-                      </Badge>
+                      <span className="truncate">{recipient.name}</span>
+                      <Badge variant="secondary" className="shrink-0 text-[10px]">Pendaftar</Badge>
                     </div>
-                    <div className="text-xs text-muted-foreground truncate">
-                      {r.phone || 'Tanpa WA'}
+                    <div className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-muted-foreground">
+                      <span>@{recipient.username || 'tanpa username'}</span>
+                      <span>{recipient.phone || 'Tanpa nomor WhatsApp'}</span>
+                      {recipient.email && <span className="truncate">{recipient.email}</span>}
                     </div>
                   </div>
-                </label>
+                </div>
               ))
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Komposer pesan */}
       <Card className="lg:col-span-2">
-        <CardContent className="p-5 space-y-4">
-          {/* Channel badge — WA only */}
-          <div className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2">
-            <MessageSquare className="h-4 w-4 text-green-600 shrink-0" />
-            <span className="text-sm font-medium text-green-700">WhatsApp</span>
-            <span className="ml-auto text-xs text-green-600">Satu-satunya channel</span>
+        <CardContent className="space-y-4 p-5">
+          <div className="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+            <MessageSquare className="h-4 w-4 shrink-0 text-amber-600" />
+            <span className="text-sm font-semibold text-amber-800">Panduan Pesan Manual</span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="use-tpl"
-              checked={useTemplate}
-              onCheckedChange={v => setUseTemplate(Boolean(v))}
-            />
-            <label htmlFor="use-tpl" className="text-sm cursor-pointer">
-              Pakai template yang ada
-            </label>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Cari nomor pendaftar di daftar sebelah kiri, lalu hubungi secara manual melalui
+            aplikasi WhatsApp yang memakai nomor admin Anda. Halaman PPDB ini hanya menampilkan
+            akun pendaftar dan tidak mengirim pesan.
+          </p>
+
+          <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm leading-relaxed">
+            <p className="font-semibold">Pengiriman melalui sistem</p>
+            <p className="mt-1 text-muted-foreground">
+              Pengiriman otomatis memakai nomor WhatsApp sistem tersedia di halaman Notifikasi
+              Superadmin. Pengiriman dari nomor WhatsApp pribadi admin belum didukung untuk saat ini.
+            </p>
           </div>
 
-          {useTemplate && (
-            <div className="space-y-1.5">
-              <Label>Template</Label>
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                value={selectedTpl}
-                onChange={e => onTplChange(e.target.value)}
-              >
-                <option value="">— Pilih template —</option>
-                {templates
-                  .filter(t => t.is_active)
-                  .map(t => (
-                    <option key={t.id} value={t.id}>{t.label}</option>
-                  ))}
-              </select>
-            </div>
-          )}
-
-          <div className="space-y-1.5">
-            <Label>Body Pesan *</Label>
-            <Textarea
-              rows={8}
-              className="font-mono text-sm"
-              value={body}
-              onChange={e => setBody(e.target.value)}
-              placeholder="Tulis pesan atau pilih template di atas..."
-            />
+          <div className="rounded-lg border border-dashed border-border px-3 py-4 text-center text-xs text-muted-foreground">
+            Fitur kirim dari nomor WhatsApp admin belum tersedia.
           </div>
-
-          {body && (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-3">
-              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
-                Preview
-              </p>
-              <pre className="whitespace-pre-wrap break-words font-sans text-xs text-slate-700 leading-relaxed max-h-40 overflow-y-auto">
-                {renderPreview(body)}
-              </pre>
-            </div>
-          )}
-
-          {canCrud && (
-            <Button
-              className="w-full"
-              disabled={sending || selected.size === 0 || !body.trim()}
-              onClick={() => setConfirmOpen(true)}
-            >
-              <Send className="h-4 w-4 mr-2" />
-              {sending ? 'Mengirim...' : `Kirim ke ${selected.size} Penerima`}
-            </Button>
-          )}
         </CardContent>
       </Card>
-
-      <ConfirmDialog
-        isOpen={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
-        onConfirm={doSend}
-        title="Kirim Notifikasi WhatsApp"
-        message={`Notifikasi akan dikirim ke ${selected.size} penerima via WhatsApp.\n\nYakin ingin melanjutkan?`}
-        confirmLabel="Ya, Kirim"
-      />
     </div>
   )
 }
 
-// ── Tab: Template Manager ──────────────────────────────────────────────────────
-
+// Lookup: event_key → template dari DB
 interface TemplateTabProps {
-  /** Templates notifikasi yang dibaca dari database. */
   templates: Template[]
   loading: boolean
-  /** Dipanggil setelah simpan agar parent refresh state-nya. */
   onRefresh: () => void
   canCrud?: boolean
 }
@@ -498,7 +355,6 @@ function TemplateTab({ templates, loading, onRefresh, canCrud = true }: Template
   const [searchQuery, setSearchQuery] = useState('')
   const [phaseFilter, setPhaseFilter] = useState('')
 
-  // Lookup: event_key → template dari DB
   const templateByKey = Object.fromEntries(templates.map(t => [t.event_key, t]))
 
   // Event key dari spec yang belum ada di DB
@@ -957,7 +813,7 @@ function LogTab() {
 
   const fetchLogs = useCallback(
     (p: number, status: string, event: string) => {
-      const qs = new URLSearchParams({ page: String(p), perPage: '20' })
+      const qs = new URLSearchParams({ page: String(p), perPage: '20', scope: 'ppdb' })
       if (status) qs.set('status', status)
       if (event) qs.set('event_key', event)
       setLoading(true)
@@ -998,7 +854,7 @@ function LogTab() {
     <Card>
       <CardContent className="p-0">
         {/* Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-3.5 sm:px-5 py-3">
+        <div className="flex flex-col gap-3 border-b border-border bg-muted/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div className="flex items-center gap-2">
             <Inbox className="h-4 w-4 text-muted-foreground shrink-0" />
             <span className="text-sm font-semibold">Log Pengiriman</span>
@@ -1008,7 +864,7 @@ function LogTab() {
               </span>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <select
               value={statusFilter}
               onChange={e => setStatusFilter(e.target.value)}
@@ -1054,8 +910,8 @@ function LogTab() {
         </div>
 
         <div className="overflow-x-auto">
-          <Table className="min-w-[750px]">
-          <TableHeader className="bg-muted/40">
+          <Table className="min-w-[850px]">
+          <TableHeader className="sticky top-0 z-10 bg-slate-50">
             <TableRow>
               <TableHead className="whitespace-nowrap">Penerima</TableHead>
               <TableHead className="whitespace-nowrap">Event</TableHead>
@@ -1212,7 +1068,8 @@ export default function NotificationsPage() {
 
   useEffect(() => { fetchTemplates() }, [fetchTemplates])
 
-  const ppdbTemplates = templates.filter(t => t.event_key !== 'account_created')
+  const ppdbEventKeys = new Set(SPEC_EVENT_KEYS.map(event => event.key))
+  const ppdbTemplates = templates.filter(t => ppdbEventKeys.has(t.event_key))
   const activeCount = ppdbTemplates.filter(t => t.is_active).length
   const specCoveredCount = SPEC_EVENT_KEYS.filter(s =>
     templates.some(t => t.event_key === s.key),
@@ -1250,7 +1107,7 @@ export default function NotificationsPage() {
     <div className="space-y-6">
       <PageHeaderCard
         title="Sistem Notifikasi"
-        description="Kelola template pesan WhatsApp, pantau log pengiriman, dan kirim broadcast kustom."
+        description="Kelola notifikasi alur PPDB, pantau log, dan lihat panduan menghubungi pendaftar secara manual."
         docKey="ppdb-notifications"
         blocks={headerBlocks}
         loading={tplLoading}
@@ -1294,7 +1151,7 @@ export default function NotificationsPage() {
 
         {canCrud && (
           <TabsContent value="send">
-            <SendTab templates={ppdbTemplates} canCrud={canCrud} />
+            <SendTab />
           </TabsContent>
         )}
         <TabsContent value="templates">

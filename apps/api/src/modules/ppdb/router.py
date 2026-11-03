@@ -25,7 +25,6 @@ from src.core.dependencies import (
 )
 from src.core.rate_limit import rate_limit_dependency
 from src.modules.ppdb.schemas import (
-    ApplicantAdminCreate,
     ApplicantAdminUpdate,
     ApplicantPasswordReset,
     ApplicantProfileUpdate,
@@ -387,14 +386,16 @@ def get_applicants(
     )
 
 
-@router.post("/applicants", status_code=201)
-def create_applicant(
-    body: ApplicantAdminCreate,
-    user: dict = Depends(require_ppdb_admin),
-    service: PPDBService = Depends(get_ppdb_service),
-):
-    """Buat pendaftar dari panel admin. Kredensial dibuat sistem."""
-    return service.create_applicant(body)
+@router.post("/applicants")
+def create_applicant():
+    """Pembuatan pendaftar manual ditiadakan. Pendaftar wajib mendaftar mandiri."""
+    raise HTTPException(
+        status_code=400,
+        detail=(
+            "Akun pendaftar tidak dapat dibuat manual dari backoffice. "
+            "Calon santri wajib mendaftar mandiri melalui portal registrasi PPDB."
+        ),
+    )
 
 
 @router.get("/applicants/me")

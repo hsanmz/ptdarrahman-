@@ -117,7 +117,12 @@ export default function KurikulumFasilitasPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-8">
-              {programs.map((prog, idx) => (
+              {loading ? (
+                <p className="py-10 text-center text-sm text-slate-400 animate-pulse">
+                  Memuat kurikulum & fasilitas...
+                </p>
+              ) : (
+              programs.map((prog, idx) => (
                 <div
                   key={prog.id || idx}
                   className="overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-sm hover:shadow-xl hover:border-emerald-200 transition-all duration-300"
@@ -199,7 +204,8 @@ export default function KurikulumFasilitasPage() {
                     )}
                   </div>
                 </div>
-              ))}
+              ))
+              )}
             </div>
           </div>
         ) : (

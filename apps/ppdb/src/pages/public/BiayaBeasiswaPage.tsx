@@ -201,7 +201,14 @@ export default function BiayaBeasiswaPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {fees?.items.map((item, idx) => {
+                {loading ? (
+                  <tr>
+                    <td colSpan={5} className="py-8 px-6 text-center text-xs text-slate-400 animate-pulse">
+                      Memuat rincian biaya...
+                    </td>
+                  </tr>
+                ) : (
+                fees?.items.map((item, idx) => {
                   const discountAmt =
                     selectedDiscountView === 'regular'
                       ? item.regularDiscountAmount
@@ -239,7 +246,8 @@ export default function BiayaBeasiswaPage() {
                       </td>
                     </tr>
                   )
-                })}
+                })
+                )}
               </tbody>
               <tfoot>
                 {/* Total Row */}

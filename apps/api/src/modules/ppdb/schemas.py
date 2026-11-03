@@ -445,10 +445,6 @@ class ApplicantPasswordReset(BaseModel):
     password: str
 
 
-class ApplicantAdminCreate(ApplicantRegister):
-    wave_id: str = Field(min_length=1)
-
-
 class ApplicantAdminUpdate(BaseModel):
     wave_id: str | None = None
     full_name: str | None = Field(default=None, min_length=1, max_length=100)

@@ -123,7 +123,12 @@ export default function LandingPage() {
           <div className="flex flex-col items-center text-center">
             {/* Status Wave Announcement Pill */}
             <div className="mb-6 inline-flex items-center gap-2.5 rounded-full border border-emerald-primary/20 bg-white/80 px-4 py-2 text-xs md:text-sm font-semibold text-slate-700 shadow-sm backdrop-blur-md">
-              {isOpen ? (
+              {loading ? (
+                <>
+                  <Waves className="h-4 w-4 text-slate-400 animate-pulse" />
+                  <span className="text-slate-400">Memuat status gelombang...</span>
+                </>
+              ) : isOpen ? (
                 <>
                   <span className="relative flex h-2.5 w-2.5">
                     <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />

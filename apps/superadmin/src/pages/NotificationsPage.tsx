@@ -267,7 +267,7 @@ function SendTab({ templates }: { templates: Template[] }) {
   const previewBody = renderPreview(body)
 
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
+    <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-5">
       {/* Recipient list */}
       <Card className="lg:col-span-3">
         <CardContent className="p-5 space-y-4">
@@ -288,7 +288,7 @@ function SendTab({ templates }: { templates: Template[] }) {
             <Input className="pl-9" placeholder="Cari nama / username / email / WA..."
               value={filter} onChange={e => setFilter(e.target.value)} />
           </div>
-          <div className="max-h-72 overflow-y-auto rounded-xl border border-border p-1.5 space-y-0.5">
+          <div className="max-h-72 min-h-0 overscroll-contain overflow-y-auto rounded-xl border border-border p-1.5 space-y-0.5">
             {recLoading ? (
               <p className="py-8 text-center text-sm text-muted-foreground">Memuat data penerima...</p>
             ) : recError ? (
@@ -326,7 +326,7 @@ function SendTab({ templates }: { templates: Template[] }) {
           <div className="flex items-center gap-2 rounded-lg bg-green-50 border border-green-200 px-3 py-2">
             <MessageSquare className="h-4 w-4 text-green-600 shrink-0" />
             <span className="text-sm font-medium text-green-700">WhatsApp</span>
-            <span className="ml-auto text-xs text-green-600">Satu-satunya channel</span>
+            <span className="ml-auto text-right text-xs text-green-600">Nomor WhatsApp sistem yang tersambung</span>
           </div>
 
           <div className="flex items-center gap-2">
@@ -351,7 +351,7 @@ function SendTab({ templates }: { templates: Template[] }) {
 
           <div className="space-y-1.5">
             <Label>Body Pesan *</Label>
-            <Textarea rows={7} className="font-mono text-sm"
+            <Textarea rows={7} className="max-h-[40vh] min-h-36 resize-y overflow-y-auto overscroll-contain font-mono text-sm"
               value={body} onChange={e => setBody(e.target.value)}
               placeholder="Tulis pesan atau pilih template di atas..." />
           </div>
@@ -655,13 +655,13 @@ function LogTab() {
   return (
     <Card>
       <CardContent className="p-0">
-        <div className="flex flex-wrap items-center gap-3 border-b border-border px-5 py-3.5">
+        <div className="flex flex-col gap-3 border-b border-border bg-muted/20 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
           <div className="flex items-center gap-2 flex-1">
             <Inbox className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm font-semibold">Log Pengiriman</span>
             {total > 0 && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">{total}</span>}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setPage(1) }}
               className="h-8 rounded-md border border-input bg-background px-2 text-xs focus-visible:outline-none">
               <option value="">Semua Status</option>
@@ -686,8 +686,9 @@ function LogTab() {
           </div>
         </div>
 
-        <Table>
-          <TableHeader className="bg-muted/40">
+        <div className="overflow-x-auto">
+        <Table className="min-w-[850px]">
+          <TableHeader className="sticky top-0 z-10 bg-slate-50">
             <TableRow>
               <TableHead>Penerima</TableHead>
               <TableHead>Event</TableHead>
@@ -745,6 +746,7 @@ function LogTab() {
             })}
           </TableBody>
         </Table>
+        </div>
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between border-t border-border px-5 py-3 text-sm text-muted-foreground">

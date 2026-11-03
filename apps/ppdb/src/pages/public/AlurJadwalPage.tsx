@@ -141,19 +141,27 @@ export default function AlurJadwalPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <div className="text-xs text-slate-500 font-medium">Gelombang Pendaftaran:</div>
-                <div className="text-base font-extrabold text-slate-900 mt-0.5">
-                  {wave?.name || 'Gelombang 1'}
+              {loading ? (
+                <div className="sm:col-span-2 py-2 text-xs font-medium text-slate-400 animate-pulse">
+                  Memuat jadwal gelombang aktif...
                 </div>
-              </div>
+              ) : (
+                <>
+                  <div>
+                    <div className="text-xs text-slate-500 font-medium">Gelombang Pendaftaran:</div>
+                    <div className="text-base font-extrabold text-slate-900 mt-0.5">
+                      {wave?.name || 'Gelombang 1'}
+                    </div>
+                  </div>
 
-              <div>
-                <div className="text-xs text-slate-500 font-medium">Periode Pendaftaran:</div>
-                <div className="text-xs sm:text-sm font-bold text-emerald-primary mt-0.5">
-                  {formatDate(wave?.registration_start_date)} — {formatDate(wave?.registration_end_date)}
-                </div>
-              </div>
+                  <div>
+                    <div className="text-xs text-slate-500 font-medium">Periode Pendaftaran:</div>
+                    <div className="text-xs sm:text-sm font-bold text-emerald-primary mt-0.5">
+                      {formatDate(wave?.registration_start_date)} — {formatDate(wave?.registration_end_date)}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

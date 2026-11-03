@@ -7,7 +7,7 @@ Semua notifikasi kepada pendaftar dikirim melalui WhatsApp; email tidak digunaka
 
 **Status kode saat ini:** Pemicu PPDB memakai template WhatsApp dan antrean Redis BullMQ. Scheduler API menjalankan pengingat pembayaran formulir setiap Senin pukul 08.00 WIB, pengingat submit dokumen H+3 setiap hari pukul 08.00 WIB, serta pengingat jadwal ujian pada H-2, H-1, dan 1 jam sebelum mulai. Panel notifikasi hanya menggunakan kanal WhatsApp. Alur pendaftar tuntas pada penandatanganan digital LoA; biaya pendidikan disetor di luar aplikasi melalui Rekening Resmi PTDARRAHMAN atau kantor bendahara pesantren.
 
-**Perbedaan notifikasi pembayaran:** `wave_closed_pending_payment` dikirim ketika gelombang ditutup dan tagihan pending dibatalkan bersama-sama. `payment_expired` dikirim ketika batas waktu bayar seorang pendaftar lewat; akunnya dinonaktifkan dan pendaftar diberi arahan untuk mendaftar kembali jika gelombang baru tersedia.
+**Pembayaran formulir kedaluwarsa:** satu template `payment_expired` dipakai ketika batas waktu pembayaran lewat atau gelombang ditutup sementara tagihan masih pending. Tagihan dibatalkan dan tidak dapat dibayar lagi; pendaftar dapat mendaftar kembali jika gelombang berikutnya tersedia.
 
 **Pengingat H+3:** dikirim tiga hari setelah pembayaran formulir berhasil, hanya jika pendaftar belum submit satu dokumen pun. Pendaftar yang sudah submit minimal satu dokumen tidak menerima pengingat ini.
 
@@ -26,7 +26,7 @@ Semua notifikasi kepada pendaftar dikirim melalui WhatsApp; email tidak digunaka
 ## FASE 1: PENDAFTARAN AWAL & FORMULIR
 
 ### 1. Pendaftaran Akun Berhasil
-* **Event key:** `account_created`
+* **Event key:** `registration_account_created`
 * **Trigger:** Pendaftar klik submit pada form pendaftaran awal (6 section).
 * **Template Pesan:**
 > 📢 **Pendaftaran Akun Berhasil!**
@@ -54,9 +54,9 @@ Semua notifikasi kepada pendaftar dikirim melalui WhatsApp; email tidak digunaka
 > 📋 *Langkah Selanjutnya:*
 > Silakan submit dokumen melalui dashboard agar dapat ditinjau panitia: *[Link URL Aplikasi]*.
 
-### 3. Penutupan Gelombang (Pembayaran Formulir Expired)
-* **Event key:** `wave_closed_pending_payment`
-* **Trigger:** Gelombang ditutup karena tanggal berakhir atau kuota tercapai; tagihan formulir yang masih pending dibatalkan.
+### 3. Pembayaran Formulir Kedaluwarsa atau Dibatalkan
+* **Event key:** `payment_expired`
+* **Trigger:** Batas waktu pembayaran lewat atau gelombang ditutup karena tanggal berakhir/kuota tercapai; tagihan formulir yang masih pending dibatalkan dan tidak dapat dibayar lagi.
 * **Template Pesan:**
 > ❌ **Masa Pembayaran Formulir Telah Berakhir**
 >

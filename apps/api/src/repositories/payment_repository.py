@@ -50,20 +50,32 @@ class PaymentRepository:
                 PPDBApplicant.email.label("applicant_email"),
                 PPDBWave.name.label("wave_name"),
             )
-            .join(
+            .outerjoin(
                 PPDBApplicant, PPDBPaymentTransaction.applicant_id == PPDBApplicant.id
             )
-            .join(PPDBWave, PPDBApplicant.wave_id == PPDBWave.id)
+            .outerjoin(
+                PPDBWave,
+                or_(
+                    PPDBPaymentTransaction.wave_id == PPDBWave.id,
+                    PPDBApplicant.wave_id == PPDBWave.id,
+                ),
+            )
             .where(PPDBWave.period_id == period_id)
         )
 
         count_stmt = (
             select(func.count())
             .select_from(PPDBPaymentTransaction)
-            .join(
+            .outerjoin(
                 PPDBApplicant, PPDBPaymentTransaction.applicant_id == PPDBApplicant.id
             )
-            .join(PPDBWave, PPDBApplicant.wave_id == PPDBWave.id)
+            .outerjoin(
+                PPDBWave,
+                or_(
+                    PPDBPaymentTransaction.wave_id == PPDBWave.id,
+                    PPDBApplicant.wave_id == PPDBWave.id,
+                ),
+            )
             .where(PPDBWave.period_id == period_id)
         )
 
@@ -86,6 +98,7 @@ class PaymentRepository:
             tx_dict = {
                 "id": tx.id,
                 "applicant_id": tx.applicant_id,
+                "wave_id": tx.wave_id,
                 "method": tx.method,
                 "amount": tx.amount,
                 "status": tx.status,
@@ -98,13 +111,63 @@ class PaymentRepository:
                 "notes": tx.notes,
                 "created_at": tx.created_at,
                 "updated_at": tx.updated_at,
-                "applicant_name": r.applicant_name,
-                "applicant_email": r.applicant_email,
-                "wave_name": r.wave_name,
+                "applicant_name": r.applicant_name or "(Pendaftar Dihapus)",
+                "applicant_email": r.applicant_email or "-",
+                "wave_name": r.wave_name or "-",
             }
             result.append(tx_dict)
 
         return result, total
+
+    def get_period_and_wave_revenue(
+        self, period_id: str, wave_id: str | None
+    ) -> tuple[int, int]:
+        """Hitung omset (total nominal Rp pembayaran formulir lunas)
+        per periode & per gelombang."""
+        period_rev_stmt = (
+            select(func.coalesce(func.sum(PPDBPaymentTransaction.amount), 0))
+            .select_from(PPDBPaymentTransaction)
+            .outerjoin(
+                PPDBApplicant, PPDBPaymentTransaction.applicant_id == PPDBApplicant.id
+            )
+            .outerjoin(
+                PPDBWave,
+                or_(
+                    PPDBPaymentTransaction.wave_id == PPDBWave.id,
+                    PPDBApplicant.wave_id == PPDBWave.id,
+                ),
+            )
+            .where(
+                PPDBWave.period_id == period_id,
+                PPDBPaymentTransaction.status.in_(["success", "paid"]),
+            )
+        )
+        period_revenue = int(self.db.scalar(period_rev_stmt) or 0)
+
+        wave_revenue = 0
+        if wave_id:
+            wave_rev_stmt = (
+                select(func.coalesce(func.sum(PPDBPaymentTransaction.amount), 0))
+                .select_from(PPDBPaymentTransaction)
+                .outerjoin(
+                    PPDBApplicant,
+                    PPDBPaymentTransaction.applicant_id == PPDBApplicant.id,
+                )
+                .outerjoin(
+                    PPDBWave,
+                    or_(
+                        PPDBPaymentTransaction.wave_id == PPDBWave.id,
+                        PPDBApplicant.wave_id == PPDBWave.id,
+                    ),
+                )
+                .where(
+                    PPDBWave.id == wave_id,
+                    PPDBPaymentTransaction.status.in_(["success", "paid"]),
+                )
+            )
+            wave_revenue = int(self.db.scalar(wave_rev_stmt) or 0)
+
+        return period_revenue, wave_revenue
 
     def get_applicant_by_user_id(self, user_id: str) -> PPDBApplicant | None:
         stmt = select(PPDBApplicant).where(PPDBApplicant.user_id == user_id)
@@ -244,12 +307,12 @@ class PaymentRepository:
             )
         )
         rows = self.db.execute(stmt).scalars().all()
-        seen: set[str] = set()
+        seen: set[str | None] = set()
         rank = 0
         for applicant in rows:
             if applicant == applicant_id:
                 return rank + 1
-            if applicant not in seen:
+            if applicant is not None and applicant not in seen:
                 seen.add(applicant)
                 rank += 1
         return None

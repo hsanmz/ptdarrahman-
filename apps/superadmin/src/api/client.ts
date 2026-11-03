@@ -496,14 +496,6 @@ export async function getApplicant(id: string): Promise<any> {
   return apiFetch(`/ppdb/applicants/${id}`)
 }
 
-/**
- * Buat pendaftar baru. Password dibuat sistem (opsional kirim `password`
- * sendiri) dan hanya dikembalikan SEKALI di respons `credentials`.
- */
-export async function createApplicant(data: any): Promise<any> {
-  return apiFetch('/ppdb/applicants', { method: 'POST', body: JSON.stringify(data) })
-}
-
 export async function updateApplicant(id: string, data: any): Promise<any> {
   return apiFetch(`/ppdb/applicants/${id}`, { method: 'PUT', body: JSON.stringify(data) })
 }

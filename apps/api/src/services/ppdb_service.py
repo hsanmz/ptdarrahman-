@@ -25,7 +25,6 @@ from src.models.ppdb import (
     PPDBWaveFeeDiscount,
 )
 from src.modules.ppdb.schemas import (
-    ApplicantAdminCreate,
     ApplicantAdminUpdate,
     ApplicantProfileUpdate,
     ApplicantRegister,
@@ -317,10 +316,12 @@ class PPDBService:
         # tidak cukup untuk situs publik yang menampilkan "Tahun Ajaran ...".
         period = self.repository.get_period_by_id(wave.period_id)
         today = datetime.now(WIB).date()
+        wave_start = wave.registration_start_date
+        wave_end = wave.registration_end_date
         paid_count = self.repository.count_paid_form_payments_in_wave(wave.id)
-        has_schedule = bool(wave.registration_start_date and wave.registration_end_date)
-        before_open = has_schedule and today < wave.registration_start_date
-        after_close = has_schedule and today > wave.registration_end_date
+        has_schedule = bool(wave_start and wave_end)
+        before_open = wave_start is not None and today < wave_start
+        after_close = wave_end is not None and today > wave_end
         quota_reached = wave.quota <= 0 or paid_count >= wave.quota
         registration_open = (
             period is not None
@@ -556,8 +557,11 @@ class PPDBService:
             }
         items = self.repository.get_fee_items_by_wave(wave_id)
         item_data = []
-        for item in items:
-            serialized = {c.name: getattr(item, c.name) for c in item.__table__.columns}
+        for legacy_item in items:
+            serialized = {
+                c.name: getattr(legacy_item, c.name)
+                for c in legacy_item.__table__.columns
+            }
             serialized["has_bills"] = False
             item_data.append(serialized)
         return {
@@ -621,26 +625,6 @@ class PPDBService:
         for item in items:
             text = f"{item.question}: {item.answer}"
             if item.notes:
-                text += f" ({item.notes})"
-            parts.append(text)
-        if notes:
-            parts.append(f"Catatan tambahan: {notes}")
-        return "; ".join(parts)
-
-    def _serialize_health_history_admin(self, body: Any) -> str | None:
-        health_form = getattr(body, "health_form", None)
-        if health_form is not None:
-            return str(json.dumps(health_form.model_dump(), ensure_ascii=False))
-        if getattr(body, "disease_history", None):
-            return str(body.disease_history)
-        items = getattr(body, "disease_history_items", None) or []
-        notes = getattr(body, "disease_history_notes", None)
-        if not items and not notes:
-            return None
-        parts: list[str] = []
-        for item in items:
-            text = f"{item.question}: {item.answer}"
-            if getattr(item, "notes", None):
                 text += f" ({item.notes})"
             parts.append(text)
         if notes:
@@ -734,15 +718,7 @@ class PPDBService:
                 59,
                 59,
             )
-        elif wave.end_date:
-            payment_deadline = datetime(
-                wave.end_date.year,
-                wave.end_date.month,
-                wave.end_date.day,
-                23,
-                59,
-                59,
-            )
+        # Deadline default +7 hari bila gelombang tak punya tanggal tutup.
         else:
             payment_deadline_wib = datetime.now(ZoneInfo("Asia/Jakarta")) + timedelta(
                 days=7
@@ -809,6 +785,7 @@ class PPDBService:
         transaction = PPDBPaymentTransaction(
             id=f"pay-{uuid.uuid4()}",
             applicant_id=applicant.id,
+            wave_id=wave.id,
             payment_type="form",
             method="qris",
             # Biaya formulir adalah master tingkat periode (satu nilai untuk
@@ -950,150 +927,6 @@ class PPDBService:
             raise HTTPException(status_code=404, detail="Pendaftar tidak ditemukan")
         return detail
 
-    def create_applicant(self, body: ApplicantAdminCreate) -> dict[str, Any]:
-        """Buat pendaftar dari Superadmin (CRUD).
-
-        Konsep password tetap sama seperti pendaftaran publik: username & password
-        dibuat otomatis oleh sistem, tidak bisa ditentukan admin dan tidak pernah
-        bisa dibaca ulang. Password hanya dikembalikan SEKALI di respons ini lalu
-        dikirim via WhatsApp. Untuk mengganti password, pakai
-        ``reset_applicant_password``.
-        """
-        wave = self.repository.get_wave_by_id(body.wave_id)
-        if not wave:
-            raise HTTPException(status_code=404, detail="Gelombang tidak ditemukan")
-
-        period = self.repository.get_period_by_id(wave.period_id)
-
-        if self.repository.get_applicant_by_email_active(body.email):
-            raise HTTPException(
-                status_code=400, detail="Email sudah terdaftar pada pendaftar lain."
-            )
-        if self.repository.get_user_by_email(body.email):
-            raise HTTPException(
-                status_code=400, detail="Email sudah dipakai akun lain."
-            )
-
-        raw_password = self.generate_random_password()
-        from src.core.security import validate_password
-
-        validate_password(raw_password)
-
-        username = self.generate_unique_username(body.full_name)
-        role_id = self.repository.get_role_id_by_name("Pendaftar")
-
-        now = datetime.now(WIB)
-        if wave.registration_end_date:
-            payment_deadline = datetime(
-                wave.registration_end_date.year,
-                wave.registration_end_date.month,
-                wave.registration_end_date.day,
-                23,
-                59,
-                59,
-            )
-        elif wave.end_date:
-            payment_deadline = datetime(
-                wave.end_date.year,
-                wave.end_date.month,
-                wave.end_date.day,
-                23,
-                59,
-                59,
-            )
-        else:
-            payment_deadline = datetime.now(ZoneInfo("Asia/Jakarta")).replace(
-                tzinfo=None
-            ) + timedelta(days=7)
-
-        user = User(
-            id=str(uuid.uuid4()),
-            username=username,
-            password_hash=hash_password(raw_password),
-            email=body.email,
-            full_name=body.full_name,
-            user_type="applicant",
-            role_id=role_id,
-            created_at=now,
-            updated_at=now,
-        )
-
-        applicant = PPDBApplicant(
-            id=f"applicant-{uuid.uuid4()}",
-            wave_id=wave.id,
-            user_id=user.id,
-            full_name=body.full_name,
-            email=body.email,
-            phone=body.phone,
-            address=body.address,
-            province=body.province,
-            city=body.city,
-            district=body.district,
-            village=body.village,
-            postal_code=body.postal_code,
-            gender=body.gender,
-            birth_place=body.birth_place,
-            birth_date=body.birth_date,
-            nisn=body.nisn,
-            nik=body.nik,
-            parent_name=(
-                body.parent_name
-                or body.father_name
-                or body.guardian_name
-                or body.mother_name
-            ),
-            father_name=body.father_name,
-            father_job=body.father_job,
-            father_phone=body.father_phone,
-            mother_name=body.mother_name,
-            mother_job=body.mother_job,
-            mother_phone=body.mother_phone,
-            guardian_name=body.guardian_name,
-            guardian_job=body.guardian_job,
-            parent_phone=body.parent_phone or body.father_phone or body.mother_phone,
-            parent_income=body.parent_income,
-            parent_email=body.parent_email,
-            previous_school=body.previous_school,
-            graduation_year=body.graduation_year,
-            disease_history=self._serialize_health_history_admin(body),
-            status="pending_payment",
-            payment_status="pending",
-            payment_deadline=payment_deadline,
-            created_at=now,
-            updated_at=now,
-        )
-
-        transaction = PPDBPaymentTransaction(
-            id=f"pay-{uuid.uuid4()}",
-            applicant_id=applicant.id,
-            method="qris",
-            # Biaya formulir adalah master tingkat periode (satu nilai untuk
-            # seluruh gelombang).
-            amount=int(period.form_fee or 0) if period else 0,
-            status="pending",
-            created_at=now,
-            updated_at=now,
-        )
-
-        try:
-            self.repository.create_user_and_applicant(user, applicant, transaction)
-        except IntegrityError:
-            logger.exception(
-                "Duplicate on admin create: email=%s username=%s", body.email, username
-            )
-            raise HTTPException(
-                status_code=400, detail="Email sudah terdaftar. Gunakan email lain."
-            )
-
-        self._notify_credentials(user, applicant, raw_password)
-
-        return {
-            "success": True,
-            "message": "Pendaftar berhasil dibuat",
-            "applicant_id": applicant.id,
-            "credentials": {"username": username, "password": raw_password},
-        }
-
     def update_applicant(
         self, applicant_id: str, body: ApplicantAdminUpdate
     ) -> dict[str, Any]:
@@ -1123,6 +956,9 @@ class PPDBService:
                 )
             applicant.wave_id = wave.id
 
+        email_changed = False
+        phone_changed = False
+
         email = data.get("email")
         if email and email.lower() != (applicant.email or "").lower():
             clash = self.repository.get_applicant_by_email_active(email)
@@ -1135,11 +971,21 @@ class PPDBService:
                 raise HTTPException(
                     status_code=400, detail="Email sudah dipakai akun lain."
                 )
+            email_changed = True
             # Email akun login ikut disesuaikan agar tetap sinkron.
             if applicant.user_id:
                 user = self.repository.get_user_by_id(applicant.user_id)
                 if user:
                     user.email = email
+                    user.updated_at = datetime.now(WIB)
+
+        phone = data.get("phone")
+        if phone and phone.strip() != (applicant.phone or "").strip():
+            phone_changed = True
+            if applicant.user_id:
+                user = self.repository.get_user_by_id(applicant.user_id)
+                if user:
+                    user.phone = phone.strip()
                     user.updated_at = datetime.now(WIB)
 
         full_name = data.get("full_name")
@@ -1156,6 +1002,42 @@ class PPDBService:
         applicant.updated_at = datetime.now(WIB)
         self.repository.update_applicant(applicant)
 
+        # Notifikasi HANYA dikirim bila kredensial/kontak kritis (email atau no. WA)
+        # diubah oleh admin. Data formulir umum lainnya TIDAK mengirim notifikasi.
+        if (email_changed or phone_changed) and applicant.user_id:
+            try:
+                user = self.repository.get_user_by_id(applicant.user_id)
+                username_val = user.username if user else ""
+                send_notifications(
+                    [
+                        (
+                            "account_updated",
+                            {
+                                "nama_peserta": applicant.full_name,
+                                "username": username_val,
+                                "email": applicant.email,
+                                "phone": applicant.phone,
+                            },
+                        )
+                    ],
+                    applicant.user_id,
+                    user_row={
+                        "id": user.id if user else applicant.user_id,
+                        "email": applicant.email,
+                        "username": username_val,
+                        "full_name": applicant.full_name,
+                    },
+                    applicant_row={
+                        "id": applicant.id,
+                        "full_name": applicant.full_name,
+                        "phone": applicant.phone,
+                    },
+                )
+            except Exception:
+                logger.exception(
+                    "Gagal mengirim notifikasi account_updated saat update_applicant"
+                )
+
         return {
             "success": True,
             "message": "Data pendaftar berhasil diperbarui",
@@ -1163,14 +1045,17 @@ class PPDBService:
         }
 
     def delete_applicant(self, applicant_id: str) -> dict[str, Any]:
-        """Hapus permanen pendaftar + akun login + seluruh data turunannya."""
+        """Hapus permanen pendaftar + akun login + seluruh data turunannya,
+        kecuali transaksi pembayaran yang sudah lunas (uang masuk).
+        """
         applicant = self.repository.get_applicant_by_id(applicant_id)
         if not applicant:
             raise HTTPException(status_code=404, detail="Pendaftar tidak ditemukan")
 
         full_name = applicant.full_name
-        # Kumpulkan path berkas SEBELUM baris DB dihapus.
-        files = self.repository.get_applicant_document_files(applicant_id)
+        # Kumpulkan seluruh path berkas fisik (dokumen + avatar)
+        # SEBELUM baris DB dihapus.
+        files = self.repository.get_applicant_all_files(applicant)
         self.repository.delete_applicant_permanent(applicant)
 
         # Berkas fisik dihapus setelah transaksi DB selesai. `delete_upload`
@@ -1189,57 +1074,10 @@ class PPDBService:
         return {
             "success": True,
             "message": (
-                f"Pendaftar {full_name} beserta seluruh datanya dihapus permanen."
+                f"Pendaftar {full_name} beserta seluruh datanya dihapus permanen. "
+                "Catatan mutasi transaksi pembayaran yang sudah masuk tetap diarsipkan."
             ),
         }
-
-    def _notify_credentials(
-        self, user: User, applicant: PPDBApplicant, raw_password: str
-    ) -> None:
-        """Kirim kredensial via WhatsApp setelah pendaftar dibuat oleh admin."""
-        from src.core.config import settings
-
-        try:
-            wave = (
-                self.repository.get_wave_by_id(applicant.wave_id)
-                if applicant.wave_id
-                else None
-            )
-            tanggal_tutup = (
-                wave.end_date.strftime("%d %B %Y")
-                if wave and wave.end_date
-                else "sesuai jadwal"
-            )
-            send_notifications(
-                [
-                    (
-                        "registration_account_created",
-                        {
-                            "username": user.username,
-                            "nama_peserta": user.full_name,
-                            "password": raw_password,
-                            "nama_sekolah": "Pesantren Tahfidz Qur'an dan Digital "
-                            "Ar-Rahman",
-                            "link_login": f"{settings.ppdb_frontend_url}/auth/login",
-                            "tanggal_tutup_gelombang": tanggal_tutup,
-                        },
-                    ),
-                ],
-                user.id,
-                user_row={
-                    "id": user.id,
-                    "email": user.email,
-                    "username": user.username,
-                    "full_name": user.full_name,
-                },
-                applicant_row={
-                    "id": applicant.id,
-                    "full_name": applicant.full_name,
-                    "phone": applicant.phone,
-                },
-            )
-        except Exception:
-            logger.exception("send_notifications failed after create; continuing")
 
     def reset_applicant_password(
         self, applicant_id: str, new_password: str
@@ -1631,8 +1469,7 @@ class PPDBService:
 
         self.repository.soft_delete_applicants(applicants, now_str)
 
-        # payment_expired: tidak ada padanan di spec baru, tetap dikirim
-        # karena user perlu tahu akun mereka kedaluwarsa.
+        # Beri tahu pendaftar bahwa tagihan pembayaran formulir sudah kedaluwarsa.
         for app in applicants:
             send_notifications([("payment_expired", {})], app.user_id)
 
@@ -1719,6 +1556,8 @@ class PPDBService:
         from src.models.cbt import ExamAttempt, ExamSchedule
 
         app_row = self.repository.db.get(PPDBApplicant, applicant_id)
+        if not app_row:
+            raise HTTPException(status_code=404, detail="Pendaftar tidak ditemukan")
         cbt_rows = self.repository.db.execute(
             select(
                 ExamSchedule.category,
@@ -1743,7 +1582,7 @@ class PPDBService:
                 ),
             )
             .where(
-                ExamSchedule.wave_id == app_row.wave_id if app_row else None,
+                ExamSchedule.wave_id == app_row.wave_id,
                 ExamSchedule.category.in_(("akademik", "psikologi")),
             )
             .order_by(ExamSchedule.session_date.asc())
@@ -2383,7 +2222,7 @@ class PPDBService:
                         "status": p.status,
                         "paid_at": (
                             p.paid_at.isoformat()
-                            if hasattr(p.paid_at, "isoformat")
+                            if p.paid_at is not None and hasattr(p.paid_at, "isoformat")
                             else (str(p.paid_at) if p.paid_at else None)
                         ),
                         "payment_method": getattr(p, "method", None) or "offline",

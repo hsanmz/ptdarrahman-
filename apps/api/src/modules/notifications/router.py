@@ -37,7 +37,7 @@ import hmac
 import logging
 import time
 from datetime import datetime, timedelta
-from typing import Any, cast
+from typing import Any, Literal, cast
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -74,6 +74,7 @@ class CustomSend(BaseModel):
     channel: str = "both"
     subject: str = ""
     body: str
+    source: Literal["ppdb", "system"] = "system"
 
 
 # ── Template Endpoints ────────────────────────────────────────────────────────
@@ -133,6 +134,7 @@ def send_custom(body: CustomSend, user: dict = Depends(require_notification_admi
         channel=body.channel,
         subject=body.subject,
         body=body.body,
+        event_key="ppdb_custom_message" if body.source == "ppdb" else "custom_message",
     )
     return {"message": "Notifikasi masuk antrian", **result}
 
@@ -146,6 +148,7 @@ def get_logs(
     perPage: int = Query(20, ge=1, le=200),
     status: str | None = Query(None),
     event_key: str | None = Query(None),
+    scope: str | None = Query(None),
     user: dict = Depends(require_notification_read),
 ):
     offset = (page - 1) * perPage
@@ -158,6 +161,43 @@ def get_logs(
     if event_key:
         where_parts.append("event_key = :event_key")
         params["event_key"] = event_key
+    if scope == "ppdb":
+        ppdb_event_keys = (
+            "account_updated",
+            "password_reset",
+            "password_changed",
+            "registration_account_created",
+            "payment_success_formulir",
+            "payment_reminder_monday",
+            "payment_expired",
+            "document_rejected_revision",
+            "documents_submitted",
+            "document_approved",
+            "session_confirmed",
+            "selection_session_broadcast",
+            "assessment_stage_completed",
+            "registration_result_passed",
+            "registration_result_conditional",
+            "registration_result_waitlist",
+            "registration_result_failed",
+            "loa_signed",
+            "reminder_upload_docs_h3",
+            "reminder_exam_h2",
+            "reminder_exam_h1",
+            "reminder_exam_1hour",
+            "ppdb_custom_message",
+        )
+        placeholders = ", ".join(
+            f":ppdb_event_{index}" for index in range(len(ppdb_event_keys))
+        )
+        where_parts.append(f"event_key IN ({placeholders})")
+        where_parts.append(
+            "recipient_user_id IN ("
+            "SELECT user_id FROM ppdb_applicants WHERE user_id IS NOT NULL)"
+        )
+        params.update(
+            {f"ppdb_event_{index}": key for index, key in enumerate(ppdb_event_keys)}
+        )
 
     where_clause = " AND ".join(where_parts)
     data_sql = (
@@ -416,7 +456,8 @@ async def wa_webhook(request: Request):
             is_new = r.set(idempotency_key, "1", nx=True, ex=600)
             if not is_new:
                 logger.info(
-                    "Webhook WA diabaikan: event %s untuk job %s sudah diproses sebelumnya",
+                    "Webhook WA diabaikan: event %s untuk job %s "
+                    "sudah diproses sebelumnya",
                     event,
                     job_id,
                 )
@@ -581,9 +622,10 @@ def _upload_docs_h3_candidates(limit: int | None) -> list[dict[str, Any]]:
         days=3
     )
     with pool.connect() as conn:
-        rows = conn.execute(
-            text(
-                """
+        rows = (
+            conn.execute(
+                text(
+                    """
                 SELECT pa.id AS applicant_id, pa.user_id, pa.full_name
                 FROM ppdb_applicants pa
                 JOIN ppdb_payment_transactions tx ON tx.applicant_id = pa.id
@@ -600,9 +642,12 @@ def _upload_docs_h3_candidates(limit: int | None) -> list[dict[str, Any]]:
                 GROUP BY pa.id, pa.user_id, pa.full_name
                 ORDER BY MIN(COALESCE(tx.confirmed_at, tx.updated_at, tx.created_at))
                 """
-            ),
-            {"cutoff": cutoff},
-        ).mappings().all()
+                ),
+                {"cutoff": cutoff},
+            )
+            .mappings()
+            .all()
+        )
         candidates = [dict(row) for row in rows]
         if limit is not None:
             candidates = candidates[:limit]
@@ -778,7 +823,7 @@ async def trigger_wave_closed(
     _: dict = Depends(require_notification_admin),
 ):
     """
-    Trigger notifikasi wave_closed_pending_payment ke semua pendaftar
+    Trigger notifikasi payment_expired ke semua pendaftar
     yang tagihan formulirnya masih pending saat gelombang ditutup.
     """
     if not body.wave_id:
@@ -862,7 +907,7 @@ async def trigger_wave_closed(
 
         for ap in applicants:
             send_notification(
-                event_key="wave_closed_pending_payment",
+                event_key="payment_expired",
                 recipient_user_id=str(ap["user_id"]),
                 context={
                     "nama_gelombang": wave["name"],

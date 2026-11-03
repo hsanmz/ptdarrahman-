@@ -4,7 +4,7 @@ import * as api from '@/api/client'
 import { Card, CardContent } from "@/components/ui"
 import { Button } from "@/components/ui"
 import { Badge } from "@/components/ui"
-import { ArrowRight, Activity, CreditCard, CheckCircle2, Clock, XCircle, RefreshCw } from 'lucide-react'
+import { ArrowRight, Activity, CreditCard, CheckCircle2, Clock, XCircle, RefreshCw, Banknote, TrendingUp } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import NoActiveWaveBanner from '@/components/shared/NoActiveWaveBanner'
 import PaginationControls from '@/components/shared/PaginationControls'
@@ -41,13 +41,21 @@ export default function PembayaranFormulirPage() {
       qs.append('page', page.toString())
       qs.append('perPage', limit.toString())
 
-      const res = await api.apiFetch<{ data: TransactionItem[]; total: number; active_period: any }>(`/payment/transactions?${qs.toString()}`)
+      const res = await api.apiFetch<{
+        data: TransactionItem[]
+        total: number
+        period_revenue?: number
+        wave_revenue?: number
+        active_wave?: any
+        active_period: any
+      }>(`/payment/transactions?${qs.toString()}`)
       return res
     }
   })
 
   const transactions = data?.data || []
   const activePeriodData = data?.active_period && typeof data.active_period === 'object' ? data.active_period : null
+  const activeWaveData = data?.active_wave && typeof data.active_wave === 'object' ? data.active_wave : null
   const hasActivePeriod = !!activePeriodData
   const totalPages = data?.total ? Math.ceil(data.total / limit) : 1
 
@@ -76,6 +84,8 @@ export default function PembayaranFormulirPage() {
         }
         blocks={[
           { icon: Activity, label: 'Periode Aktif', value: activePeriodData?.name || 'Tidak ada', active: hasActivePeriod, pulse: hasActivePeriod },
+          { icon: Banknote, label: 'Omset Periode Aktif', value: formatRp(data?.period_revenue ?? 0), active: hasActivePeriod },
+          { icon: TrendingUp, label: `Omset ${activeWaveData?.name || 'Gelombang'}`, value: formatRp(data?.wave_revenue ?? 0), active: !!activeWaveData },
           { icon: CreditCard, label: 'Total Transaksi', value: data?.total != null ? `${data.total} transaksi` : '—', active: true },
         ]}
       />

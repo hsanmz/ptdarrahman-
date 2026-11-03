@@ -524,19 +524,6 @@ class SelectionStageService:
             if not schedules:
                 continue
 
-            # Ambil pendaftar aktif di gelombang ini
-            applicants = (
-                self.db.query(PPDBApplicant)
-                .filter(
-                    PPDBApplicant.wave_id == wave.id,
-                    PPDBApplicant.status.in_(("selection", "document_approved")),
-                    PPDBApplicant.deleted_at.is_(None),
-                )
-                .all()
-            )
-            if not applicants:
-                continue
-
             for s in schedules:
                 try:
                     s_time = datetime.strptime(s["start_time"], "%H:%M").time()
@@ -558,6 +545,33 @@ class SelectionStageService:
                     event_key = "reminder_exam_h2"
 
                 if not target_type:
+                    continue
+
+                # CBT candidates are assigned to a batch in SelectionResult;
+                # selection sessions are assigned by their session IDs.
+                assigned = self.db.query(PPDBApplicant).filter(
+                    PPDBApplicant.wave_id == wave.id,
+                    PPDBApplicant.status.in_(("selection", "document_approved")),
+                    PPDBApplicant.deleted_at.is_(None),
+                )
+                if s["type"] == "selection_session":
+                    assigned = assigned.join(
+                        SelectionResult,
+                        SelectionResult.applicant_id == PPDBApplicant.id,
+                    ).filter(
+                        or_(
+                            SelectionResult.session_id == s["id"],
+                            SelectionResult.interview_session_id == s["id"],
+                            SelectionResult.interview_parent_session_id == s["id"],
+                        )
+                    )
+                else:
+                    assigned = assigned.join(
+                        SelectionResult,
+                        SelectionResult.applicant_id == PPDBApplicant.id,
+                    ).filter(SelectionResult.batch_name == s.get("batch_name"))
+                applicants = assigned.all()
+                if not applicants:
                     continue
 
                 # Kirim ke pendaftar

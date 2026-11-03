@@ -182,8 +182,14 @@ class PPDBPaymentTransaction(Base):
     __tablename__ = "ppdb_payment_transactions"
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
-    applicant_id: Mapped[str] = mapped_column(
-        String(64), ForeignKey("ppdb_applicants.id", ondelete="CASCADE")
+    applicant_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("ppdb_applicants.id", ondelete="SET NULL"), nullable=True
+    )
+    wave_id: Mapped[str | None] = mapped_column(
+        String(50),
+        ForeignKey("ppdb_waves.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     method: Mapped[str] = mapped_column(String(20), default="offline")
     amount: Mapped[int] = mapped_column(BigInteger, default=0)
@@ -328,4 +334,3 @@ class PPDBWaveFeeItem(Base):
     order_index: Mapped[int] = mapped_column(Integer, default=0)
     created_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-

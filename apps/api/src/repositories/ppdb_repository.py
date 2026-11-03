@@ -495,15 +495,53 @@ class PPDBRepository:
     def delete_applicant_permanent(self, applicant: PPDBApplicant) -> None:
         user_id = applicant.user_id
 
-        self.db.query(FileUpload).filter(
-            FileUpload.entity_type.like("ppdb_document:%"),
-            FileUpload.entity_id == applicant.id,
-        ).delete(synchronize_session=False)
+        # 1. Update & detach transaksi pembayaran yang SUDAH LUNAS (success / paid).
+        # Uang masuk TIDAK BOLEH dihapus dari sistem/buku kas.
+        paid_txs = (
+            self.db.query(PPDBPaymentTransaction)
+            .filter(
+                PPDBPaymentTransaction.applicant_id == applicant.id,
+                PPDBPaymentTransaction.status.in_(["success", "paid"]),
+            )
+            .all()
+        )
+        for tx in paid_txs:
+            tx.applicant_id = None
+            if not tx.wave_id:
+                tx.wave_id = applicant.wave_id
+            archive_note = (
+                f"[Arsip Transaksi PPDB - Akun Dihapus Superadmin]\n"
+                f"Pendaftar: {applicant.full_name} | "
+                f"Email: {applicant.email} | "
+                f"No. WA: {applicant.phone} | "
+                f"No. Reg: {applicant.registration_number or '-'} | "
+                f"Wave ID: {applicant.wave_id}\n"
+                f"Catatan: Akun pendaftar dihapus permanen oleh Superadmin. "
+                f"Catatan transaksi uang masuk tetap dipertahankan "
+                f"dalam buku besar keuangan pesantren."
+            )
+            tx.notes = f"{tx.notes}\n\n{archive_note}" if tx.notes else archive_note
 
+        # 2. Hapus transaksi yang BELUM LUNAS (pending, failed, expired, cancelled)
         self.db.query(PPDBPaymentTransaction).filter(
-            PPDBPaymentTransaction.applicant_id == applicant.id
+            PPDBPaymentTransaction.applicant_id == applicant.id,
+            ~PPDBPaymentTransaction.status.in_(["success", "paid"]),
         ).delete(synchronize_session=False)
 
+        # 3. Hapus data ujian CBT & Psikologi (attempts & answers)
+        self.db.execute(
+            text(
+                "DELETE FROM `ppdb_exam_answers` WHERE `attempt_id` IN "
+                "(SELECT id FROM `ppdb_exam_attempts` WHERE `applicant_id` = :aid)"
+            ),
+            {"aid": applicant.id},
+        )
+        self.db.execute(
+            text("DELETE FROM `ppdb_exam_attempts` WHERE `applicant_id` = :aid"),
+            {"aid": applicant.id},
+        )
+
+        # 4. Hapus data evaluasi & penilaian seleksi (Tahfidz & Wawancara)
         self.db.execute(
             text("DELETE FROM `selection_results` WHERE `applicant_id` = :aid"),
             {"aid": applicant.id},
@@ -513,7 +551,21 @@ class PPDBRepository:
             {"aid": applicant.id},
         )
 
+        # 5. Hapus seluruh metadata file upload
+        file_filter = [
+            FileUpload.entity_id == applicant.id,
+            FileUpload.entity_type.like("ppdb_document:%"),
+        ]
+        if user_id:
+            file_filter.append(FileUpload.uploaded_by == user_id)
+        self.db.query(FileUpload).filter(or_(*file_filter)).delete(
+            synchronize_session=False
+        )
+
+        # 6. Hapus pendaftar
         self.db.delete(applicant)
+
+        # 7. Hapus user (cascades refresh_tokens & permissions)
         if user_id:
             self.db.query(User).filter(User.id == user_id).delete(
                 synchronize_session=False
@@ -521,16 +573,24 @@ class PPDBRepository:
 
         self.db.commit()
 
-    def get_applicant_document_files(self, applicant_id: str) -> list[str]:
-        rows = (
-            self.db.query(FileUpload.storage_path)
-            .filter(
-                FileUpload.entity_type.like("ppdb_document:%"),
-                FileUpload.entity_id == applicant_id,
-            )
-            .all()
-        )
-        return [r[0] for r in rows]
+    def get_applicant_all_files(self, applicant: PPDBApplicant) -> list[str]:
+        user_id = applicant.user_id
+        conditions = [
+            FileUpload.entity_id == applicant.id,
+            FileUpload.entity_type.like("ppdb_document:%"),
+        ]
+        if user_id:
+            conditions.append(FileUpload.uploaded_by == user_id)
+
+        rows = self.db.query(FileUpload.storage_path).filter(or_(*conditions)).all()
+        paths = [r[0] for r in rows if r[0]]
+
+        if user_id:
+            user = self.get_user_by_id(user_id)
+            if user and user.avatar_url:
+                paths.append(user.avatar_url)
+
+        return list(set(paths))
 
     def get_applicant_by_user_id(self, user_id: str) -> PPDBApplicant | None:
         return cast(

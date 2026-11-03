@@ -37,15 +37,12 @@ vi.mock('@/api/client', () => ({
   API_BASE: 'http://localhost:8000',
 }))
 
-// Mock useBrand
-vi.mock('@repo/ui', async (importOriginal) => {
-  const actual = await importOriginal<Record<string, any>>()
-  return {
-    ...actual,
-    useBrand: () => ({ logoUrl: '' }),
-    resolveCompanyProfileUrl: () => 'http://localhost:3000',
-  }
-})
+// Mock useBrand (pertahankan ekspor asli seperti Button agar halaman tetap render)
+vi.mock('@repo/ui', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@repo/ui')>()),
+  useBrand: () => ({ logoUrl: '' }),
+  resolveCompanyProfileUrl: () => 'http://localhost:3000',
+}))
 
 describe('PPDB Public Pages', () => {
   it('renders LandingPage (Beranda) with announcement and CTA', () => {

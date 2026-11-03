@@ -81,6 +81,8 @@ class PaymentService:
             return {
                 "data": [],
                 "total": 0,
+                "period_revenue": 0,
+                "wave_revenue": 0,
                 "active_wave": None,
                 "active_period": None,
             }
@@ -88,10 +90,18 @@ class PaymentService:
         data, total = self.repo.get_transactions(
             active_period["id"], status, per_page, offset
         )
+        active_wave = self.repo.get_active_wave_info()
+        active_wave_id = active_wave["id"] if active_wave else None
+        period_revenue, wave_revenue = self.repo.get_period_and_wave_revenue(
+            active_period["id"], active_wave_id
+        )
+
         return {
             "data": data,
             "total": total,
-            "active_wave": self.repo.get_active_wave_info(),
+            "period_revenue": period_revenue,
+            "wave_revenue": wave_revenue,
+            "active_wave": active_wave,
             "active_period": active_period,
         }
 
@@ -203,6 +213,7 @@ class PaymentService:
         tx = PPDBPaymentTransaction(
             id=str(uuid.uuid4()),
             applicant_id=applicant.id,
+            wave_id=applicant.wave_id,
             order_id=order_id,
             txn_id=txn_id,
             payment_type=payment_type,
@@ -324,11 +335,7 @@ class PaymentService:
             "wave_registration_end_date": (
                 wave.registration_end_date.strftime("%Y-%m-%d")
                 if wave and wave.registration_end_date
-                else (
-                    wave.end_date.strftime("%Y-%m-%d")
-                    if wave and wave.end_date
-                    else None
-                )
+                else None
             ),
             "wave_quota": wave.quota if wave else 0,
             "created_at": applicant.created_at,
@@ -631,6 +638,7 @@ class PaymentService:
             tx = PPDBPaymentTransaction(
                 id=str(uuid.uuid4()),
                 applicant_id=applicant.id,
+                wave_id=applicant.wave_id,
                 order_id=order_id,
                 txn_id=created.txn_id,
                 payment_type="form",
@@ -809,6 +817,10 @@ class PaymentService:
             return {"status": "success", "already_settled": True}
 
         now_wib = datetime.now(WIB)
+        if not tx.applicant_id:
+            raise HTTPException(
+                status_code=404, detail="Applicant not found for transaction"
+            )
         applicant = self.repo.get_applicant_by_id(tx.applicant_id)
         if not applicant:
             raise HTTPException(
@@ -1009,7 +1021,7 @@ class PaymentService:
         for app in pending_applicants:
             try:
                 send_notification(
-                    event_key="wave_closed_pending_payment",
+                    event_key="payment_expired",
                     recipient_user_id=str(app.user_id),
                     context={
                         "nama_gelombang": wave.name,
@@ -1018,8 +1030,7 @@ class PaymentService:
                 )
             except Exception:
                 logger.exception(
-                    "Gagal mengirim notifikasi wave_closed_pending_payment "
-                    "untuk user %s",
+                    "Gagal mengirim notifikasi payment_expired " "untuk user %s",
                     app.user_id,
                 )
 
@@ -1050,7 +1061,9 @@ class PaymentService:
         tx.confirmed_at = now_wib
         self.repo.update_transaction(tx)
 
-        applicant = self.repo.get_applicant_by_id(tx.applicant_id)
+        applicant = (
+            self.repo.get_applicant_by_id(tx.applicant_id) if tx.applicant_id else None
+        )
         if applicant:
             applicant.payment_status = "paid"
             applicant.status = "document_uploaded_pending"
@@ -1106,7 +1119,9 @@ class PaymentService:
         tx.confirmed_at = None
         self.repo.update_transaction(tx)
 
-        applicant = self.repo.get_applicant_by_id(tx.applicant_id)
+        applicant = (
+            self.repo.get_applicant_by_id(tx.applicant_id) if tx.applicant_id else None
+        )
         if applicant:
             applicant.payment_status = "pending"
             applicant.status = "pending_payment"

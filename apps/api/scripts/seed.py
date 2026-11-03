@@ -141,24 +141,7 @@ SITE_SETTINGS = [
     ("to_email", ""),
 ]
 
-NOTIF_TEMPLATES = [
-    {
-        "event_key": "account_created",
-        "label": "Akun Panel Dibuat (Kredensial Login)",
-        "channel": "both",
-        "email_subject": "Akun Anda Telah Dibuat",
-        "body": (
-            "Halo {nama_peserta},\n\n"
-            "Akun Anda telah dibuat oleh admin. Berikut kredensial login Anda:\n"
-            "  Username: {username}\n"
-            "  Password: {password}\n"
-            "  Link Login: {link_login}\n"
-            "  Email: {email}\n"
-            "  No. WhatsApp: {phone}\n\n"
-            "Segera ganti password Anda setelah login pertama kali.\n\n"
-            "Terima kasih,\nAdmin PTDARRAHMAN"
-        ),
-    },
+NOTIF_TEMPLATES: list[dict[str, str | None]] = [
     {
         "event_key": "account_updated",
         "label": "Data Akun Diperbarui",
@@ -192,16 +175,26 @@ NOTIF_TEMPLATES = [
     },
     {
         "event_key": "payment_expired",
-        "label": "Pendaftaran Hangus",
+        "label": "Pembayaran Formulir Kedaluwarsa",
         "channel": "both",
-        "email_subject": "Pendaftaran PPDB Dinyatakan Hangus",
+        "email_subject": "Pembayaran Formulir Kedaluwarsa",
         "body": (
             "Halo {nama_peserta},\n\n"
-            "Kami mohon maaf, pendaftaran Anda dinyatakan hangus karena belum "
-            "melakukan pembayaran "
-            "formulir hingga batas waktu yang ditentukan. Silakan mendaftar "
-            "kembali pada gelombang berikutnya.\n\n"
+            "Tagihan pembayaran formulir Anda telah kedaluwarsa dan dibatalkan. "
+            "Tagihan ini tidak dapat dibayar lagi. Silakan mendaftar kembali "
+            "jika gelombang berikutnya tersedia.\n\n"
             "Terima kasih,\nPanitia PPDB Pesantren Tahfidz Qur'an dan Digital Ar-Rahman"
+        ),
+    },
+    {
+        "event_key": "selection_session_broadcast",
+        "label": "Informasi Tambahan Sesi Seleksi",
+        "channel": "whatsapp",
+        "email_subject": None,
+        "body": (
+            "Halo {nama_peserta},\n\n"
+            "Informasi untuk sesi {session_name}:\n{custom_message}\n\n"
+            "Terima kasih,\nPanitia PPDB PTDARRAHMAN"
         ),
     },
     {
